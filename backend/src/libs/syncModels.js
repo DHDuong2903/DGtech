@@ -1,6 +1,7 @@
 import { sequelize } from "./db.js";
 
 import { User } from "../models/userModel.js";
+import { Category } from "../models/categoryModel.js";
 
 export const syncModels = async () => {
   try {

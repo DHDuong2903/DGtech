@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./libs/db.js";
 import { syncModels } from "./libs/syncModels.js";
-import { clerkMiddleware } from "@clerk/express";
 import webhookRoute from "./routes/webhookRoute.js";
 import categoryRoute from "./routes/categoryRoute.js";
 
@@ -19,7 +18,7 @@ app.use(
 );
 
 app.use("/api/webhooks", webhookRoute);
-app.use("/api/categories", clerkMiddleware(), categoryRoute);
+app.use("/api/categories", categoryRoute);
 
 const startServer = async () => {
   await connectDB();
