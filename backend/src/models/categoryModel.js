@@ -1,6 +1,7 @@
 import { sequelize } from "../libs/db.js";
 import { DataTypes } from "sequelize";
 
+
 export const Category = sequelize.define(
   "Category",
   {
@@ -12,6 +13,7 @@ export const Category = sequelize.define(
     },
     name: {
       type: DataTypes.STRING,
+      allowNull: false,
       unique: true,
     },
     description: {
@@ -23,3 +25,5 @@ export const Category = sequelize.define(
     tableName: "categories",
   }
 );
+
+
