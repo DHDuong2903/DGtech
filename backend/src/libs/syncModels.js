@@ -3,6 +3,7 @@ import { sequelize } from "./db.js";
 import { User } from "../models/userModel.js";
 import { Category } from "../models/categoryModel.js";
 import { Product } from "../models/productModel.js";
+import { Review } from "../models/reviewModel.js";
 
 export const syncModels = async () => {
   try {

@@ -6,6 +6,7 @@ import { syncModels } from "./libs/syncModels.js";
 import webhookRoute from "./routes/webhookRoute.js";
 import categoryRoute from "./routes/categoryRoute.js";
 import productRoute from "./routes/productRoute.js";
+import reviewRoute from "./routes/reviewRoute.js";
 
 dotenv.config();
 const app = express();
@@ -21,6 +22,7 @@ app.use(
 app.use("/api/webhooks", webhookRoute);
 app.use("/api/categories", categoryRoute);
 app.use("/api/products", productRoute);
+app.use("/api/reviews", reviewRoute);
 
 const startServer = async () => {
   await connectDB();

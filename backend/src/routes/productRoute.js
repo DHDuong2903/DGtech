@@ -7,10 +7,11 @@ import {
   getProductById,
   updateProduct,
 } from "../controllers/productController.js";
+import { requireAuth } from "../middlewares/requireAuth.js";
 import { upload } from "../middlewares/upload.js";
 
 const router = express.Router();
-// router.use(requireAuth);
+router.use(requireAuth);
 
 router.post("/", upload.single("image"), createProduct);
 router.put("/:productId", upload.single("image"), updateProduct);
