@@ -1,14 +1,20 @@
+"use client";
+
 import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { useAuth } from "../../hooks/useAuth";
+
 const Navbar = () => {
+  const { isAdmin, isLoading } = useAuth();
+
   return (
     <div className="px-10 h-18 flex items-center">
       {/* Logo */}
       <Link href="/" className="flex items-end">
-        <span className="font-bold text-4xl bg-gradient-to-r bg-clip-text from-orange-600 to-orange-400 text-transparent">
+        <span className="font-bold text-4xl bg-linear-to-r bg-clip-text from-orange-600 to-orange-400 text-transparent">
           DG
         </span>
         <span className="text-2xl font-medium">tech</span>
@@ -30,15 +36,19 @@ const Navbar = () => {
           >
             Shop
           </Link>
-          <Link
-            href="/admin"
-            className="text-md border-b-3 border-transparent hover:border-orange-500 cursor-pointer duration-300 transform ease-in-out"
-          >
-            Admin
-          </Link>
+
+          {/* Chỉ hiển thị Admin link cho user có role = 'admin' */}
+          {!isLoading && isAdmin && (
+            <Link
+              href="/admin"
+              className="text-md border-b-3 border-transparent hover:border-orange-500 cursor-pointer duration-300 transform ease-in-out"
+            >
+              Admin
+            </Link>
+          )}
         </ul>
         {/* Search */}
-        <div className="flex items-center hidden lg:block w-80">
+        <div className="items-center hidden lg:block w-80">
           <Input placeholder="Search products" />
         </div>
         {/* Cart */}
