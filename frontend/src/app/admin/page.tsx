@@ -1,11 +1,14 @@
-import React from 'react'
+"use client";
+
+import { AdminLayout } from "../../components/admin/AdminLayout";
+import { DashboardContent } from "../../components/admin/DashboardContent";
 
 const AdminPage = () => {
   return (
-    <div>
-      AdminPage
-    </div>
-  )
-}
+    <AdminLayout>
+      <DashboardContent />
+    </AdminLayout>
+  );
+};
 
-export default AdminPage
+export default AdminPage;

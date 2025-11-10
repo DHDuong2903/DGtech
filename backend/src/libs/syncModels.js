@@ -7,7 +7,9 @@ import { Review } from "../models/reviewModel.js";
 
 export const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: true });
+    // Tạm thời dùng false để nhanh hơn khi dev
+    // Chỉ dùng alter: true khi có thay đổi schema
+    await sequelize.sync({ alter: false });
     console.log("Models da duoc dong bo voi database");
   } catch (error) {
     console.error("Loi khi dong bo syncModels:", error);

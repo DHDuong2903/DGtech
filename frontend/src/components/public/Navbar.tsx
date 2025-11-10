@@ -11,7 +11,7 @@ const Navbar = () => {
   const { isAdmin, isLoading } = useAuth();
 
   return (
-    <div className="px-10 h-18 flex items-center">
+    <div className="px-10 h-18 flex items-center border-b border-gray-200">
       {/* Logo */}
       <Link href="/" className="flex items-end">
         <span className="font-bold text-4xl bg-linear-to-r bg-clip-text from-orange-600 to-orange-400 text-transparent">

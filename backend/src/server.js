@@ -12,7 +12,8 @@ import reviewRoute from "./routes/reviewRoute.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT;
-app.use(express.json());
+
+// CORS must be before other middlewares
 app.use(
   cors({
     origin: "http://localhost:3000",
@@ -20,11 +21,12 @@ app.use(
   })
 );
 
-app.use("/api/users", userRoute);
-app.use("/api/webhooks", webhookRoute);
-app.use("/api/categories", categoryRoute);
-app.use("/api/products", productRoute);
-app.use("/api/reviews", reviewRoute);
+// Apply express.json() only to routes that don't handle file uploads
+app.use("/api/users", express.json(), userRoute);
+app.use("/api/webhooks", webhookRoute); // webhook needs raw body
+app.use("/api/categories", express.json(), categoryRoute);
+app.use("/api/products", productRoute); // NO express.json() - handles multipart/form-data
+app.use("/api/reviews", express.json(), reviewRoute);
 
 const startServer = async () => {
   await connectDB();

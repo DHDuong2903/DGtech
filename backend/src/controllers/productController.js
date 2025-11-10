@@ -1,4 +1,5 @@
 import { Category, Product } from "../models/associationsModel.js";
+import { Op } from "sequelize";
 
 export const createProduct = async (req, res) => {
   try {
@@ -21,22 +22,35 @@ export const createProduct = async (req, res) => {
       return res.status(409).json({ error: "San pham da ton tai" });
     }
 
-    // upload image neu co file
+    // upload image neu co file - cloudinary tra ve url trong file.path
     const imageUrl = req.file ? req.file.path : null;
 
     // Tao san pham moi
     const newProduct = await Product.create({
       name,
-      description,
-      price,
+      description: description || "",
+      price: parseFloat(price),
       imageUrl,
-      stock,
-      categoryId,
+      stock: parseInt(stock) || 0,
+      categoryId: parseInt(categoryId),
     });
-    return res.status(201).json({ message: "Them san pham moi thanh cong", newProduct });
+
+    // Fetch product with category info
+    const productWithCategory = await Product.findByPk(newProduct.productId, {
+      include: {
+        model: Category,
+        as: "category",
+        attributes: ["categoryId", "name"],
+      },
+    });
+
+    return res.status(201).json({
+      message: "Them san pham moi thanh cong",
+      newProduct: productWithCategory,
+    });
   } catch (error) {
-    console.log("Loi khi goi createProduct", error);
-    return res.status(500).json({ error: "Loi he thong" });
+    console.error("Loi khi goi createProduct:", error);
+    return res.status(500).json({ error: "Loi he thong", details: error.message });
   }
 };
 
@@ -51,23 +65,35 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ error: "San pham khong ton tai" });
     }
 
-    // Neu co anh moi
+    // Neu co anh moi thi dung anh moi, khong thi giu anh cu
     const imageUrl = req.file ? req.file.path : product.imageUrl;
 
     // Cap nhat thong tin san pham
     await product.update({
       name: name || product.name,
-      description: description || product.description,
-      price: price || product.price,
+      description: description !== undefined ? description : product.description,
+      price: price ? parseFloat(price) : product.price,
       imageUrl,
-      stock: stock || product.stock,
-      categoryId: categoryId || product.categoryId,
+      stock: stock !== undefined ? parseInt(stock) : product.stock,
+      categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
     });
 
-    return res.status(200).json({ message: "Cap nhat san pham thanh cong", product });
+    // Fetch product with category info
+    const productWithCategory = await Product.findByPk(product.productId, {
+      include: {
+        model: Category,
+        as: "category",
+        attributes: ["categoryId", "name"],
+      },
+    });
+
+    return res.status(200).json({
+      message: "Cap nhat san pham thanh cong",
+      product: productWithCategory,
+    });
   } catch (error) {
-    console.log("Loi khi goi updateProduct", error);
-    return res.status(500).json({ error: "Loi he thong" });
+    console.error("Loi khi goi updateProduct:", error);
+    return res.status(500).json({ error: "Loi he thong", details: error.message });
   }
 };
 
