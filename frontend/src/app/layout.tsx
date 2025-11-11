@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import Navbar from "../components/public/Navbar";
-import Footer from "../components/public/Footer";
-import { AuthProvider } from "../components/providers/AuthProvider";
+import { ConditionalFooter } from "../components/ConditionalFooter";
+import { AuthProvider } from "../providers/AuthProvider";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -33,7 +33,7 @@ export default function RootLayout({
           <AuthProvider>
             <Navbar />
             <main className="flex-1">{children}</main>
-            <Footer />
+            <ConditionalFooter />
           </AuthProvider>
         </body>
       </html>
