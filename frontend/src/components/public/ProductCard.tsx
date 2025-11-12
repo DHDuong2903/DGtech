@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Product } from "../../types";
 import { formatCurrency } from "../../utils";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,17 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push(`/shop/${product.productId}`);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group cursor-pointer">
+    <div
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group cursor-pointer"
+      onClick={handleClick}
+    >
       {/* Image */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
         {product.imageUrl ? (
