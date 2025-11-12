@@ -7,6 +7,8 @@ export interface Product {
   stock: number;
   imageUrl?: string;
   categoryId: number;
+  isFeatured: boolean;
+  isOnSale: boolean;
   category?: {
     categoryId: number;
     name: string;
@@ -21,9 +23,11 @@ export interface ProductFormData {
   price: number;
   stock: number;
   categoryId: number;
+  isFeatured: boolean;
+  isOnSale: boolean;
   image?: File;
 }
 
-export type ProductCreateData = Omit<Product, 'productId' | 'createdAt' | 'updatedAt' | 'category'>;
+export type ProductCreateData = Omit<Product, "productId" | "createdAt" | "updatedAt" | "category">;
 
 export type ProductUpdateData = Partial<ProductCreateData>;

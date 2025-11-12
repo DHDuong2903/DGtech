@@ -3,7 +3,7 @@ import { Op } from "sequelize";
 
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, categoryId } = req.body;
+    const { name, description, price, stock, categoryId, isFeatured, isOnSale } = req.body;
 
     if (!name || !price || !categoryId) {
       return res.status(400).json({ error: "Thieu thong tin bat buoc" });
@@ -33,6 +33,8 @@ export const createProduct = async (req, res) => {
       imageUrl,
       stock: parseInt(stock) || 0,
       categoryId: parseInt(categoryId),
+      isFeatured: isFeatured === "true" || isFeatured === true,
+      isOnSale: isOnSale === "true" || isOnSale === true,
     });
 
     // Fetch product with category info
@@ -57,7 +59,7 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { name, description, price, stock, categoryId } = req.body;
+    const { name, description, price, stock, categoryId, isFeatured, isOnSale } = req.body;
 
     // Kiem tra san pham co ton tai khong
     const product = await Product.findByPk(productId);
@@ -76,6 +78,8 @@ export const updateProduct = async (req, res) => {
       imageUrl,
       stock: stock !== undefined ? parseInt(stock) : product.stock,
       categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
+      isFeatured: isFeatured !== undefined ? isFeatured === "true" || isFeatured === true : product.isFeatured,
+      isOnSale: isOnSale !== undefined ? isOnSale === "true" || isOnSale === true : product.isOnSale,
     });
 
     // Fetch product with category info
@@ -206,5 +210,125 @@ export const getAllProducts = async (req, res) => {
   } catch (error) {
     console.log("Loi khi goi getAllProducts", error);
     return res.status(500).json({ error: "Loi he thong" });
+  }
+};
+
+export const toggleProductFeatured = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { isFeatured } = req.body;
+
+    // Tim san pham theo ID
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({ error: "San pham khong ton tai" });
+    }
+
+    // Cap nhat trang thai
+    await product.update({ isFeatured: isFeatured === "true" || isFeatured === true });
+
+    // Fetch product with category info
+    const productWithCategory = await Product.findByPk(product.productId, {
+      include: {
+        model: Category,
+        as: "category",
+        attributes: ["categoryId", "name"],
+      },
+    });
+
+    return res.status(200).json({
+      message: "Cap nhat trang thai noi bat thanh cong",
+      product: productWithCategory,
+    });
+  } catch (error) {
+    console.error("Loi khi goi toggleProductFeatured:", error);
+    return res.status(500).json({ error: "Loi he thong", details: error.message });
+  }
+};
+
+export const toggleProductOnSale = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { isOnSale } = req.body;
+
+    // Tim san pham theo ID
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({ error: "San pham khong ton tai" });
+    }
+
+    // Cap nhat trang thai
+    await product.update({ isOnSale: isOnSale === "true" || isOnSale === true });
+
+    // Fetch product with category info
+    const productWithCategory = await Product.findByPk(product.productId, {
+      include: {
+        model: Category,
+        as: "category",
+        attributes: ["categoryId", "name"],
+      },
+    });
+
+    return res.status(200).json({
+      message: "Cap nhat trang thai giam gia thanh cong",
+      product: productWithCategory,
+    });
+  } catch (error) {
+    console.error("Loi khi goi toggleProductOnSale:", error);
+    return res.status(500).json({ error: "Loi he thong", details: error.message });
+  }
+};
+
+export const getFeaturedProducts = async (req, res) => {
+  try {
+    const { limit = 8 } = req.query;
+
+    const products = await Product.findAll({
+      where: { isFeatured: true },
+      include: [
+        {
+          model: Category,
+          as: "category",
+          attributes: ["categoryId", "name"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit: parseInt(limit),
+    });
+
+    return res.status(200).json({
+      message: "Lay danh sach san pham noi bat thanh cong",
+      products,
+    });
+  } catch (error) {
+    console.error("Loi khi goi getFeaturedProducts:", error);
+    return res.status(500).json({ error: "Loi he thong", details: error.message });
+  }
+};
+
+export const getOnSaleProducts = async (req, res) => {
+  try {
+    const { limit = 8 } = req.query;
+
+    const products = await Product.findAll({
+      where: { isOnSale: true },
+      include: [
+        {
+          model: Category,
+          as: "category",
+          attributes: ["categoryId", "name"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit: parseInt(limit),
+    });
+
+    return res.status(200).json({
+      message: "Lay danh sach san pham dang giam gia thanh cong",
+      products,
+    });
+  } catch (error) {
+    console.error("Loi khi goi getOnSaleProducts:", error);
+    return res.status(500).json({ error: "Loi he thong", details: error.message });
   }
 };

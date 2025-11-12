@@ -14,9 +14,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const ProductsPage = () => {
-  const { products, loading, error, createProduct, updateProduct, deleteProduct } = useProductStore();
+  const {
+    products,
+    loading,
+    error,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    toggleFeatured,
+    toggleOnSale,
+    setError,
+  } = useProductStore();
   const { categories } = useCategoryStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,6 +82,30 @@ const ProductsPage = () => {
   const openDeleteModal = (product: Product) => {
     setSelectedProduct(product);
     setIsDeleteModalOpen(true);
+  };
+
+  // Handle toggle featured
+  const handleToggleFeatured = async (product: Product, isFeatured: boolean) => {
+    try {
+      await toggleFeatured(product.productId, isFeatured);
+      setError(null);
+    } catch (err) {
+      console.error("Error toggling featured:", err);
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Failed to toggle featured status");
+    }
+  };
+
+  // Handle toggle on sale
+  const handleToggleOnSale = async (product: Product, isOnSale: boolean) => {
+    try {
+      await toggleOnSale(product.productId, isOnSale);
+      setError(null);
+    } catch (err) {
+      console.error("Error toggling on sale:", err);
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Failed to toggle on sale status");
+    }
   };
 
   // Calculate total value
@@ -166,6 +202,8 @@ const ProductsPage = () => {
                       <TableHead>Danh mục</TableHead>
                       <TableHead>Giá</TableHead>
                       <TableHead>Tồn kho</TableHead>
+                      <TableHead>Nổi bật</TableHead>
+                      <TableHead>Giảm giá</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead className="text-right">Hành động</TableHead>
                     </TableRow>
@@ -192,6 +230,26 @@ const ProductsPage = () => {
                           <span className={product.stock < 10 ? "text-orange-600 font-medium" : ""}>
                             {product.stock}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={product.isFeatured || false}
+                              onCheckedChange={(checked) => handleToggleFeatured(product, checked)}
+                            />
+                            <Label className="text-sm text-muted-foreground">
+                              {product.isFeatured ? "Có" : "Không"}
+                            </Label>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={product.isOnSale || false}
+                              onCheckedChange={(checked) => handleToggleOnSale(product, checked)}
+                            />
+                            <Label className="text-sm text-muted-foreground">{product.isOnSale ? "Có" : "Không"}</Label>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {product.stock === 0 ? (

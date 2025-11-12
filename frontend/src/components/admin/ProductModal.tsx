@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Product, Category } from "../../types";
 import { isValidImage } from "../../utils";
 
@@ -36,6 +37,8 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: product.price.toString(),
         stock: product.stock.toString(),
         categoryId: product.categoryId.toString(),
+        isFeatured: product.isFeatured || false,
+        isOnSale: product.isOnSale || false,
       };
     }
     return {
@@ -44,6 +47,8 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
       price: "",
       stock: "",
       categoryId: "",
+      isFeatured: false,
+      isOnSale: false,
     };
   };
 
@@ -91,6 +96,8 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
     data.append("price", formData.price);
     data.append("stock", formData.stock);
     data.append("categoryId", formData.categoryId);
+    data.append("isFeatured", formData.isFeatured.toString());
+    data.append("isOnSale", formData.isOnSale.toString());
 
     if (imageFile) {
       data.append("image", imageFile);
@@ -107,6 +114,8 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: "",
         stock: "",
         categoryId: "",
+        isFeatured: false,
+        isOnSale: false,
       });
       setImageFile(null);
       setImagePreview("");
@@ -123,6 +132,8 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: "",
         stock: "",
         categoryId: "",
+        isFeatured: false,
+        isOnSale: false,
       });
       setImageFile(null);
       setImagePreview("");
@@ -235,6 +246,31 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                   <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-md border" />
                 </div>
               )}
+            </div>
+
+            {/* Featured and On Sale Switches */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between space-x-2 border rounded-lg p-3">
+                <Label htmlFor="isFeatured" className="cursor-pointer">
+                  Sản phẩm nổi bật
+                </Label>
+                <Switch
+                  id="isFeatured"
+                  checked={formData.isFeatured}
+                  onCheckedChange={(checked: boolean) => setFormData({ ...formData, isFeatured: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between space-x-2 border rounded-lg p-3">
+                <Label htmlFor="isOnSale" className="cursor-pointer">
+                  Đang giảm giá
+                </Label>
+                <Switch
+                  id="isOnSale"
+                  checked={formData.isOnSale}
+                  onCheckedChange={(checked: boolean) => setFormData({ ...formData, isOnSale: checked })}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -1,7 +1,7 @@
 // Products API Service
-import axiosInstance from '../lib/axios';
-import type { Product, PaginatedResponse, ApiResponse } from '../types';
-import { API_ENDPOINTS } from '../constants';
+import axiosInstance from "../lib/axios";
+import type { Product, PaginatedResponse, ApiResponse } from "../types";
+import { API_ENDPOINTS } from "../constants";
 
 export const productsApi = {
   /**
@@ -17,16 +17,13 @@ export const productsApi = {
     minStock?: number;
     maxStock?: number;
     sortBy?: string;
-    order?: 'ASC' | 'DESC';
+    order?: "ASC" | "DESC";
   }): Promise<PaginatedResponse<Product>> => {
     try {
-      const { data } = await axiosInstance.get<PaginatedResponse<Product>>(
-        API_ENDPOINTS.PRODUCTS,
-        { params }
-      );
+      const { data } = await axiosInstance.get<PaginatedResponse<Product>>(API_ENDPOINTS.PRODUCTS, { params });
       return data;
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error("Error fetching products:", error);
       throw error;
     }
   },
@@ -49,13 +46,10 @@ export const productsApi = {
    */
   create: async (productData: FormData): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.post<ApiResponse<Product>>(
-        API_ENDPOINTS.PRODUCTS,
-        productData
-      );
+      const { data } = await axiosInstance.post<ApiResponse<Product>>(API_ENDPOINTS.PRODUCTS, productData);
       return data.newProduct!;
     } catch (error) {
-      console.error('Error creating product:', error);
+      console.error("Error creating product:", error);
       throw error;
     }
   },
@@ -65,10 +59,7 @@ export const productsApi = {
    */
   update: async (id: string, productData: FormData): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.put<ApiResponse<Product>>(
-        API_ENDPOINTS.PRODUCT_BY_ID(id),
-        productData
-      );
+      const { data } = await axiosInstance.put<ApiResponse<Product>>(API_ENDPOINTS.PRODUCT_BY_ID(id), productData);
       return data.product!;
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
@@ -84,6 +75,68 @@ export const productsApi = {
       await axiosInstance.delete(API_ENDPOINTS.PRODUCT_BY_ID(id));
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Toggle product featured status
+   */
+  toggleFeatured: async (id: string, isFeatured: boolean): Promise<Product> => {
+    try {
+      const { data } = await axiosInstance.patch<ApiResponse<Product>>(API_ENDPOINTS.PRODUCT_TOGGLE_FEATURED(id), {
+        isFeatured,
+      });
+      return data.product!;
+    } catch (error) {
+      console.error(`Error toggling featured for product ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Toggle product on sale status
+   */
+  toggleOnSale: async (id: string, isOnSale: boolean): Promise<Product> => {
+    try {
+      const { data } = await axiosInstance.patch<ApiResponse<Product>>(API_ENDPOINTS.PRODUCT_TOGGLE_ON_SALE(id), {
+        isOnSale,
+      });
+      return data.product!;
+    } catch (error) {
+      console.error(`Error toggling on sale for product ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get featured products
+   */
+  getFeatured: async (limit: number = 8): Promise<Product[]> => {
+    try {
+      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(
+        API_ENDPOINTS.PRODUCTS_FEATURED,
+        { params: { limit } }
+      );
+      return data.products || [];
+    } catch (error) {
+      console.error("Error fetching featured products:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get on sale products
+   */
+  getOnSale: async (limit: number = 8): Promise<Product[]> => {
+    try {
+      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(
+        API_ENDPOINTS.PRODUCTS_ON_SALE,
+        { params: { limit } }
+      );
+      return data.products || [];
+    } catch (error) {
+      console.error("Error fetching on sale products:", error);
       throw error;
     }
   },

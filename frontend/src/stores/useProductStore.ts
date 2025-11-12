@@ -16,6 +16,8 @@ interface ProductState {
   createProduct: (formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   updateProduct: (id: string, formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
+  toggleFeatured: (id: string, isFeatured: boolean) => Promise<{ success: boolean; data?: Product; error?: string }>;
+  toggleOnSale: (id: string, isOnSale: boolean) => Promise<{ success: boolean; data?: Product; error?: string }>;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -99,6 +101,46 @@ export const useProductStore = create<ProductState>()(
           const errorMessage = error.message || "Failed to delete product";
           set({ error: errorMessage });
           toast.error("Không thể xóa sản phẩm. Vui lòng thử lại");
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      // Toggle featured status
+      toggleFeatured: async (id: string, isFeatured: boolean) => {
+        try {
+          const updatedProduct = await productsApi.toggleFeatured(id, isFeatured);
+          set((state) => ({
+            products: state.products.map((prod) => (prod.productId === id ? { ...prod, isFeatured } : prod)),
+            error: null,
+          }));
+          toast.success(isFeatured ? "Đã đánh dấu là sản phẩm nổi bật" : "Đã bỏ đánh dấu sản phẩm nổi bật");
+          return { success: true, data: updatedProduct };
+        } catch (err) {
+          console.error("Error toggling featured:", err);
+          const error = err as ApiError;
+          const errorMessage = error.message || "Failed to toggle featured status";
+          set({ error: errorMessage });
+          toast.error("Không thể cập nhật trạng thái nổi bật. Vui lòng thử lại");
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      // Toggle on sale status
+      toggleOnSale: async (id: string, isOnSale: boolean) => {
+        try {
+          const updatedProduct = await productsApi.toggleOnSale(id, isOnSale);
+          set((state) => ({
+            products: state.products.map((prod) => (prod.productId === id ? { ...prod, isOnSale } : prod)),
+            error: null,
+          }));
+          toast.success(isOnSale ? "Đã đánh dấu là đang giảm giá" : "Đã bỏ đánh dấu giảm giá");
+          return { success: true, data: updatedProduct };
+        } catch (err) {
+          console.error("Error toggling on sale:", err);
+          const error = err as ApiError;
+          const errorMessage = error.message || "Failed to toggle on sale status";
+          set({ error: errorMessage });
+          toast.error("Không thể cập nhật trạng thái giảm giá. Vui lòng thử lại");
           return { success: false, error: errorMessage };
         }
       },
