@@ -34,20 +34,20 @@ export const DeleteConfirmModal = ({
         <DialogHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            <DialogTitle>Delete {capitalizedType}</DialogTitle>
+            <DialogTitle>Xóa {capitalizedType}</DialogTitle>
           </div>
           <DialogDescription className="pt-2">
-            Are you sure you want to delete{" "}
+            Bạn có chắc là muốn xóa{" "}
             <span className="font-semibold text-foreground">{itemName}</span>?
-            This action cannot be undone.
+            Hành động này không thể hoàn tác.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            Hủy
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm}>
-            Delete
+            Xóa
           </Button>
         </DialogFooter>
       </DialogContent>

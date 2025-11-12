@@ -28,15 +28,14 @@ const Navbar = () => {
             href="/"
             className="text-md border-b-3 border-transparent hover:border-orange-500 cursor-pointer duration-300 transform ease-in-out"
           >
-            Home
+            Trang chủ
           </Link>
           <Link
             href="/shop"
             className="text-md border-b-3 border-transparent hover:border-orange-500 cursor-pointer duration-300 transform ease-in-out"
           >
-            Shop
+            Sản phẩm
           </Link>
-          
 
           {/* Chỉ hiển thị Admin link cho user có role = 'admin' */}
           {!isLoading && isAdmin && (
@@ -63,12 +62,12 @@ const Navbar = () => {
               0
             </span>
           </div>
-          <span className="text-md">Cart</span>
+          <span className="text-md">Giỏ hàng</span>
         </Link>
         {/* Login */}
         <SignedOut>
           <SignInButton mode="modal">
-            <Button className="cursor-pointer">Login</Button>
+            <Button className="cursor-pointer">Đăng nhập</Button>
           </SignInButton>
         </SignedOut>
         <SignedIn>

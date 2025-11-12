@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser, useAuth as useClerkAuth } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { useUserStore } from "../stores/useUserStore";
 import axiosInstance from "../lib/axios";
 
 export const useAuth = () => {
   const { user: clerkUser, isLoaded, isSignedIn } = useUser();
-  const { getToken } = useClerkAuth();
   const { user, setUser, setLoading, setError, clearUser, isAdmin } = useUserStore();
   const [mounted, setMounted] = useState(false);
 
@@ -32,20 +31,9 @@ export const useAuth = () => {
 
       try {
         setLoading(true);
-        
-        // Lấy token từ Clerk
-        const token = await getToken();
-        
-        if (!token) {
-          throw new Error("No token available");
-        }
-        
-        // Gọi API getMe với Bearer token
-        const response = await axiosInstance.get("/users/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+
+        // Gọi API getMe - Token tự động được inject bởi AxiosInterceptorSetup
+        const response = await axiosInstance.get("/users/me");
 
         if (response.data.user) {
           setUser(response.data.user);
@@ -60,7 +48,7 @@ export const useAuth = () => {
     };
 
     fetchUser();
-  }, [isLoaded, isSignedIn, clerkUser, user, setUser, setLoading, setError, clearUser, getToken]);
+  }, [isLoaded, isSignedIn, clerkUser, user, setUser, setLoading, setError, clearUser]);
 
   return {
     user,

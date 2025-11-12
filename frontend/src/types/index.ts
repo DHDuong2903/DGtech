@@ -1,23 +1,36 @@
-// Types cho User
-export interface User {
-  clerkId: string;
-  username: string;
-  email: string;
-  phone?: string;
-  role: "user" | "admin";
-  createdAt?: string;
-  updatedAt?: string;
-}
+// Export all types
+export * from './categoryType';
+export * from './productType';
+export * from './userType';
+export * from './reviewType';
 
-// Types cho API Response
+// API Response Types
 export interface ApiResponse<T> {
   message: string;
   user?: T;
   data?: T;
+  categories?: T;
+  category?: T;
+  newCategory?: T;
+  products?: T;
+  product?: T;
+  newProduct?: T;
+  reviews?: T;
+  review?: T;
 }
 
-// Types cho Error Response
+// Paginated Response
+export interface PaginatedResponse<T> {
+  message: string;
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  data: T[];
+}
+
+// Error Response
 export interface ApiError {
   message: string;
   error?: string;
+  details?: string;
 }

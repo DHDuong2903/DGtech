@@ -71,3 +71,56 @@ export const getAllCategories = async (req, res) => {
     return res.status(500).json({ message: "Loi he thong" });
   }
 };
+
+export const toggleCategoryHomepage = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { isActive } = req.body;
+
+    // Tim category theo ID
+    const category = await Category.findByPk(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category khong ton tai" });
+    }
+
+    // Neu dang bat active, kiem tra so luong category active
+    if (isActive) {
+      const activeCount = await Category.count({
+        where: { isActiveOnHomepage: true },
+      });
+
+      if (activeCount >= 4) {
+        return res.status(400).json({ 
+          message: "Chi duoc active toi da 4 categories tren homepage" 
+        });
+      }
+    }
+
+    // Cap nhat trang thai
+    await category.update({ isActiveOnHomepage: isActive });
+    return res.status(200).json({ 
+      message: "Cap nhat trang thai thanh cong", 
+      category 
+    });
+  } catch (error) {
+    console.log("Loi khi goi toggleCategoryHomepage", error);
+    return res.status(500).json({ message: "Loi he thong" });
+  }
+};
+
+export const getActiveCategories = async (req, res) => {
+  try {
+    const categories = await Category.findAll({
+      where: { isActiveOnHomepage: true },
+      limit: 4,
+    });
+
+    return res.status(200).json({ 
+      message: "Lay danh sach categories active thanh cong", 
+      categories 
+    });
+  } catch (error) {
+    console.log("Loi khi goi getActiveCategories", error);
+    return res.status(500).json({ message: "Loi he thong" });
+  }
+};

@@ -3,119 +3,64 @@
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { CategoryModal } from "../../../components/admin/CategoryModal";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Pencil, Trash2, Tag } from "lucide-react";
-import { useAxios } from "../../../hooks/useAxios";
+import { useCategoryStore } from "../../../stores";
+import { Category } from "../../../types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface Category {
-  categoryId: number;
-  name: string;
-  description: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const CategoriesPage = () => {
-  const api = useAxios();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { categories, loading, error, createCategory, updateCategory, deleteCategory, toggleHomepage, setError } =
+    useCategoryStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch categories
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await api.get("/categories");
-
-      if (response.data.categories) {
-        setCategories(response.data.categories);
-      }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      const error = err as { response?: { status?: number; data?: { message?: string } } };
-      if (error.response?.status === 404) {
-        setCategories([]);
-      } else {
-        setError(error.response?.data?.message || "Failed to fetch categories");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Handle create category
   const handleCreateCategory = async (categoryData: Omit<Category, "categoryId" | "createdAt" | "updatedAt">) => {
-    try {
-      const response = await api.post("/categories", categoryData);
-
-      if (response.data.newCategory) {
-        setCategories([...categories, response.data.newCategory]);
-        setError(null);
-        return true; // Success
-      }
-      return false;
-    } catch (err) {
-      console.error("Error creating category:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to create category");
-      return false;
-    }
+    const result = await createCategory(categoryData);
+    return result.success;
   };
 
   // Handle update category
   const handleUpdateCategory = async (categoryData: Omit<Category, "categoryId" | "createdAt" | "updatedAt">) => {
     if (!selectedCategory) return false;
 
-    try {
-      const response = await api.put(`/categories/${selectedCategory.categoryId}`, categoryData);
-
-      if (response.data.category) {
-        setCategories(
-          categories.map((cat) => (cat.categoryId === selectedCategory.categoryId ? response.data.category : cat))
-        );
-        setSelectedCategory(null);
-        setError(null);
-        return true; // Success
-      }
-      return false;
-    } catch (err) {
-      console.error("Error updating category:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to update category");
-      return false;
+    const result = await updateCategory(selectedCategory.categoryId, categoryData);
+    if (result.success) {
+      setSelectedCategory(null);
     }
+    return result.success;
   };
 
   // Handle delete category
   const handleDeleteCategory = async () => {
     if (!selectedCategory) return;
 
-    try {
-      await api.delete(`/categories/${selectedCategory.categoryId}`);
-      setCategories(categories.filter((cat) => cat.categoryId !== selectedCategory.categoryId));
+    const result = await deleteCategory(selectedCategory.categoryId);
+    if (result.success) {
       setIsDeleteModalOpen(false);
       setSelectedCategory(null);
+    }
+  };
+
+  // Handle toggle homepage active
+  const handleToggleHomepage = async (category: Category, isActive: boolean) => {
+    try {
+      await toggleHomepage(category.categoryId, isActive);
       setError(null);
     } catch (err) {
-      console.error("Error deleting category:", err);
+      console.error("Error toggling homepage:", err);
       const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to delete category");
+      setError(error.response?.data?.message || "Failed to toggle homepage status");
     }
   };
 
@@ -146,12 +91,12 @@ const CategoriesPage = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Category Manager</h1>
-              <p className="text-muted-foreground mt-2">Manage your product categories</p>
+              <h1 className="text-3xl font-bold tracking-tight">Quản lý danh mục</h1>
+              <p className="text-muted-foreground mt-2">Quản lý danh mục sản phẩm</p>
             </div>
             <Button onClick={openCreateModal} size="default" className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
-              Add Category
+              Thêm danh mục
             </Button>
           </div>
         </div>
@@ -164,7 +109,7 @@ const CategoriesPage = () => {
                 <Tag className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Categories</p>
+                <p className="text-sm text-muted-foreground">Tổng số danh mục</p>
                 <h3 className="text-2xl font-bold">{categories.length}</h3>
               </div>
             </div>
@@ -187,11 +132,11 @@ const CategoriesPage = () => {
           ) : categories.length === 0 ? (
             <CardContent className="text-center py-12">
               <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No categories yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">Get started by creating your first category</p>
+              <h3 className="text-lg font-semibold mb-2">Chưa có danh mục nào cả</h3>
+              <p className="text-sm text-muted-foreground mb-4">Bắt đầu bằng cách tạo danh mục đầu tiên</p>
               <Button onClick={openCreateModal} className="cursor-pointer">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Category
+                Thêm danh mục
               </Button>
             </CardContent>
           ) : (
@@ -199,10 +144,11 @@ const CategoriesPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[100px]">ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-[150px]">Created At</TableHead>
-                  <TableHead className="text-right w-[120px]">Actions</TableHead>
+                  <TableHead>Tên</TableHead>
+                  <TableHead>Mô tả</TableHead>
+                  <TableHead className="w-[150px]">Nổi bật</TableHead>
+                  <TableHead className="w-[150px]">Thời gian tạo</TableHead>
+                  <TableHead className="text-right w-[120px]">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -216,6 +162,17 @@ const CategoriesPage = () => {
                       <span className="text-muted-foreground line-clamp-2">
                         {category.description || "No description"}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={category.isActiveOnHomepage || false}
+                          onCheckedChange={(checked) => handleToggleHomepage(category, checked)}
+                        />
+                        <Label className="text-sm text-muted-foreground">
+                          {category.isActiveOnHomepage ? "Active" : "Inactive"}
+                        </Label>
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {category.createdAt ? new Date(category.createdAt).toLocaleDateString() : "N/A"}

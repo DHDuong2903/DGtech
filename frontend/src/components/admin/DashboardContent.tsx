@@ -44,7 +44,7 @@ export const DashboardContent = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-2">
-          Welcome back! Here&apos;s an overview of your store.
+          Chào mừng bạn trở lại! Sau đây là tổng quan về cửa hàng của bạn.
         </p>
       </div>
 

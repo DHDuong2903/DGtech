@@ -15,27 +15,27 @@ const Footer = () => {
           <div>
             <h3 className="text-orange-600 text-xl font-bold mb-3">DGTech</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Your one-stop shop for the latest and greatest in tech products.
+              Điểm đến cho những sản phẩm công nghệ mới nhất và tốt nhất.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-gray-900 font-semibold mb-3">Quick Links</h3>
+            <h3 className="text-gray-900 font-semibold mb-3">Liên kết nhanh</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/" className="text-gray-600 hover:text-orange-600 transition-colors">
-                  Home
+                  Trang chủ
                 </Link>
               </li>
               <li>
                 <Link href="/shop" className="text-gray-600 hover:text-orange-600 transition-colors">
-                  Shop
+                  Sản phẩm
                 </Link>
               </li>
               <li>
                 <Link href="/about" className="text-gray-600 hover:text-orange-600 transition-colors">
-                  About Us
+                  Về chúng tôi
                 </Link>
               </li>
             </ul>
@@ -43,7 +43,7 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-gray-900 font-semibold mb-3">Contact</h3>
+            <h3 className="text-gray-900 font-semibold mb-3">Liên hệ</h3>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start">
                 <MapPin className="h-4 w-4 mr-2 mt-1 shrink-0 text-orange-600" />

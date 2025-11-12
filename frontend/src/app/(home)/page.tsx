@@ -1,4 +1,5 @@
-import { HeroSlideshow } from "../../components/public/HeroSlideshow";
+import { HeroSlideshow } from "../../components/public/Slideshow";
+import { FeaturedCategories } from "../../components/public/FeaturedCategories";
 
 export default function Home() {
   return (
@@ -6,38 +7,7 @@ export default function Home() {
       <HeroSlideshow />
       
       {/* Featured Categories Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
-          Danh Mục Sản Phẩm
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {/* Placeholder for categories - will connect to API later */}
-          <div className="group cursor-pointer">
-            <div className="bg-gray-100 rounded-lg p-8 text-center hover:bg-orange-50 transition-colors">
-              <div className="text-4xl mb-4">📱</div>
-              <h3 className="font-semibold text-gray-900">Điện Thoại</h3>
-            </div>
-          </div>
-          <div className="group cursor-pointer">
-            <div className="bg-gray-100 rounded-lg p-8 text-center hover:bg-orange-50 transition-colors">
-              <div className="text-4xl mb-4">💻</div>
-              <h3 className="font-semibold text-gray-900">Laptop</h3>
-            </div>
-          </div>
-          <div className="group cursor-pointer">
-            <div className="bg-gray-100 rounded-lg p-8 text-center hover:bg-orange-50 transition-colors">
-              <div className="text-4xl mb-4">⌚</div>
-              <h3 className="font-semibold text-gray-900">Đồng Hồ</h3>
-            </div>
-          </div>
-          <div className="group cursor-pointer">
-            <div className="bg-gray-100 rounded-lg p-8 text-center hover:bg-orange-50 transition-colors">
-              <div className="text-4xl mb-4">🎧</div>
-              <h3 className="font-semibold text-gray-900">Phụ Kiện</h3>
-            </div>
-          </div>
-        </div>
-      </section>
+      <FeaturedCategories />
 
       {/* Featured Products Section - Placeholder */}
       <section className="bg-gray-50 py-16">

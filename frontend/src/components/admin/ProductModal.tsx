@@ -14,23 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Category {
-  categoryId: number;
-  name: string;
-}
-
-interface Product {
-  productId: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  imageUrl?: string;
-  categoryId: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { Product, Category } from "../../types";
+import { isValidImage } from "../../utils";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -80,6 +65,13 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validation = isValidImage(file);
+      if (!validation.valid) {
+        alert(validation.error);
+        e.target.value = "";
+        return;
+      }
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -142,9 +134,9 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Add New Product" : "Edit Product"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? "Thêm sản phẩm mới" : "Chỉnh sửa sản phẩm"}</DialogTitle>
           <DialogDescription>
-            {mode === "create" ? "Create a new product for your store." : "Make changes to your product here."}
+            {mode === "create" ? "Thêm một sản phẩm mới cho cửa hàng." : "Thay đổi sản phẩm ở đây."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -152,7 +144,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             {/* Product Name */}
             <div className="grid gap-2">
               <Label htmlFor="name">
-                Product Name <span className="text-red-500">*</span>
+                Tên sản phẩm <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
@@ -160,18 +152,18 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter product name"
+                placeholder="Nhập tên"
               />
             </div>
 
             {/* Description */}
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Mô tả</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter product description"
+                placeholder="Nhập mô tả"
                 rows={3}
               />
             </div>
@@ -180,23 +172,23 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="price">
-                  Price (VND) <span className="text-red-500">*</span>
+                  Giá (VND) <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="price"
                   type="number"
-                  step="1000"
+                  step="10000"
                   min="0"
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="100000"
+                  placeholder="1000000"
                 />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="stock">
-                  Stock <span className="text-red-500">*</span>
+                  Số lượng trong kho <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="stock"
@@ -213,7 +205,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             {/* Category */}
             <div className="grid gap-2">
               <Label htmlFor="category">
-                Category <span className="text-red-500">*</span>
+                Danh mục <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={formData.categoryId}
@@ -221,7 +213,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder="Chọn danh mục" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -235,7 +227,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
 
             {/* Image Upload */}
             <div className="grid gap-2">
-              <Label htmlFor="image">Product Image</Label>
+              <Label htmlFor="image">Ảnh sản phẩm</Label>
               <Input id="image" type="file" accept="image/*" onChange={handleImageChange} />
               {imagePreview && (
                 <div className="mt-2">
@@ -247,9 +239,9 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              Hủy
             </Button>
-            <Button type="submit">{mode === "create" ? "Create" : "Save Changes"}</Button>
+            <Button type="submit">{mode === "create" ? "Thêm" : "Lưu thay đổi"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

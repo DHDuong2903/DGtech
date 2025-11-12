@@ -61,9 +61,7 @@ export const HeroSlideshow = () => {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
 
-  const plugin = useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: true })
-  );
+  const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
 
   useEffect(() => {
     if (!api) return;
@@ -89,14 +87,8 @@ export const HeroSlideshow = () => {
             <CarouselItem key={slide.id}>
               <div className="relative w-full h-[500px] overflow-hidden">
                 {/* Background Image with Next.js Image */}
-                <Image
-                  src={slide.image}
-                  alt={slide.title}
-                  fill
-                  className="object-cover"
-                  priority={slide.id === 1}
-                />
-                
+                <Image src={slide.image} alt={slide.title} fill className="object-cover" priority={slide.id === 1} />
+
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-black/40 z-10" />
 
@@ -111,12 +103,7 @@ export const HeroSlideshow = () => {
                     </p>
                     {slide.cta && (
                       <a href={slide.cta.link}>
-                        <Button
-                          size="lg"
-                          className="bg-orange-600 hover:bg-orange-700 text-white animate-fade-in-up animation-delay-400"
-                        >
-                          {slide.cta.text}
-                        </Button>
+                        <Button size="lg">{slide.cta.text}</Button>
                       </a>
                     )}
                   </div>
@@ -136,9 +123,7 @@ export const HeroSlideshow = () => {
             key={index}
             onClick={() => api?.scrollTo(index)}
             className={`h-2 rounded-full transition-all duration-300 ${
-              index === current
-                ? "w-8 bg-orange-600"
-                : "w-2 bg-white/60 hover:bg-white"
+              index === current ? "w-8 bg-orange-600" : "w-2 bg-white/60 hover:bg-white"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />

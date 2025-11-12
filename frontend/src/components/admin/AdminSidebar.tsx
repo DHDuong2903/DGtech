@@ -22,13 +22,13 @@ const menuItems: MenuItem[] = [
   },
   {
     id: "categories",
-    label: "Category Manager",
+    label: "Quản lý danh mục",
     icon: <Tag size={20} />,
     href: "/admin/categories",
   },
   {
     id: "products",
-    label: "Product Manager",
+    label: "Quản lý sản phẩm",
     icon: <Package size={20} />,
     href: "/admin/products",
   },

@@ -5,6 +5,10 @@ import { ClerkProvider } from "@clerk/nextjs";
 import Navbar from "../components/public/Navbar";
 import { ConditionalFooter } from "../components/ConditionalFooter";
 import { AuthProvider } from "../providers/AuthProvider";
+import { StoreInitializer } from "../providers/StoreInitializer";
+import { AxiosInterceptorSetup } from "../providers/AxiosInterceptorSetup";
+import { Toaster } from "@/components/ui/sonner";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -31,9 +35,14 @@ export default function RootLayout({
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
           <AuthProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <ConditionalFooter />
+            <AxiosInterceptorSetup>
+              <StoreInitializer>
+                <Navbar />
+                <main className="flex-1">{children}</main>
+                <ConditionalFooter />
+                <Toaster />
+              </StoreInitializer>
+            </AxiosInterceptorSetup>
           </AuthProvider>
         </body>
       </html>

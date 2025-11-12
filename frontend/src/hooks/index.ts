@@ -1,2 +1,6 @@
+// Authentication hooks
 export { useAuth } from "./useAuth";
-export { useAxios } from "./useAxios";
+
+// Note: useCategories and useProducts have been migrated to Zustand stores
+// Use useCategoryStore and useProductStore from '../stores' instead
+// useAxios has been removed - use axiosInstance directly with AxiosInterceptorSetup for automatic token injection

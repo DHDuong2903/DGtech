@@ -4,166 +4,51 @@ import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { ProductModal } from "../../../components/admin/ProductModal";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
 import { ProductImage } from "../../../components/admin/ProductImage";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Pencil, Trash2, Package, DollarSign, Archive } from "lucide-react";
-import { useAxios } from "../../../hooks/useAxios";
+import { useProductStore, useCategoryStore } from "../../../stores";
+import { Product } from "../../../types";
+import { formatCurrency } from "../../../utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface Category {
-  categoryId: number;
-  name: string;
-}
-
-interface Product {
-  productId: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  imageUrl?: string;
-  categoryId: number;
-  category?: {
-    categoryId: number;
-    name: string;
-  };
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 const ProductsPage = () => {
-  const api = useAxios();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { products, loading, error, createProduct, updateProduct, deleteProduct } = useProductStore();
+  const { categories } = useCategoryStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch categories
-  const fetchCategories = async () => {
-    try {
-      const response = await api.get("/categories");
-      if (response.data.categories) {
-        setCategories(response.data.categories);
-      }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
-  };
-
-  // Fetch products
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await api.get("/products");
-
-      if (response.data.data) {
-        setProducts(response.data.data);
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      const error = err as {
-        response?: { status?: number; data?: { message?: string } };
-      };
-      if (error.response?.status === 404) {
-        setProducts([]);
-      } else {
-        setError(
-          error.response?.data?.message || "Failed to fetch products"
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Handle create product
   const handleCreateProduct = async (productData: FormData) => {
-    try {
-      const response = await api.post("/products", productData);
-
-      if (response.data.newProduct) {
-        setProducts([...products, response.data.newProduct]);
-        setError(null);
-        return true; // Success
-      }
-      return false;
-    } catch (err) {
-      console.error("Error creating product:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to create product");
-      return false;
-    }
+    const result = await createProduct(productData);
+    return result.success;
   };
 
   // Handle update product
   const handleUpdateProduct = async (productData: FormData) => {
     if (!selectedProduct) return false;
 
-    try {
-      const response = await api.put(
-        `/products/${selectedProduct.productId}`,
-        productData
-      );
-
-      if (response.data.product) {
-        setProducts(
-          products.map((prod) =>
-            prod.productId === selectedProduct.productId
-              ? response.data.product
-              : prod
-          )
-        );
-        setSelectedProduct(null);
-        setError(null);
-        return true; // Success
-      }
-      return false;
-    } catch (err) {
-      console.error("Error updating product:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to update product");
-      return false;
+    const result = await updateProduct(selectedProduct.productId, productData);
+    if (result.success) {
+      setSelectedProduct(null);
     }
+    return result.success;
   };
 
   // Handle delete product
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
 
-    try {
-      await api.delete(`/products/${selectedProduct.productId}`);
-      setProducts(
-        products.filter((prod) => prod.productId !== selectedProduct.productId)
-      );
+    const result = await deleteProduct(selectedProduct.productId);
+    if (result.success) {
       setIsDeleteModalOpen(false);
       setSelectedProduct(null);
-      setError(null);
-    } catch (err) {
-      console.error("Error deleting product:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to delete product");
     }
   };
 
@@ -187,19 +72,8 @@ const ProductsPage = () => {
     setIsDeleteModalOpen(true);
   };
 
-  // Format price
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
-
   // Calculate total value
-  const totalValue = products.reduce(
-    (sum, product) => sum + product.price * product.stock,
-    0
-  );
+  const totalValue = products.reduce((sum, product) => sum + product.price * product.stock, 0);
 
   // Calculate low stock items
   const lowStockCount = products.filter((p) => p.stock < 10).length;
@@ -210,14 +84,12 @@ const ProductsPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your product inventory
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">Các sản phẩm</h1>
+            <p className="text-muted-foreground mt-1">Quản lý kho sản phẩm của bạn</p>
           </div>
           <Button onClick={openCreateModal}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Product
+            Thêm sản phẩm
           </Button>
         </div>
 
@@ -227,9 +99,7 @@ const ProductsPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Products
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">Tổng số sản phẩm</p>
                   <h3 className="text-2xl font-bold mt-2">{products.length}</h3>
                 </div>
                 <Package className="h-8 w-8 text-blue-500" />
@@ -241,12 +111,8 @@ const ProductsPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Value
-                  </p>
-                  <h3 className="text-2xl font-bold mt-2 tracking-tight">
-                    {formatPrice(totalValue)}
-                  </h3>
+                  <p className="text-sm font-medium text-muted-foreground">Tổng giá trị</p>
+                  <h3 className="text-2xl font-bold mt-2 tracking-tight">{formatCurrency(totalValue)}</h3>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-500" />
               </div>
@@ -257,9 +123,7 @@ const ProductsPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Low Stock Items
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">Sản phẩm có số lượng thấp</p>
                   <h3 className="text-2xl font-bold mt-2">{lowStockCount}</h3>
                 </div>
                 <Archive className="h-8 w-8 text-orange-500" />
@@ -280,18 +144,16 @@ const ProductsPage = () => {
           <CardContent className="p-6">
             {loading ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">Loading products...</p>
+                <p className="text-muted-foreground">Tải sản phẩm...</p>
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">No products yet</h3>
-                <p className="text-muted-foreground mt-2">
-                  Get started by creating your first product.
-                </p>
+                <h3 className="mt-4 text-lg font-semibold">Chưa có sản phẩm nào</h3>
+                <p className="text-muted-foreground mt-2">Bắt đầu bằng cách tạo sản phẩm đầu tiên của bạn.</p>
                 <Button onClick={openCreateModal} className="mt-4">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Product
+                  Thêm sản phẩm
                 </Button>
               </div>
             ) : (
@@ -299,78 +161,55 @@ const ProductsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Hình ảnh</TableHead>
+                      <TableHead>Tên</TableHead>
+                      <TableHead>Danh mục</TableHead>
+                      <TableHead>Giá</TableHead>
+                      <TableHead>Tồn kho</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead className="text-right">Hành động</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {products.map((product) => (
                       <TableRow key={product.productId}>
                         <TableCell>
-                          <ProductImage
-                            imageUrl={product.imageUrl}
-                            alt={product.name}
-                          />
+                          <ProductImage imageUrl={product.imageUrl} alt={product.name} />
                         </TableCell>
                         <TableCell>
                           <div>
                             <p className="font-medium">{product.name}</p>
                             {product.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-1">
-                                {product.description}
-                              </p>
+                              <p className="text-sm text-muted-foreground line-clamp-1">{product.description}</p>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {product.category?.name || "N/A"}
-                          </Badge>
+                          <Badge variant="outline">{product.category?.name || "N/A"}</Badge>
                         </TableCell>
-                        <TableCell className="font-medium">
-                          {formatPrice(product.price)}
-                        </TableCell>
+                        <TableCell className="font-medium">{formatCurrency(product.price)}</TableCell>
                         <TableCell>
-                          <span
-                            className={
-                              product.stock < 10
-                                ? "text-orange-600 font-medium"
-                                : ""
-                            }
-                          >
+                          <span className={product.stock < 10 ? "text-orange-600 font-medium" : ""}>
                             {product.stock}
                           </span>
                         </TableCell>
                         <TableCell>
                           {product.stock === 0 ? (
-                            <Badge variant="destructive">Out of Stock</Badge>
+                            <Badge variant="destructive">Hết hàng</Badge>
                           ) : product.stock < 10 ? (
                             <Badge variant="outline" className="text-orange-600 border-orange-600">
-                              Low Stock
+                              Sắp hết hàng
                             </Badge>
                           ) : (
-                            <Badge className="bg-green-600">In Stock</Badge>
+                            <Badge className="bg-green-600">Còn hàng</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditModal(product)}
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => openEditModal(product)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openDeleteModal(product)}
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => openDeleteModal(product)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>

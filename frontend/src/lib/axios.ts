@@ -10,9 +10,9 @@ axiosInstance.interceptors.request.use(
   (config) => {
     // Nếu data là FormData thì không set Content-Type (để browser tự động set với boundary)
     if (!(config.data instanceof FormData)) {
-      config.headers['Content-Type'] = 'application/json';
+      config.headers["Content-Type"] = "application/json";
     }
-    // Token sẽ được thêm từ useAxios hook
+    // Token sẽ được thêm từ AxiosInterceptorSetup component
     return config;
   },
   (error) => {
@@ -27,8 +27,7 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Xử lý khi unauthorized
-      console.log("Unauthorized access");
+      console.error("Unauthorized access - Please login");
     }
     return Promise.reject(error);
   }
