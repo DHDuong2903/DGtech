@@ -3,6 +3,7 @@ export * from './categoryType';
 export * from './productType';
 export * from './userType';
 export * from './reviewType';
+export * from './cartType';
 
 // API Response Types
 export interface ApiResponse<T> {

@@ -2,6 +2,8 @@ import { Category } from "./categoryModel.js";
 import { Product } from "./productModel.js";
 import { User } from "./userModel.js";
 import { Review } from "./reviewModel.js";
+import { Cart } from "./cartModel.js";
+import { CartItem } from "./cartItemModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -15,4 +17,16 @@ Review.belongsTo(User, { foreignKey: "clerkId", as: "user" });
 Product.hasMany(Review, { foreignKey: "productId", as: "reviews" });
 Review.belongsTo(Product, { foreignKey: "productId", as: "product" });
 
-export { Category, Product, User, Review };
+// Quan he giua User va Cart
+User.hasOne(Cart, { foreignKey: "clerkId", as: "cart" });
+Cart.belongsTo(User, { foreignKey: "clerkId", as: "user" });
+
+// Quan he giua Cart va CartItem
+Cart.hasMany(CartItem, { foreignKey: "cartId", as: "items", onDelete: "CASCADE" });
+CartItem.belongsTo(Cart, { foreignKey: "cartId", as: "cart" });
+
+// Quan he giua Product va CartItem
+Product.hasMany(CartItem, { foreignKey: "productId", as: "cartItems" });
+CartItem.belongsTo(Product, { foreignKey: "productId", as: "product" });
+
+export { Category, Product, User, Review, Cart, CartItem };
