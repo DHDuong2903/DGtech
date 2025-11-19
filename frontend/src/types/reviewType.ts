@@ -7,6 +7,12 @@ export interface Review {
   comment: string;
   createdAt?: string;
   updatedAt?: string;
+  user?: {
+    clerkId: string;
+    username: string;
+    email: string;
+    imageUrl?: string;
+  };
 }
 
 export interface ReviewFormData {

@@ -19,11 +19,6 @@ export const Category = sequelize.define(
     description: {
       type: DataTypes.TEXT,
     },
-    isActiveOnHomepage: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-      allowNull: false,
-    },
   },
   {
     timestamps: true,

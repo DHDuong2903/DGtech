@@ -12,11 +12,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 const CategoriesPage = () => {
-  const { categories, loading, error, createCategory, updateCategory, deleteCategory, toggleHomepage, setError } =
+  const { categories, loading, error, createCategory, updateCategory, deleteCategory } =
     useCategoryStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,18 +47,6 @@ const CategoriesPage = () => {
     if (result.success) {
       setIsDeleteModalOpen(false);
       setSelectedCategory(null);
-    }
-  };
-
-  // Handle toggle homepage active
-  const handleToggleHomepage = async (category: Category, isActive: boolean) => {
-    try {
-      await toggleHomepage(category.categoryId, isActive);
-      setError(null);
-    } catch (err) {
-      console.error("Error toggling homepage:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to toggle homepage status");
     }
   };
 
@@ -146,7 +132,6 @@ const CategoriesPage = () => {
                   <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Tên</TableHead>
                   <TableHead>Mô tả</TableHead>
-                  <TableHead className="w-[150px]">Nổi bật</TableHead>
                   <TableHead className="w-[150px]">Thời gian tạo</TableHead>
                   <TableHead className="text-right w-[120px]">Hành động</TableHead>
                 </TableRow>
@@ -162,17 +147,6 @@ const CategoriesPage = () => {
                       <span className="text-muted-foreground line-clamp-2">
                         {category.description || "No description"}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={category.isActiveOnHomepage || false}
-                          onCheckedChange={(checked) => handleToggleHomepage(category, checked)}
-                        />
-                        <Label className="text-sm text-muted-foreground">
-                          {category.isActiveOnHomepage ? "Active" : "Inactive"}
-                        </Label>
-                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {category.createdAt ? new Date(category.createdAt).toLocaleDateString() : "N/A"}

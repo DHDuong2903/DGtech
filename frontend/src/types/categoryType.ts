@@ -3,7 +3,6 @@ export interface Category {
   categoryId: number;
   name: string;
   description: string;
-  isActiveOnHomepage?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

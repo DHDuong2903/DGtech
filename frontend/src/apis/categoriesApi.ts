@@ -18,21 +18,6 @@ export const categoriesApi = {
   },
 
   /**
-   * Get active categories for homepage
-   */
-  getActive: async (): Promise<Category[]> => {
-    try {
-      const response = await axiosInstance.get<{ message: string; categories: Category[] }>(
-        API_ENDPOINTS.CATEGORIES_ACTIVE
-      );
-      return response.data.categories || [];
-    } catch (error) {
-      console.error("Error fetching active categories:", error);
-      throw error;
-    }
-  },
-
-  /**
    * Get category by ID
    */
   getById: async (id: number): Promise<Category> => {
@@ -87,23 +72,6 @@ export const categoriesApi = {
       await axiosInstance.delete(API_ENDPOINTS.CATEGORY_BY_ID(id));
     } catch (error) {
       console.error(`Error deleting category ${id}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Toggle category on homepage
-   */
-  toggleHomepage: async (id: number, isActive: boolean): Promise<Category> => {
-    try {
-      const response = await axiosInstance.patch<{ message: string; category: Category }>(
-        API_ENDPOINTS.CATEGORY_TOGGLE_HOMEPAGE(id),
-        { isActive }
-      );
-      // Backend returns { message, category }
-      return response.data.category;
-    } catch (error) {
-      console.error(`Error toggling homepage for category ${id}:`, error);
       throw error;
     }
   },

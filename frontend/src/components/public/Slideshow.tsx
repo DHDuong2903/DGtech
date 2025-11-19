@@ -57,7 +57,7 @@ const slides: Slide[] = [
   },
 ];
 
-export const HeroSlideshow = () => {
+export const Slideshow = () => {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
 

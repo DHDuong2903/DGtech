@@ -16,6 +16,9 @@ export const User = sequelize.define(
       type: DataTypes.STRING,
       unique: true,
     },
+    imageUrl: {
+      type: DataTypes.STRING,
+    },
     phone: {
       type: DataTypes.STRING,
     },

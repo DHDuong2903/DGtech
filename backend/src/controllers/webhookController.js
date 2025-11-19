@@ -17,6 +17,7 @@ export const handleClerkWebhook = async (req, res) => {
     const username = user.username || `${user.first_name || ""} ${user.last_name || ""}`.trim();
     const email = user.email_addresses?.[0]?.email_address || null;
     const phone = user.phone_numbers?.[0]?.phone_number || null;
+    const imageUrl = user.image_url || user.profile_image_url || null;
 
     // Tao user moi trong database neu chua ton tai
     await User.findOrCreate({
@@ -24,6 +25,7 @@ export const handleClerkWebhook = async (req, res) => {
       defaults: {
         username,
         email,
+        imageUrl,
         phone,
         role: "user",
       },

@@ -2,8 +2,6 @@
 export const API_ENDPOINTS = {
   // Categories
   CATEGORIES: "/categories",
-  CATEGORIES_ACTIVE: "/categories/active",
-  CATEGORY_TOGGLE_HOMEPAGE: (id: number) => `/categories/${id}/toggle-homepage`,
   CATEGORY_BY_ID: (id: number) => `/categories/${id}`,
 
   // Products

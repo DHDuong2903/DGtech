@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Product } from "../../types";
 import { productsApi } from "../../apis";
 import { ProductCard } from "./ProductCard";
+import Link from "next/link";
 
 export const OnSaleProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -38,7 +39,7 @@ export const OnSaleProducts = () => {
   }
 
   if (products.length === 0) {
-    return null; // Don't show section if no on sale products
+    return null;
   }
 
   return (
@@ -49,9 +50,9 @@ export const OnSaleProducts = () => {
             <h2 className="text-3xl font-bold text-gray-900">Sản Phẩm Đang Giảm Giá</h2>
             <p className="text-gray-600 mt-2">Ưu đãi đặc biệt trong thời gian có hạn</p>
           </div>
-          <a href="/shop" className="text-red-600 hover:text-red-700 font-semibold transition-colors">
+          <Link href="/shop" className="text-red-600 hover:text-red-700 font-semibold transition-colors">
             Xem tất cả →
-          </a>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
