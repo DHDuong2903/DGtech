@@ -110,7 +110,6 @@ export const getAllReviews = async (req, res) => {
   try {
     // Get productId from either params or query
     const productId = req.params.productId || req.query.productId;
-    console.log("Getting reviews for productId:", productId);
 
     const condition = productId ? { where: { productId } } : {};
 
@@ -118,8 +117,6 @@ export const getAllReviews = async (req, res) => {
       ...condition,
       order: [["createdAt", "DESC"]],
     });
-
-    console.log(`Found ${reviews.length} reviews`);
 
     // Manually fetch user data for each review
     const reviewsWithUsers = await Promise.all(

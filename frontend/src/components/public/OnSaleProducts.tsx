@@ -5,6 +5,7 @@ import { Product } from "../../types";
 import { productsApi } from "../../apis";
 import { ProductCard } from "./ProductCard";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export const OnSaleProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -50,8 +51,12 @@ export const OnSaleProducts = () => {
             <h2 className="text-3xl font-bold text-gray-900">Sản Phẩm Đang Giảm Giá</h2>
             <p className="text-gray-600 mt-2">Ưu đãi đặc biệt trong thời gian có hạn</p>
           </div>
-          <Link href="/shop" className="text-red-600 hover:text-red-700 font-semibold transition-colors">
-            Xem tất cả →
+          <Link
+            href="/shop"
+            className="flex items-center text-red-600 hover:text-red-700 font-semibold transition-colors"
+          >
+            Xem tất cả
+            <ArrowRight className="h-4 w-4 ml-1" />
           </Link>
         </div>
 

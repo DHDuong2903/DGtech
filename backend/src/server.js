@@ -21,12 +21,16 @@ app.use(
   })
 );
 
-app.use("/api/users", express.json(), userRoute);
+// Webhook route PHẢI đặt trước express.json() để giữ raw body
 app.use("/api/webhooks", webhookRoute);
-app.use("/api/categories", express.json(), categoryRoute);
+
+// Các route khác dùng express.json()
+app.use(express.json());
+app.use("/api/users", userRoute);
+app.use("/api/categories", categoryRoute);
 app.use("/api/products", productRoute);
-app.use("/api/reviews", express.json(), reviewRoute);
-app.use("/api/carts", express.json(), cartRoute);
+app.use("/api/reviews", reviewRoute);
+app.use("/api/carts", cartRoute);
 
 const startServer = async () => {
   await connectDB();

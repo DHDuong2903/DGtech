@@ -27,7 +27,7 @@ router.use(requireAuth);
 router.post("/", upload.single("image"), createProduct);
 router.put("/:productId", upload.single("image"), updateProduct);
 router.delete("/:productId", deleteProduct);
-router.patch("/:productId/toggle-featured", express.json(), toggleProductFeatured);
-router.patch("/:productId/toggle-on-sale", express.json(), toggleProductOnSale);
+router.patch("/:productId/toggle-featured", toggleProductFeatured);
+router.patch("/:productId/toggle-on-sale", toggleProductOnSale);
 
 export default router;

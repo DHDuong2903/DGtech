@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Tắt error overlay cho runtime errors đã được xử lý
+  reactStrictMode: true,
 };
 
 export default nextConfig;

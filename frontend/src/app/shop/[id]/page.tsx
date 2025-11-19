@@ -13,6 +13,7 @@ import { Star, BadgePercent, Package, ArrowLeft, ShoppingCart, Minus, Plus } fro
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { UserAvatar } from "../../../components/public/UserAvatar";
+import { useCartStore } from "../../../stores";
 
 const ProductDetailPage = () => {
   const params = useParams();
@@ -20,6 +21,7 @@ const ProductDetailPage = () => {
   const productId = params.id as string;
 
   const { user } = useUser();
+  const { addToCart, loading: cartLoading } = useCartStore();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -55,9 +57,7 @@ const ProductDetailPage = () => {
       if (!productId) return;
 
       try {
-        console.log("Fetching reviews for product:", productId);
         const data = await reviewsApi.getByProductId(productId);
-        console.log("Received reviews:", data);
         setReviews(data);
       } catch (error) {
         console.error("Error fetching reviews:", error);
@@ -97,9 +97,20 @@ const ProductDetailPage = () => {
     }
   };
 
-  const handleAddToCart = () => {
-    // TODO: Implement add to cart functionality
-    toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
+  const handleAddToCart = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
+      return;
+    }
+
+    if (!product) return;
+
+    try {
+      await addToCart(product.productId, quantity);
+    } catch (error) {
+      // Error already handled in store with toast
+      console.error("Add to cart error:", error);
+    }
   };
 
   const handleSubmitReview = async () => {
@@ -115,7 +126,7 @@ const ProductDetailPage = () => {
 
     try {
       setSubmitting(true);
-      console.log("Submitting review:", { productId, rating, comment: comment.trim() });
+      
       await reviewsApi.create({
         productId: productId,
         rating,
@@ -178,8 +189,8 @@ const ProductDetailPage = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6" size="sm">
-          <ArrowLeft className="h-4 w-4 mr-2" />
+        <Button variant="outline" onClick={() => router.back()} className="mb-6" size="sm">
+          <ArrowLeft className="h-4 w-4" />
           Quay lại
         </Button>
 
@@ -285,9 +296,9 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
 
-                <Button className="w-full" size="lg" onClick={handleAddToCart}>
+                <Button className="w-full" size="lg" onClick={handleAddToCart} disabled={cartLoading}>
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  Thêm vào giỏ hàng
+                  {cartLoading ? "Đang thêm..." : "Thêm vào giỏ hàng"}
                 </Button>
 
                 <div className="text-center pt-2">

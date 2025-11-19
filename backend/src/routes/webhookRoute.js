@@ -4,6 +4,6 @@ import { verifyClerkSignature } from "../middlewares/verifyClerkSignature.js";
 
 const router = express.Router();
 
-router.post("/clerk", express.json({ type: "*/*" }), verifyClerkSignature, handleClerkWebhook);
+router.post("/clerk", express.raw({ type: "application/json" }), verifyClerkSignature, handleClerkWebhook);
 
 export default router;

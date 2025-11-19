@@ -4,11 +4,22 @@ import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { useAuth } from "../../hooks/useAuth";
+import { useCartStore } from "../../stores/useCartStore";
+import { useEffect } from "react";
 
 const Navbar = () => {
   const { isAdmin, isLoading } = useAuth();
+  const { cart, fetchCart } = useCartStore();
+  const { isSignedIn, isLoaded } = useUser();
+
+  useEffect(() => {
+    // Chỉ fetch cart khi user đã đăng nhập
+    if (isLoaded && isSignedIn) {
+      fetchCart();
+    }
+  }, [fetchCart, isLoaded, isSignedIn]);
 
   return (
     <div className="px-10 h-18 flex items-center border-b border-gray-200">
@@ -58,9 +69,11 @@ const Navbar = () => {
         >
           <div className="relative">
             <ShoppingCart size={20} />
-            <span className="w-4 h-4 rounded-full absolute -top-1 -right-2 bg-orange-500 text-white text-xs flex items-center justify-center">
-              0
-            </span>
+            {isSignedIn && cart && cart.totalItems > 0 && (
+              <span className="w-4 h-4 rounded-full absolute -top-2 -right-2 bg-orange-500 text-white text-xs flex items-center justify-center">
+                {cart.totalItems}
+              </span>
+            )}
           </div>
           <span className="text-md">Giỏ hàng</span>
         </Link>

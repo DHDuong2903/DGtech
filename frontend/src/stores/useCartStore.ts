@@ -36,13 +36,19 @@ export const useCartStore = create<CartState>()(
           try {
             const response = await cartApi.getCart();
             set({ cart: response.cart, loading: false });
-          } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } catch (err: any) {
             console.error("Error fetching cart:", err);
-            const error = err as ApiError;
-            set({
-              error: error.message || "Failed to fetch cart",
-              loading: false,
-            });
+            // Không hiển thị lỗi nếu là 401 (chưa đăng nhập)
+            if (err?.response?.status !== 401) {
+              const error = err as ApiError;
+              set({
+                error: error.message || "Failed to fetch cart",
+                loading: false,
+              });
+            } else {
+              set({ loading: false, cart: null });
+            }
           }
         },
 
@@ -52,11 +58,10 @@ export const useCartStore = create<CartState>()(
           try {
             const response = await cartApi.addToCart({ productId, quantity });
             set({ cart: response.cart, loading: false });
-            toast.success(response.message || "Item added to cart");
-          } catch (err) {
+            toast.success(response.message || "Sản phẩm đã được thêm vào giỏ hàng");
+          } catch (err: any) {
             console.error("Error adding to cart:", err);
-            const error = err as ApiError;
-            const errorMessage = error.message || "Failed to add item to cart";
+            const errorMessage = err?.response?.data?.error || err?.message || "Không thể thêm sản phẩm vào giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }
@@ -70,11 +75,11 @@ export const useCartStore = create<CartState>()(
               quantity,
             });
             set({ cart: response.cart, loading: false });
-            toast.success(response.message || "Cart updated");
+            toast.success(response.message || "Cập nhật giỏ hàng thành công");
           } catch (err) {
             console.error("Error updating cart item:", err);
             const error = err as ApiError;
-            const errorMessage = error.message || "Failed to update cart item";
+            const errorMessage = error.message || "Lỗi khi cập nhật sản phẩm trong giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }
@@ -86,12 +91,11 @@ export const useCartStore = create<CartState>()(
           try {
             const response = await cartApi.removeFromCart(cartItemId);
             set({ cart: response.cart, loading: false });
-            toast.success(response.message || "Item removed from cart");
+            toast.success(response.message || "Sản phẩm đã được xóa khỏi giỏ hàng");
           } catch (err) {
             console.error("Error removing from cart:", err);
             const error = err as ApiError;
-            const errorMessage =
-              error.message || "Failed to remove item from cart";
+            const errorMessage = error.message || "Không thể xóa sản phẩm khỏi giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }
@@ -103,11 +107,11 @@ export const useCartStore = create<CartState>()(
           try {
             const response = await cartApi.clearCart();
             set({ cart: response.cart, loading: false });
-            toast.success(response.message || "Cart cleared");
+            toast.success(response.message || "Giỏ hàng đã được làm trống");
           } catch (err) {
             console.error("Error clearing cart:", err);
             const error = err as ApiError;
-            const errorMessage = error.message || "Failed to clear cart";
+            const errorMessage = error.message || "Không thể làm trống giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }

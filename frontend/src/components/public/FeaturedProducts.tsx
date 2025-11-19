@@ -5,6 +5,8 @@ import { Product } from "../../types";
 import { productsApi } from "../../apis";
 import { ProductCard } from "./ProductCard";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -50,8 +52,12 @@ export const FeaturedProducts = () => {
             <h2 className="text-3xl font-bold text-gray-900">Sản Phẩm Nổi Bật</h2>
             <p className="text-gray-600 mt-2">Những sản phẩm được yêu thích nhất</p>
           </div>
-          <Link href="/shop" className="text-orange-600 hover:text-orange-700 font-semibold transition-colors">
-            Xem tất cả →
+          <Link
+            href="/shop"
+            className="flex items-center text-orange-600 hover:text-orange-700 font-semibold transition-colors"
+          >
+            Xem tất cả
+            <ArrowRight className="h-4 w-4 ml-1" />
           </Link>
         </div>
 

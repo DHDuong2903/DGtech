@@ -48,7 +48,7 @@ export const getCart = async (req, res) => {
     res.status(200).json({ cart });
   } catch (error) {
     console.error("Error getting cart:", error);
-    res.status(500).json({ error: "Failed to get cart" });
+    res.status(500).json({ error: "Không thể lấy giỏ hàng" });
   }
 };
 
@@ -59,17 +59,17 @@ export const addToCart = async (req, res) => {
     const { productId, quantity = 1 } = req.body;
 
     if (!productId) {
-      return res.status(400).json({ error: "Product ID is required" });
+      return res.status(400).json({ error: "Product ID là bắt buộc" });
     }
 
     // Check if product exists
     const product = await Product.findByPk(productId);
     if (!product) {
-      return res.status(404).json({ error: "Product not found" });
+      return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
     }
 
     if (product.stock < quantity) {
-      return res.status(400).json({ error: "Insufficient stock" });
+      return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
 
     // Find or create cart
@@ -83,14 +83,16 @@ export const addToCart = async (req, res) => {
       where: { cartId: cart.cartId, productId },
     });
 
+    let message;
     if (cartItem) {
       // Update quantity
       const newQuantity = cartItem.quantity + quantity;
       if (product.stock < newQuantity) {
-        return res.status(400).json({ error: "Insufficient stock" });
+        return res.status(400).json({ error: "Không đủ hàng trong kho" });
       }
       cartItem.quantity = newQuantity;
       await cartItem.save();
+      message = `Đã cập nhật số lượng sản phẩm trong giỏ hàng (${newQuantity})`;
     } else {
       // Create new cart item
       cartItem = await CartItem.create({
@@ -98,6 +100,7 @@ export const addToCart = async (req, res) => {
         productId,
         quantity,
       });
+      message = "Sản phẩm đã được thêm vào giỏ hàng";
     }
 
     // Update cart totals
@@ -121,10 +124,10 @@ export const addToCart = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ cart, message: "Item added to cart" });
+    res.status(200).json({ cart, message });
   } catch (error) {
     console.error("Error adding to cart:", error);
-    res.status(500).json({ error: "Failed to add item to cart" });
+    res.status(500).json({ error: "Không thể thêm sản phẩm vào giỏ hàng" });
   }
 };
 
@@ -136,13 +139,13 @@ export const updateCartItem = async (req, res) => {
     const { quantity } = req.body;
 
     if (!quantity || quantity < 1) {
-      return res.status(400).json({ error: "Valid quantity is required" });
+      return res.status(400).json({ error: "Số lượng hợp lệ là bắt buộc" });
     }
 
     // Find cart
     const cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
-      return res.status(404).json({ error: "Cart not found" });
+      return res.status(404).json({ error: "Không tìm thấy giỏ hàng" });
     }
 
     // Find cart item
@@ -152,12 +155,12 @@ export const updateCartItem = async (req, res) => {
     });
 
     if (!cartItem) {
-      return res.status(404).json({ error: "Cart item not found" });
+      return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
     }
 
     // Check stock
     if (cartItem.product.stock < quantity) {
-      return res.status(400).json({ error: "Insufficient stock" });
+      return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
 
     // Update quantity
@@ -185,10 +188,10 @@ export const updateCartItem = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ cart: updatedCart, message: "Cart item updated" });
+    res.status(200).json({ cart: updatedCart, message: "Sản phẩm trong giỏ hàng đã được cập nhật" });
   } catch (error) {
     console.error("Error updating cart item:", error);
-    res.status(500).json({ error: "Failed to update cart item" });
+    res.status(500).json({ error: "Không thể cập nhật sản phẩm trong giỏ hàng" });
   }
 };
 
@@ -201,7 +204,7 @@ export const removeFromCart = async (req, res) => {
     // Find cart
     const cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
-      return res.status(404).json({ error: "Cart not found" });
+      return res.status(404).json({ error: "Không tìm thấy giỏ hàng" });
     }
 
     // Find and delete cart item
@@ -210,7 +213,7 @@ export const removeFromCart = async (req, res) => {
     });
 
     if (!cartItem) {
-      return res.status(404).json({ error: "Cart item not found" });
+      return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
     }
 
     await cartItem.destroy();
@@ -236,10 +239,10 @@ export const removeFromCart = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ cart: updatedCart, message: "Item removed from cart" });
+    res.status(200).json({ cart: updatedCart, message: "Sản phẩm đã được xóa khỏi giỏ hàng" });
   } catch (error) {
     console.error("Error removing from cart:", error);
-    res.status(500).json({ error: "Failed to remove item from cart" });
+    res.status(500).json({ error: "Không thể xóa sản phẩm khỏi giỏ hàng" });
   }
 };
 
@@ -251,7 +254,7 @@ export const clearCart = async (req, res) => {
     // Find cart
     const cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
-      return res.status(404).json({ error: "Cart not found" });
+      return res.status(404).json({ error: "Không tìm thấy giỏ hàng" });
     }
 
     // Delete all cart items
@@ -280,10 +283,10 @@ export const clearCart = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ cart: updatedCart, message: "Cart cleared" });
+    res.status(200).json({ cart: updatedCart, message: "Giỏ hàng đã được làm trống" });
   } catch (error) {
     console.error("Error clearing cart:", error);
-    res.status(500).json({ error: "Failed to clear cart" });
+    res.status(500).json({ error: "Không thể làm trống giỏ hàng" });
   }
 };
 
