@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Package } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,18 @@ const Navbar = () => {
         <div className="items-center hidden lg:block w-80">
           <Input placeholder="Search products" />
         </div>
+
+        {/* Orders - Only show when signed in */}
+        {isSignedIn && (
+          <Link
+            href="/orders"
+            className="flex items-center gap-2 border-b-3 border-transparent hover:border-orange-500 cursor-pointer duration-300 transform ease-in-out"
+          >
+            <Package size={20} />
+            <span className="text-md hidden md:inline">Đơn hàng</span>
+          </Link>
+        )}
+
         {/* Cart */}
         <Link
           href="/cart"
@@ -69,13 +81,13 @@ const Navbar = () => {
         >
           <div className="relative">
             <ShoppingCart size={20} />
-            {isSignedIn && cart && cart.totalItems > 0 && (
+            {isSignedIn && cart?.items && cart.items.length > 0 && (
               <span className="w-4 h-4 rounded-full absolute -top-2 -right-2 bg-orange-500 text-white text-xs flex items-center justify-center">
-                {cart.totalItems}
+                {cart.items.length}
               </span>
             )}
           </div>
-          <span className="text-md">Giỏ hàng</span>
+          <span className="text-md hidden md:inline">Giỏ hàng</span>
         </Link>
         {/* Login */}
         <SignedOut>

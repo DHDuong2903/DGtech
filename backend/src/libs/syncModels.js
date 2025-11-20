@@ -6,6 +6,11 @@ import { Product } from "../models/productModel.js";
 import { Review } from "../models/reviewModel.js";
 import { Cart } from "../models/cartModel.js";
 import { CartItem } from "../models/cartItemModel.js";
+import { Order } from "../models/orderModel.js";
+import { OrderItem } from "../models/orderItemModel.js";
+
+// Import associations
+import "../models/associationsModel.js";
 
 export const syncModels = async () => {
   try {

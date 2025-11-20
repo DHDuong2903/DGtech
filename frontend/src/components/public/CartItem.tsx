@@ -5,14 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { formatCurrency } from "../../utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { CartItem as CartItemType } from "../../types";
 
 interface CartItemProps {
   item: CartItemType;
+  selected: boolean;
+  onToggleSelect: (cartItemId: string) => void;
 }
 
-export const CartItem = ({ item }: CartItemProps) => {
+export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
   const { loading, updateCartItem, removeFromCart } = useCartStore();
 
   const handleUpdateQuantity = async (newQuantity: number) => {
@@ -28,6 +31,15 @@ export const CartItem = ({ item }: CartItemProps) => {
 
   return (
     <div className="flex gap-4 border rounded-lg p-4 md:p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
+      {/* Checkbox */}
+      <div className="flex items-start pt-2">
+        <Checkbox
+          id={`select-${item.cartItemId}`}
+          checked={selected}
+          onCheckedChange={() => onToggleSelect(item.cartItemId)}
+        />
+      </div>
+
       {/* Product Image */}
       <div className="relative w-28 h-28 md:w-36 md:h-36 shrink-0 bg-gray-50 rounded-lg overflow-hidden">
         <Image
