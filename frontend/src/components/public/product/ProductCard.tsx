@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/src/components/ui/badge";
 import { Star, BadgePercent } from "lucide-react";
 import { Product } from "@/src/types";
 import { formatCurrency } from "@/src/utils";

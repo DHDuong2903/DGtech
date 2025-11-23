@@ -9,13 +9,13 @@ import { Plus, Pencil, Trash2, Package, DollarSign, Archive } from "lucide-react
 import { useProductStore, useCategoryStore } from "../../../stores";
 import { Product } from "../../../types";
 import { formatCurrency } from "../../../utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
+import { Badge } from "@/src/components/ui/badge";
+import { Switch } from "@/src/components/ui/switch";
+import { Label } from "@/src/components/ui/label";
+import { Alert, AlertDescription } from "@/src/components/ui/alert";
 
 const ProductsPage = () => {
   const {

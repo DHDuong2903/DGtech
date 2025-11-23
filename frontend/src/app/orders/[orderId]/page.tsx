@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useOrderStore } from "../../../stores";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card } from "@/src/components/ui/card";
+import { Badge } from "@/src/components/ui/badge";
 import { ArrowLeft, Package, MapPin, Phone, CreditCard, FileText } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, getStatusColor, getStatusLabel } from "../../../utils";
@@ -18,7 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/src/components/ui/dialog";
 
 const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
   return method === "COD" ? "Thanh toán khi nhận hàng" : "Chuyển khoản ngân hàng";

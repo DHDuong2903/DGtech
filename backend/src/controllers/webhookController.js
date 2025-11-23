@@ -2,8 +2,10 @@ import { Payment } from "../models/paymentModel.js";
 import { Order } from "../models/orderModel.js";
 import { OrderItem } from "../models/orderItemModel.js";
 import { Product } from "../models/productModel.js";
+import { User } from "../models/userModel.js";
 import { sequelize } from "../libs/db.js";
 import { verifyWebhookSignature, extractOrderCode } from "../helpers/paymentHelper.js";
+import { Webhook } from "svix";
 
 // Handle SePay webhook
 export const handleSepayWebhook = async (req, res) => {
@@ -148,5 +150,74 @@ export const handleSepayWebhook = async (req, res) => {
     await transaction.rollback();
     console.error("Error processing SePay webhook:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Handle Clerk webhook
+export const handleClerkWebhook = async (req, res) => {
+  try {
+    const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
+
+    if (!WEBHOOK_SECRET) {
+      console.error("CLERK_WEBHOOK_SECRET is not set");
+      return res.status(500).json({ error: "Webhook secret not configured" });
+    }
+
+    // Get Svix headers
+    const svix_id = req.headers["svix-id"];
+    const svix_timestamp = req.headers["svix-timestamp"];
+    const svix_signature = req.headers["svix-signature"];
+
+    if (!svix_id || !svix_timestamp || !svix_signature) {
+      return res.status(400).json({ error: "Missing svix headers" });
+    }
+
+    // Get raw body
+    const body = req.body.toString();
+
+    // Verify webhook signature
+    const wh = new Webhook(WEBHOOK_SECRET);
+    let evt;
+
+    try {
+      evt = wh.verify(body, {
+        "svix-id": svix_id,
+        "svix-timestamp": svix_timestamp,
+        "svix-signature": svix_signature,
+      });
+    } catch (err) {
+      console.error("Webhook verification failed:", err.message);
+      return res.status(400).json({ error: "Webhook verification failed" });
+    }
+
+    const eventType = evt.type;
+    console.log(`Clerk Webhook: ${eventType}`);
+
+    if (eventType === "user.created") {
+      const { id, email_addresses, username, image_url, phone_numbers } = evt.data;
+
+      const userData = {
+        clerkId: id,
+        email: email_addresses[0]?.email_address || "",
+        username: username || email_addresses[0]?.email_address?.split("@")[0] || "",
+        imageUrl: image_url || null,
+        phone: phone_numbers[0]?.phone_number || null,
+        role: "user",
+      };
+
+      try {
+        await User.create(userData);
+        console.log(`User created: ${id}`);
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        console.error("Error creating user:", error.message);
+        return res.status(500).json({ error: "Failed to create user" });
+      }
+    }
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Error processing Clerk webhook:", error.message);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

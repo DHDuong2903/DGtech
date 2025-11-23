@@ -2,7 +2,7 @@
 
 import { Tag } from "lucide-react";
 
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/src/components/ui/carousel";
 import { useCategoryStore } from "@/src/stores";
 import { getCategoryIcon } from "@/src/constants";
 
@@ -56,23 +56,23 @@ export const FeaturedCategories = () => {
                   <div className="p-1">
                     <a href={`/shop?category=${category.categoryId}`} className="group cursor-pointer block h-full">
                       <div className="border-2 rounded-lg p-8 text-center hover:shadow-md hover:border-orange-400 hover:scale-105 duration-300 transition-all h-full flex flex-col justify-center items-center">
-                    <IconComponent className="w-12 h-12 mb-4 text-gray-700 group-hover:text-orange-600 transition-colors" />
-                    <h3 className="font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                      {category.name}
-                    </h3>
-                    {category.description && (
-                      <p className="text-sm text-gray-500 mt-2 line-clamp-2">{category.description}</p>
-                    )}
+                        <IconComponent className="w-12 h-12 mb-4 text-gray-700 group-hover:text-orange-600 transition-colors" />
+                        <h3 className="font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                          {category.name}
+                        </h3>
+                        {category.description && (
+                          <p className="text-sm text-gray-500 mt-2 line-clamp-2">{category.description}</p>
+                        )}
+                      </div>
+                    </a>
                   </div>
-                </a>
-                  </div>
-              </CarouselItem>
-            );
-          })}
-        </CarouselContent>
-        <CarouselPrevious className="hidden md:flex" />
-        <CarouselNext className="hidden md:flex" />
-      </Carousel>
+                </CarouselItem>
+              );
+            })}
+          </CarouselContent>
+          <CarouselPrevious className="hidden md:flex" />
+          <CarouselNext className="hidden md:flex" />
+        </Carousel>
       </div>
     </section>
   );

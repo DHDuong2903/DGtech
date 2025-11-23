@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "@/src/components/ui/card";
 import { Star } from "lucide-react";
 import { Review } from "@/src/types";
 import { UserAvatar } from "@/src/components/public/layout/UserAvatar";
@@ -19,17 +19,17 @@ export const ReviewsList = ({ reviews }: ReviewsListProps) => {
   return (
     <div className="space-y-4">
       {reviews.map((review) => (
-        <Card key={review.reviewId} className="p-6">
+        <Card key={review.reviewId} className="pl-6 py-4">
           <div className="flex items-start gap-4">
             <UserAvatar
               clerkId={review.clerkId}
               username={review.user?.username}
               imageUrl={review.user?.imageUrl}
-              size={48}
+              size={40}
             />
 
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-900">{review.user?.username || "Người dùng"}</span>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (

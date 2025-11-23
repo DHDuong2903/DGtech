@@ -1,5 +1,5 @@
 import { CartItem as CartItemComponent } from "../cart/CartItem";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/src/components/ui/button";
 import { CartItem as CartItemType } from "@/src/types";
 
 interface CartItemListProps {

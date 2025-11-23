@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card } from "@/src/components/ui/card";
+import { Badge } from "@/src/components/ui/badge";
 import Image from "next/image";
 import { formatCurrency, getStatusColor, getStatusLabel } from "@/src/utils";
 import { Order } from "@/src/types";

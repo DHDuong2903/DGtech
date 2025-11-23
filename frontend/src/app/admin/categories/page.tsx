@@ -7,15 +7,14 @@ import { useState } from "react";
 import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { useCategoryStore } from "../../../stores";
 import { Category } from "../../../types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
+import { Badge } from "@/src/components/ui/badge";
+import { Alert, AlertDescription } from "@/src/components/ui/alert";
 
 const CategoriesPage = () => {
-  const { categories, loading, error, createCategory, updateCategory, deleteCategory } =
-    useCategoryStore();
+  const { categories, loading, error, createCategory, updateCategory, deleteCategory } = useCategoryStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

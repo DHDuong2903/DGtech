@@ -7,7 +7,7 @@ import { ConditionalFooter } from "../components/ConditionalFooter";
 import { AuthProvider } from "../providers/AuthProvider";
 import { StoreInitializer } from "../providers/StoreInitializer";
 import { AxiosInterceptorSetup } from "../providers/AxiosInterceptorSetup";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/src/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

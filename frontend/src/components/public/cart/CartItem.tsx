@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/src/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/src/components/ui/checkbox";
 import { CartItem as CartItemType } from "@/src/types";
 import { useCartStore } from "@/src/stores";
 import { formatCurrency } from "@/src/utils";

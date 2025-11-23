@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/src/components/ui/dialog";
+import { Button } from "@/src/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 
 interface DeleteConfirmModalProps {
@@ -27,7 +27,7 @@ export const DeleteConfirmModal = ({
   itemType = "category",
 }: DeleteConfirmModalProps) => {
   const capitalizedType = itemType.charAt(0).toUpperCase() + itemType.slice(1);
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -37,9 +37,8 @@ export const DeleteConfirmModal = ({
             <DialogTitle>Xóa {capitalizedType}</DialogTitle>
           </div>
           <DialogDescription className="pt-2">
-            Bạn có chắc là muốn xóa{" "}
-            <span className="font-semibold text-foreground">{itemName}</span>?
-            Hành động này không thể hoàn tác.
+            Bạn có chắc là muốn xóa <span className="font-semibold text-foreground">{itemName}</span>? Hành động này
+            không thể hoàn tác.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

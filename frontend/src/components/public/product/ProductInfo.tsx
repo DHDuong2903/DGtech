@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/src/components/ui/badge";
 import { formatCurrency } from "@/src/utils";
 
 interface ProductInfoProps {

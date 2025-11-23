@@ -2,8 +2,8 @@
 
 import { ShoppingCart, Package } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
 import { useAuth } from "@/src/hooks";

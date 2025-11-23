@@ -8,8 +8,8 @@ import {
   CarouselNext,
   CarouselPrevious,
   type CarouselApi,
-} from "@/components/ui/carousel";
-import { Button } from "@/components/ui/button";
+} from "@/src/components/ui/carousel";
+import { Button } from "@/src/components/ui/button";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 

@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/src/components/ui/checkbox";
 
 interface CartSelectAllProps {
   isAllSelected: boolean;

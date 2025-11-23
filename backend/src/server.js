@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { connectDB } from "./libs/db.js";
 import { syncModels } from "./libs/syncModels.js";
 import userRoute from "./routes/userRoute.js";
@@ -14,11 +16,19 @@ import paymentRoute from "./routes/paymentRoute.js";
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
+// Get __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin:
+      process.env.NODE_ENV === "production"
+        ? true // Allow same origin in production
+        : "http://localhost:3000", // Allow localhost in development
     credentials: true,
   })
 );
@@ -35,11 +45,39 @@ app.use("/api/cart", cartRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/payments", paymentRoute);
 
+// Serve static files from Next.js build (production only)
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "../../frontend/.next/standalone");
+  const publicPath = path.join(__dirname, "../../frontend/public");
+  const staticPath = path.join(__dirname, "../../frontend/.next/static");
+
+  // Serve static files
+  app.use("/_next/static", express.static(staticPath));
+  app.use("/images", express.static(path.join(publicPath, "images")));
+
+  // Serve Next.js pages
+  app.get("*", (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+
+    // Serve Next.js
+    const nextServer = path.join(frontendPath, "server.js");
+    import(nextServer)
+      .then((mod) => {
+        mod.default(req, res);
+      })
+      .catch(next);
+  });
+}
+
 const startServer = async () => {
   await connectDB();
   await syncModels();
   app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
   });
 };
 

@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useOrderStore } from "../../../stores";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Badge } from "@/src/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+} from "@/src/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { Package, Eye, ShoppingCart, DollarSign, Clock, CheckCircle2 } from "lucide-react";
 import { Order } from "../../../types";
 import { formatCurrency, getStatusColor, getStatusLabel } from "../../../utils";

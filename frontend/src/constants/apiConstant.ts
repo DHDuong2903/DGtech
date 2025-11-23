@@ -25,5 +25,5 @@ export const API_ENDPOINTS = {
   WEBHOOKS: "/webhooks",
 } as const;
 
-// API Base URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// API Base URL - Sử dụng relative URL cho production
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";

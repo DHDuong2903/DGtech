@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/src/components/ui/button";
 import { Package, ArrowLeft } from "lucide-react";
 
 interface ProductNotFoundProps {

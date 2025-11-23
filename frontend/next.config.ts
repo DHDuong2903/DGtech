@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone", // For deployment with custom server
   images: {
     remotePatterns: [
       {

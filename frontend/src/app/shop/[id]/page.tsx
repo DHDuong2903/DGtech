@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/src/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/src/components/ui/card";
+import { Button } from "@/src/components/ui/button";
+import { Textarea } from "@/src/components/ui/textarea";
 import { Star } from "lucide-react";
 
 interface ReviewFormProps {
