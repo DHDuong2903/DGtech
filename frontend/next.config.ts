@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "img.vietqr.io",
+        pathname: "/**",
+      },
     ],
   },
   // Tắt error overlay cho runtime errors đã được xử lý

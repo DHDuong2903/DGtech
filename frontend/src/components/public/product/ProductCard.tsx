@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Product } from "../../types";
-import { formatCurrency } from "../../utils";
 import { Badge } from "@/components/ui/badge";
 import { Star, BadgePercent } from "lucide-react";
+import { Product } from "@/src/types";
+import { formatCurrency } from "@/src/utils";
 
 interface ProductCardProps {
   product: Product;

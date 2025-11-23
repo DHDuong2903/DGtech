@@ -4,6 +4,7 @@ export * from "./productApi";
 export * from "./userApi";
 export * from "./reviewApi";
 export * from "./cartApi";
+export * from "./paymentApi";
 
 // Re-export for convenience
 export { categoriesApi } from "./categoriesApi";

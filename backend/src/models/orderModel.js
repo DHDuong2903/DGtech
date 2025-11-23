@@ -20,9 +20,11 @@ export const Order = sequelize.define(
       defaultValue: 0,
     },
     status: {
-      type: DataTypes.ENUM("PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED"),
+      type: DataTypes.ENUM("PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"),
       defaultValue: "PENDING",
       allowNull: false,
+      comment:
+        "PENDING: Chờ thanh toán, PROCESSING: Đã thanh toán đang chuẩn bị, SHIPPED: Đang giao, DELIVERED: Đã giao, COMPLETED: Hoàn thành, CANCELLED: Đã hủy",
     },
     shippingAddress: {
       type: DataTypes.TEXT,

@@ -1,38 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Product } from "../../types";
-import { productsApi } from "../../apis";
-import { ProductCard } from "./ProductCard";
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { Product } from "@/src/types";
+import { productsApi } from "@/src/apis";
+import { ProductCard } from "../product";
 
-export const OnSaleProducts = () => {
+export const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOnSaleProducts = async () => {
+    const fetchFeaturedProducts = async () => {
       try {
         setLoading(true);
-        const data = await productsApi.getOnSale(8);
+        const data = await productsApi.getFeatured(8);
         setProducts(data);
       } catch (error) {
-        console.error("Error fetching on sale products:", error);
+        console.error("Error fetching featured products:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOnSaleProducts();
+    fetchFeaturedProducts();
   }, []);
 
   if (loading) {
     return (
-      <section className="bg-white py-16">
+      <section className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-12">
-            <div className="inline-block w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+            <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
           </div>
         </div>
       </section>
@@ -44,16 +45,16 @@ export const OnSaleProducts = () => {
   }
 
   return (
-    <section className="bg-white py-16">
+    <section className="bg-gray-50 py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">Sản Phẩm Đang Giảm Giá</h2>
-            <p className="text-gray-600 mt-2">Ưu đãi đặc biệt trong thời gian có hạn</p>
+            <h2 className="text-3xl font-bold text-gray-900">Sản Phẩm Nổi Bật</h2>
+            <p className="text-gray-600 mt-2">Những sản phẩm được yêu thích nhất</p>
           </div>
           <Link
             href="/shop"
-            className="flex items-center text-red-600 hover:text-red-700 font-semibold transition-colors"
+            className="flex items-center text-orange-600 hover:text-orange-700 font-semibold transition-colors"
           >
             Xem tất cả
             <ArrowRight className="h-4 w-4 ml-1" />

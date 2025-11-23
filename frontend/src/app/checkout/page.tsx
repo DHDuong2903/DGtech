@@ -87,8 +87,13 @@ export default function CheckoutPage() {
         console.error("Error refreshing cart:", error);
       }
 
-      // Chuyển sang trang order detail
-      router.push(`/orders/${order.orderId}`);
+      // Nếu là BANK_TRANSFER và có payment info, chuyển sang trang thanh toán
+      if (paymentMethod === "BANK_TRANSFER" && order.payment) {
+        router.push(`/payment/${order.orderId}`);
+      } else {
+        // COD thì chuyển về trang order detail
+        router.push(`/orders/${order.orderId}`);
+      }
     }
   };
 

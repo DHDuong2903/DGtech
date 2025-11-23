@@ -1,58 +1,29 @@
 import { Cart } from "../models/cartModel.js";
 import { CartItem } from "../models/cartItemModel.js";
 import { Product } from "../models/productModel.js";
+import { updateCartTotals, getCartWithDetails } from "../helpers/cartHelper.js";
 
-// Get cart for current user
+// Lay gio hang cua user hien tai
 export const getCart = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
 
-    // Find or create cart
-    let cart = await Cart.findOne({
-      where: { clerkId },
-      include: [
-        {
-          model: CartItem,
-          as: "items",
-          include: [
-            {
-              model: Product,
-              as: "product",
-              attributes: ["productId", "name", "price", "imageUrl", "stock"],
-            },
-          ],
-        },
-      ],
-    });
+    // Tim hoac tao moi gio hang
+    let cart = await getCartWithDetails(clerkId);
 
     if (!cart) {
-      cart = await Cart.create({ clerkId });
-      cart = await Cart.findOne({
-        where: { clerkId },
-        include: [
-          {
-            model: CartItem,
-            as: "items",
-            include: [
-              {
-                model: Product,
-                as: "product",
-                attributes: ["productId", "name", "price", "imageUrl", "stock"],
-              },
-            ],
-          },
-        ],
-      });
+      await Cart.create({ clerkId });
+      cart = await getCartWithDetails(clerkId);
     }
 
     res.status(200).json({ cart });
   } catch (error) {
-    console.error("Error getting cart:", error);
+    console.error("Loi khi getCart", error);
     res.status(500).json({ error: "Không thể lấy giỏ hàng" });
   }
 };
 
-// Add item to cart
+// Them san pham vao gio hang
 export const addToCart = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
@@ -62,7 +33,7 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ error: "Product ID là bắt buộc" });
     }
 
-    // Check if product exists
+    // Kiem tra san pham ton tai khong
     const product = await Product.findByPk(productId);
     if (!product) {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
@@ -72,20 +43,20 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
 
-    // Find or create cart
+    // Tim hoac tao moi gio hang
     let cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
       cart = await Cart.create({ clerkId });
     }
 
-    // Check if item already exists in cart
+    // Kiem tra san pham da co trong gio hang chua
     let cartItem = await CartItem.findOne({
       where: { cartId: cart.cartId, productId },
     });
 
     let message;
     if (cartItem) {
-      // Update quantity
+      // Cap nhat so luong
       const newQuantity = cartItem.quantity + quantity;
       if (product.stock < newQuantity) {
         return res.status(400).json({ error: "Không đủ hàng trong kho" });
@@ -94,7 +65,7 @@ export const addToCart = async (req, res) => {
       await cartItem.save();
       message = `Đã cập nhật số lượng sản phẩm trong giỏ hàng (${newQuantity})`;
     } else {
-      // Create new cart item
+      // Tao moi san pham trong gio hang
       cartItem = await CartItem.create({
         cartId: cart.cartId,
         productId,
@@ -103,35 +74,20 @@ export const addToCart = async (req, res) => {
       message = "Sản phẩm đã được thêm vào giỏ hàng";
     }
 
-    // Update cart totals
+    // Cap nhat tong tien gio hang
     await updateCartTotals(cart.cartId);
 
-    // Fetch updated cart
-    cart = await Cart.findOne({
-      where: { clerkId },
-      include: [
-        {
-          model: CartItem,
-          as: "items",
-          include: [
-            {
-              model: Product,
-              as: "product",
-              attributes: ["productId", "name", "price", "imageUrl", "stock"],
-            },
-          ],
-        },
-      ],
-    });
+    // Lay lai gio hang sau cap nhat
+    cart = await getCartWithDetails(clerkId);
 
     res.status(200).json({ cart, message });
   } catch (error) {
-    console.error("Error adding to cart:", error);
+    console.error("Loi khi addToCart", error);
     res.status(500).json({ error: "Không thể thêm sản phẩm vào giỏ hàng" });
   }
 };
 
-// Update cart item quantity
+// Cap nhat so luong san pham trong gio hang
 export const updateCartItem = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
@@ -142,13 +98,13 @@ export const updateCartItem = async (req, res) => {
       return res.status(400).json({ error: "Số lượng hợp lệ là bắt buộc" });
     }
 
-    // Find cart
+    // Tim gio hang
     const cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
       return res.status(404).json({ error: "Không tìm thấy giỏ hàng" });
     }
 
-    // Find cart item
+    // Tim san pham trong gio hang
     const cartItem = await CartItem.findOne({
       where: { cartItemId, cartId: cart.cartId },
       include: [{ model: Product, as: "product" }],
@@ -158,56 +114,41 @@ export const updateCartItem = async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
     }
 
-    // Check stock
+    // Kiem tra kho
     if (cartItem.product.stock < quantity) {
       return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
 
-    // Update quantity
+    // Cap nhat so luong
     cartItem.quantity = quantity;
     await cartItem.save();
 
-    // Update cart totals
+    // Cap nhat tong tien gio hang
     await updateCartTotals(cart.cartId);
 
-    // Fetch updated cart
-    const updatedCart = await Cart.findOne({
-      where: { clerkId },
-      include: [
-        {
-          model: CartItem,
-          as: "items",
-          include: [
-            {
-              model: Product,
-              as: "product",
-              attributes: ["productId", "name", "price", "imageUrl", "stock"],
-            },
-          ],
-        },
-      ],
-    });
+    // Lay lai gio hang sau cap nhat
+    const updatedCart = await getCartWithDetails(clerkId);
 
     res.status(200).json({ cart: updatedCart, message: "Sản phẩm trong giỏ hàng đã được cập nhật" });
   } catch (error) {
-    console.error("Error updating cart item:", error);
+    console.error("Loi khi updateCartItem", error);
     res.status(500).json({ error: "Không thể cập nhật sản phẩm trong giỏ hàng" });
   }
 };
 
-// Remove item from cart
+// Xoa san pham khoi gio hang
 export const removeFromCart = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
     const { cartItemId } = req.params;
 
-    // Find cart
+    // Tim gio hang
     const cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
       return res.status(404).json({ error: "Không tìm thấy giỏ hàng" });
     }
 
-    // Find and delete cart item
+    // Tim va xoa san pham trong gio hang
     const cartItem = await CartItem.findOne({
       where: { cartItemId, cartId: cart.cartId },
     });
@@ -218,92 +159,44 @@ export const removeFromCart = async (req, res) => {
 
     await cartItem.destroy();
 
-    // Update cart totals
+    // Cap nhat tong tien gio hang
     await updateCartTotals(cart.cartId);
 
-    // Fetch updated cart
-    const updatedCart = await Cart.findOne({
-      where: { clerkId },
-      include: [
-        {
-          model: CartItem,
-          as: "items",
-          include: [
-            {
-              model: Product,
-              as: "product",
-              attributes: ["productId", "name", "price", "imageUrl", "stock"],
-            },
-          ],
-        },
-      ],
-    });
+    // Lay lai gio hang sau cap nhat
+    const updatedCart = await getCartWithDetails(clerkId);
 
     res.status(200).json({ cart: updatedCart, message: "Sản phẩm đã được xóa khỏi giỏ hàng" });
   } catch (error) {
-    console.error("Error removing from cart:", error);
+    console.error("Loi khi removeFromCart", error);
     res.status(500).json({ error: "Không thể xóa sản phẩm khỏi giỏ hàng" });
   }
 };
 
-// Clear cart
+// Xoa toan bo san pham trong gio hang
 export const clearCart = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
 
-    // Find cart
+    // Tim gio hang
     const cart = await Cart.findOne({ where: { clerkId } });
     if (!cart) {
       return res.status(404).json({ error: "Không tìm thấy giỏ hàng" });
     }
 
-    // Delete all cart items
+    // Xoa toan bo san pham trong gio hang
     await CartItem.destroy({ where: { cartId: cart.cartId } });
 
-    // Update cart totals
+    // Cap nhat tong tien gio hang
     cart.totalPrice = 0;
     cart.totalItems = 0;
     await cart.save();
 
-    // Fetch updated cart
-    const updatedCart = await Cart.findOne({
-      where: { clerkId },
-      include: [
-        {
-          model: CartItem,
-          as: "items",
-          include: [
-            {
-              model: Product,
-              as: "product",
-              attributes: ["productId", "name", "price", "imageUrl", "stock"],
-            },
-          ],
-        },
-      ],
-    });
+    // Lay lai gio hang sau cap nhat
+    const updatedCart = await getCartWithDetails(clerkId);
 
     res.status(200).json({ cart: updatedCart, message: "Giỏ hàng đã được làm trống" });
   } catch (error) {
-    console.error("Error clearing cart:", error);
+    console.error("Loi khi clearCart", error);
     res.status(500).json({ error: "Không thể làm trống giỏ hàng" });
   }
-};
-
-// Helper function to update cart totals
-const updateCartTotals = async (cartId) => {
-  const cartItems = await CartItem.findAll({
-    where: { cartId },
-    include: [{ model: Product, as: "product" }],
-  });
-
-  let totalPrice = 0;
-  let totalItems = 0;
-
-  cartItems.forEach((item) => {
-    totalPrice += parseFloat(item.product.price) * item.quantity;
-    totalItems += item.quantity;
-  });
-
-  await Cart.update({ totalPrice, totalItems }, { where: { cartId } });
 };

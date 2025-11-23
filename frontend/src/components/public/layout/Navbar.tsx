@@ -5,9 +5,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
-import { useAuth } from "../../hooks/useAuth";
-import { useCartStore } from "../../stores/useCartStore";
 import { useEffect } from "react";
+import { useAuth } from "@/src/hooks";
+import { useCartStore } from "@/src/stores";
 
 const Navbar = () => {
   const { isAdmin, isLoading } = useAuth();

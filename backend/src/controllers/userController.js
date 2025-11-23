@@ -2,23 +2,85 @@ import { User } from "../models/userModel.js";
 
 export const getMe = async (req, res) => {
   try {
-    // Lay clerkId tu req.auth duoc ho tro tu Clerk
     const clerkId = req.auth.userId;
 
-    // Tim user trong database bang clerkId
-    const user = await User.findOne({
-      where: { clerkId },
-    });
+    const user = await User.findOne({ where: { clerkId } });
 
-    // Neu khong tim thay user
     if (!user) {
-      return res.status(404).json({ message: "User khong ton tai" });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Tra ve thong tin user
-    return res.status(200).json({ message: "GetMe thanh cong", user });
+    return res.status(200).json({ message: "GetMe success", user });
   } catch (error) {
-    console.log("Loi khi goi getMe", error);
+    console.error("Loi khi goi getMe:", error);
+    return res.status(500).json({ message: "Loi he thong" });
+  }
+};
+
+// Get all users (Admin only)
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      message: "Get all users success",
+      users,
+      total: users.length,
+    });
+  } catch (error) {
+    console.error("Loi khi lay danh sach users:", error);
+    return res.status(500).json({ message: "Loi he thong" });
+  }
+};
+
+// Update user role (Admin only)
+export const updateUserRole = async (req, res) => {
+  try {
+    const { clerkId } = req.params;
+    const { role } = req.body;
+
+    if (!["user", "admin"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const user = await User.findOne({ where: { clerkId } });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.update({ role });
+
+    return res.status(200).json({
+      message: "Update user role success",
+      user,
+    });
+  } catch (error) {
+    console.error("Loi khi cap nhat role:", error);
+    return res.status(500).json({ message: "Loi he thong" });
+  }
+};
+
+// Delete user (Admin only)
+export const deleteUser = async (req, res) => {
+  try {
+    const { clerkId } = req.params;
+
+    const user = await User.findOne({ where: { clerkId } });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.destroy();
+
+    return res.status(200).json({
+      message: "Delete user success",
+    });
+  } catch (error) {
+    console.error("Loi khi xoa user:", error);
     return res.status(500).json({ message: "Loi he thong" });
   }
 };

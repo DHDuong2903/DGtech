@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import Navbar from "../components/public/Navbar";
+import Navbar from "../components/public/layout/Navbar";
 import { ConditionalFooter } from "../components/ConditionalFooter";
 import { AuthProvider } from "../providers/AuthProvider";
 import { StoreInitializer } from "../providers/StoreInitializer";

@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { Order } from "../../types";
-import { formatCurrency, getStatusColor, getStatusLabel } from "../../utils";
+import { formatCurrency, getStatusColor, getStatusLabel } from "@/src/utils";
+import { Order } from "@/src/types";
 
 interface OrderCardProps {
   order: Order;
@@ -11,7 +11,7 @@ interface OrderCardProps {
   onCancel?: (orderId: string) => void;
 }
 
-export const OrderCard = ({ order, onViewDetail, onCancel }: OrderCardProps) => {
+export const OrderCard = ({ order, onViewDetail }: OrderCardProps) => {
   return (
     <Card className="p-6 hover:shadow-md transition-shadow">
       {/* Header */}
@@ -58,11 +58,6 @@ export const OrderCard = ({ order, onViewDetail, onCancel }: OrderCardProps) => 
         <Button variant="outline" className="flex-1" onClick={() => onViewDetail(order.orderId)}>
           Xem chi tiết
         </Button>
-        {order.status === "PENDING" && onCancel && (
-          <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => onCancel(order.orderId)}>
-            Hủy đơn
-          </Button>
-        )}
       </div>
     </Card>
   );

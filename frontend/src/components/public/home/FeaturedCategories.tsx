@@ -1,9 +1,10 @@
 "use client";
 
 import { Tag } from "lucide-react";
-import { useCategoryStore } from "../../stores";
-import { getCategoryIcon } from "../../constants";
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { useCategoryStore } from "@/src/stores";
+import { getCategoryIcon } from "@/src/constants";
 
 export const FeaturedCategories = () => {
   const { categories, loading } = useCategoryStore();

@@ -1,9 +1,9 @@
 import express from "express";
-import { handleClerkWebhook } from "../controllers/webhookController.js";
-import { verifyClerkSignature } from "../middlewares/verifyClerkSignature.js";
+import { handleSepayWebhook } from "../controllers/webhookController.js";
 
 const router = express.Router();
 
-router.post("/clerk", express.raw({ type: "application/json" }), verifyClerkSignature, handleClerkWebhook);
+// SePay webhook - use express.json() for JSON parsing
+router.post("/sepay", express.json(), handleSepayWebhook);
 
 export default router;

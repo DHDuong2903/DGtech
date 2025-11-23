@@ -1,24 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Product, Category } from "../../types";
-import { productsApi, categoriesApi } from "../../apis";
-import { ProductCard } from "../../components/public/ProductCard";
+import { Category } from "../../types";
+import { categoriesApi } from "../../apis";
+import { ProductCard } from "../../components/public/product/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filter, Search, X, ChevronUp } from "lucide-react";
+import { useProductStore } from "../../stores";
 
 const ShopPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const { products, loading, totalItems, totalPages, currentPage: storePage, fetchProducts } = useProductStore();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
+
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [minPrice, setMinPrice] = useState<string>("");
@@ -26,7 +24,7 @@ const ShopPage = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [order, setOrder] = useState<"ASC" | "DESC">("DESC");
-  
+
   // UI states
   const [showFilters, setShowFilters] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -46,52 +44,37 @@ const ShopPage = () => {
 
   // Fetch products with filters
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const params: {
-          page: number;
-          limit: number;
-          sortBy: string;
-          order: "ASC" | "DESC";
-          categoryId?: number;
-          search?: string;
-          minPrice?: number;
-          maxPrice?: number;
-        } = {
-          page: currentPage,
-          limit: 12,
-          sortBy,
-          order,
-        };
-
-        if (selectedCategory !== "all") {
-          params.categoryId = parseInt(selectedCategory);
-        }
-        if (searchQuery) {
-          params.search = searchQuery;
-        }
-        if (minPrice) {
-          params.minPrice = parseFloat(minPrice);
-        }
-        if (maxPrice) {
-          params.maxPrice = parseFloat(maxPrice);
-        }
-
-        const response = await productsApi.getAll(params);
-        setProducts(response.data || []);
-        setTotalItems(response.totalItems || 0);
-        setTotalPages(response.totalPages || 1);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
+    const params: {
+      page: number;
+      limit: number;
+      sortBy: string;
+      order: "ASC" | "DESC";
+      categoryId?: number;
+      search?: string;
+      minPrice?: number;
+      maxPrice?: number;
+    } = {
+      page: currentPage,
+      limit: 12,
+      sortBy,
+      order,
     };
 
-    fetchProducts();
-  }, [currentPage, selectedCategory, minPrice, maxPrice, searchQuery, sortBy, order]);
+    if (selectedCategory !== "all") {
+      params.categoryId = parseInt(selectedCategory);
+    }
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
+    if (minPrice) {
+      params.minPrice = parseFloat(minPrice);
+    }
+    if (maxPrice) {
+      params.maxPrice = parseFloat(maxPrice);
+    }
+
+    fetchProducts(params);
+  }, [currentPage, selectedCategory, minPrice, maxPrice, searchQuery, sortBy, order, fetchProducts]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -146,98 +129,98 @@ const ShopPage = () => {
                     </Button>
                   </CardTitle>
                 </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Search */}
-                <div>
-                  <Label className="mb-2">Tìm kiếm</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Tên sản phẩm..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+                <CardContent className="space-y-6">
+                  {/* Search */}
+                  <div>
+                    <Label className="mb-2">Tìm kiếm</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Tên sản phẩm..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Category Filter */}
-                <div>
-                  <Label className="mb-2">Danh mục</Label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn danh mục" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả danh mục</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.categoryId} value={cat.categoryId.toString()}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <Label className="mb-2">Khoảng giá</Label>
-                  <div className="space-y-2">
-                    <Input
-                      type="number"
-                      placeholder="Giá tối thiểu"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value)}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Giá tối đa"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                    />
+                  {/* Category Filter */}
+                  <div>
+                    <Label className="mb-2">Danh mục</Label>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn danh mục" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả danh mục</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.categoryId} value={cat.categoryId.toString()}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
 
-                {/* Sort */}
-                <div>
-                  <Label className="mb-2">Sắp xếp theo</Label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="createdAt">Mới nhất</SelectItem>
-                      <SelectItem value="price">Giá</SelectItem>
-                      <SelectItem value="name">Tên</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      variant={order === "ASC" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setOrder("ASC")}
-                      className="flex-1"
-                    >
-                      Tăng dần
-                    </Button>
-                    <Button
-                      variant={order === "DESC" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setOrder("DESC")}
-                      className="flex-1"
-                    >
-                      Giảm dần
-                    </Button>
+                  {/* Price Range */}
+                  <div>
+                    <Label className="mb-2">Khoảng giá</Label>
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        placeholder="Giá tối thiểu"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Giá tối đa"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Reset Button */}
-                <Button variant="outline" className="w-full" onClick={handleResetFilters}>
-                  <X className="h-4 w-4 mr-2" />
-                  Xóa bộ lọc
-                </Button>
-              </CardContent>
-            </Card>
+                  {/* Sort */}
+                  <div>
+                    <Label className="mb-2">Sắp xếp theo</Label>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="createdAt">Mới nhất</SelectItem>
+                        <SelectItem value="price">Giá</SelectItem>
+                        <SelectItem value="name">Tên</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant={order === "ASC" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setOrder("ASC")}
+                        className="flex-1"
+                      >
+                        Tăng dần
+                      </Button>
+                      <Button
+                        variant={order === "DESC" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setOrder("DESC")}
+                        className="flex-1"
+                      >
+                        Giảm dần
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Reset Button */}
+                  <Button variant="outline" className="w-full" onClick={handleResetFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Xóa bộ lọc
+                  </Button>
+                </CardContent>
+              </Card>
             </aside>
           )}
 

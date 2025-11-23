@@ -71,5 +71,3 @@ export const getAllCategories = async (req, res) => {
     return res.status(500).json({ message: "Loi he thong" });
   }
 };
-
-

@@ -8,11 +8,27 @@ import { toast } from "sonner";
 interface ProductState {
   // State
   products: Product[];
+  currentProduct: Product | null;
+  relatedProducts: Product[];
   loading: boolean;
   error: string | null;
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
 
   // Actions
-  fetchProducts: () => Promise<void>;
+  fetchProducts: (params?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    order?: "ASC" | "DESC";
+    categoryId?: number;
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+  }) => Promise<void>;
+  fetchProductById: (id: string) => Promise<void>;
+  fetchRelatedProducts: (categoryId: number, excludeId: string) => Promise<void>;
   createProduct: (formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   updateProduct: (id: string, formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -27,21 +43,63 @@ export const useProductStore = create<ProductState>()(
     (set) => ({
       // Initial state
       products: [],
+      currentProduct: null,
+      relatedProducts: [],
       loading: false,
       error: null,
+      totalItems: 0,
+      totalPages: 1,
+      currentPage: 1,
 
-      // Fetch all products
-      fetchProducts: async () => {
+      // Fetch products with filters and pagination
+      fetchProducts: async (params?: {
+        page?: number;
+        limit?: number;
+        sortBy?: string;
+        order?: "ASC" | "DESC";
+        categoryId?: number;
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+      }) => {
         set({ loading: true, error: null });
         try {
-          const response = await productsApi.getAll();
-          // Extract products array from paginated response
-          const products = response.data || [];
-          set({ products, loading: false });
+          const response = await productsApi.getAll(params);
+          set({
+            products: response.data || [],
+            totalItems: response.totalItems || 0,
+            totalPages: response.totalPages || 1,
+            currentPage: response.currentPage || 1,
+            loading: false,
+          });
         } catch (err) {
           console.error("Error fetching products:", err);
           const error = err as ApiError;
           set({ error: error.message || "Failed to fetch products", loading: false });
+        }
+      },
+
+      // Fetch single product by ID
+      fetchProductById: async (id: string) => {
+        set({ loading: true, error: null });
+        try {
+          const product = await productsApi.getById(id);
+          set({ currentProduct: product, loading: false });
+        } catch (err) {
+          console.error("Error fetching product:", err);
+          const error = err as ApiError;
+          set({ error: error.message || "Failed to fetch product", loading: false });
+        }
+      },
+
+      // Fetch related products by category
+      fetchRelatedProducts: async (categoryId: number, excludeId: string) => {
+        try {
+          const response = await productsApi.getAll({ categoryId, limit: 4 });
+          const filtered = (response.data || []).filter((p) => p.productId !== excludeId);
+          set({ relatedProducts: filtered.slice(0, 4) });
+        } catch (err) {
+          console.error("Error fetching related products:", err);
         }
       },
 

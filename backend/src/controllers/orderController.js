@@ -1,11 +1,12 @@
 import { Order } from "../models/orderModel.js";
 import { OrderItem } from "../models/orderItemModel.js";
 import { Product } from "../models/productModel.js";
-import { Cart } from "../models/cartModel.js";
 import { CartItem } from "../models/cartItemModel.js";
+import { Payment } from "../models/paymentModel.js";
 import { sequelize } from "../libs/db.js";
+import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
 
-// Create new order from selected cart items
+// Tao order moi tu cac san pham duoc chon trong cart
 export const createOrder = async (req, res) => {
   const transaction = await sequelize.transaction();
 
@@ -13,7 +14,7 @@ export const createOrder = async (req, res) => {
     const { userId: clerkId } = req.auth;
     const { selectedItems, shippingAddress, phone, paymentMethod, notes } = req.body;
 
-    // Validate required fields
+    // Validate
     if (!selectedItems || !Array.isArray(selectedItems) || selectedItems.length === 0) {
       await transaction.rollback();
       return res.status(400).json({ error: "Vui lòng chọn ít nhất một sản phẩm" });
@@ -24,7 +25,7 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ error: "Vui lòng cung cấp đầy đủ thông tin giao hàng" });
     }
 
-    // Get cart items
+    // Lay cac san pham trong gio hang
     const cartItems = await CartItem.findAll({
       where: { cartItemId: selectedItems },
       include: [
@@ -42,7 +43,7 @@ export const createOrder = async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
     }
 
-    // Validate stock availability
+    // Kiem tra kho
     for (const cartItem of cartItems) {
       if (cartItem.product.stock < cartItem.quantity) {
         await transaction.rollback();
@@ -52,7 +53,7 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Calculate total price
+    // Tinh tong tien
     let totalPrice = 0;
     const orderItemsData = [];
 
@@ -67,7 +68,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Create order
+    // Tao order
     const order = await Order.create(
       {
         clerkId,
@@ -76,12 +77,12 @@ export const createOrder = async (req, res) => {
         phone,
         paymentMethod: paymentMethod || "COD",
         notes: notes || null,
-        status: "PENDING",
+        status: paymentMethod === "BANK_TRANSFER" ? "PENDING" : "PROCESSING",
       },
       { transaction }
     );
 
-    // Create order items
+    // Tao order items
     const orderItems = await Promise.all(
       orderItemsData.map((item) =>
         OrderItem.create(
@@ -94,25 +95,46 @@ export const createOrder = async (req, res) => {
       )
     );
 
-    // Update product stock
-    for (const cartItem of cartItems) {
-      await Product.decrement("stock", {
-        by: cartItem.quantity,
-        where: { productId: cartItem.productId },
-        transaction,
-      });
+    // Cap nhat stock san pham (neu khong phai BANK_TRANSFER)
+    if (paymentMethod !== "BANK_TRANSFER") {
+      for (const cartItem of cartItems) {
+        await Product.decrement("stock", {
+          by: cartItem.quantity,
+          where: { productId: cartItem.productId },
+          transaction,
+        });
+      }
     }
 
-    // Remove ordered items from cart
+    // Xoa cac san pham da chon khoi gio hang
     await CartItem.destroy({
       where: { cartItemId: selectedItems },
       transaction,
     });
 
+    // Neu la BANK_TRANSFER, tao payment record voi QR code info
+    let payment = null;
+    if (paymentMethod === "BANK_TRANSFER") {
+      const transactionContent = generateTransactionContent(order.orderId);
+
+      payment = await Payment.create(
+        {
+          orderId: order.orderId,
+          amount: totalPrice,
+          paymentMethod: "BANK_TRANSFER",
+          status: "PENDING",
+          transactionContent,
+          bankCode: process.env.SEPAY_BANK_CODE,
+          accountNumber: process.env.SEPAY_ACCOUNT_NUMBER,
+        },
+        { transaction }
+      );
+    }
+
     // Commit transaction
     await transaction.commit();
 
-    // Fetch complete order with items
+    // Lay lai order hoan chinh
     const completeOrder = await Order.findByPk(order.orderId, {
       include: [
         {
@@ -126,8 +148,23 @@ export const createOrder = async (req, res) => {
             },
           ],
         },
+        ...(payment
+          ? [
+              {
+                model: Payment,
+                as: "payment",
+              },
+            ]
+          : []),
       ],
     });
+
+    // Neu co payment, them QR code URL
+    if (payment) {
+      const qrCodeUrl = generateQRCodeUrl(payment);
+      completeOrder.payment.dataValues.qrCodeUrl = qrCodeUrl;
+      completeOrder.payment.dataValues.accountName = process.env.SEPAY_ACCOUNT_NAME;
+    }
 
     res.status(201).json({
       message: "Đặt hàng thành công",
@@ -135,12 +172,12 @@ export const createOrder = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error creating order:", error);
+    console.error("Loi khi createOrder", error);
     res.status(500).json({ error: "Lỗi khi tạo đơn hàng" });
   }
 };
 
-// Get all orders for current user
+// Lay danh sach orders cua nguoi dung
 export const getOrders = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
@@ -183,12 +220,12 @@ export const getOrders = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error getting orders:", error);
+    console.error("Loi khi getOrders", error);
     res.status(500).json({ error: "Lỗi khi lấy danh sách đơn hàng" });
   }
 };
 
-// Get order by ID
+// Lay order theo ID
 export const getOrderById = async (req, res) => {
   try {
     const { userId: clerkId } = req.auth;
@@ -217,12 +254,12 @@ export const getOrderById = async (req, res) => {
 
     res.status(200).json({ order });
   } catch (error) {
-    console.error("Error getting order:", error);
+    console.error("Loi khi getOrderById", error);
     res.status(500).json({ error: "Lỗi khi lấy thông tin đơn hàng" });
   }
 };
 
-// Cancel order (only if status is PENDING)
+// Huy don hang (chi khi status la PENDING)
 export const cancelOrder = async (req, res) => {
   const transaction = await sequelize.transaction();
 
@@ -246,28 +283,34 @@ export const cancelOrder = async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
     }
 
-    if (order.status !== "PENDING") {
+    if (!["PENDING", "PROCESSING"].includes(order.status)) {
       await transaction.rollback();
       return res.status(400).json({
-        error: "Chỉ có thể hủy đơn hàng đang chờ xử lý",
+        error: "Không thể hủy đơn hàng ở trạng thái này",
       });
     }
 
-    // Restore product stock
-    for (const item of order.items) {
-      await Product.increment("stock", {
-        by: item.quantity,
-        where: { productId: item.productId },
-        transaction,
-      });
+    // Chi hoan stock neu:
+    // - COD (da tru stock luc dat hang)
+    // - BANK_TRANSFER nhung da thanh toan (status = PROCESSING tro len)
+    const shouldRestoreStock = order.paymentMethod === "COD" || order.status !== "PENDING";
+
+    if (shouldRestoreStock) {
+      for (const item of order.items) {
+        await Product.increment("stock", {
+          by: item.quantity,
+          where: { productId: item.productId },
+          transaction,
+        });
+      }
     }
 
-    // Update order status
+    // Cap nhat trang thai don hang
     await order.update({ status: "CANCELLED" }, { transaction });
 
     await transaction.commit();
 
-    // Fetch complete order with product details
+    // Lay lai order hoan chinh
     const updatedOrder = await Order.findByPk(order.orderId, {
       include: [
         {
@@ -290,12 +333,12 @@ export const cancelOrder = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error("Error cancelling order:", error);
+    console.error("Loi khi cancelOrder", error);
     res.status(500).json({ error: "Lỗi khi hủy đơn hàng" });
   }
 };
 
-// Admin: Get all orders
+// Admin: Lay danh sach tat ca don hang
 export const getAllOrders = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -342,13 +385,13 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// Admin: Update order status
+// Admin: Cap nhat trang thai don hang
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+    const validStatuses = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Trạng thái không hợp lệ" });
     }
@@ -366,7 +409,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
     }
 
-    // If cancelling order, restore stock
+    // Neu chuyen sang CANCELLED, hoan lai stock neu can
     if (status === "CANCELLED" && order.status !== "CANCELLED") {
       for (const item of order.items) {
         await Product.increment("stock", {
@@ -383,7 +426,7 @@ export const updateOrderStatus = async (req, res) => {
       order,
     });
   } catch (error) {
-    console.error("Error updating order status:", error);
+    console.error("Loi khi updateOrderStatus", error);
     res.status(500).json({ error: "Lỗi khi cập nhật trạng thái đơn hàng" });
   }
 };

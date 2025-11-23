@@ -1,7 +1,7 @@
-import { Slideshow } from "../../components/public/Slideshow";
-import { FeaturedCategories } from "../../components/public/FeaturedCategories";
-import { FeaturedProducts } from "../../components/public/FeaturedProducts";
-import { OnSaleProducts } from "../../components/public/OnSaleProducts";
+import { Slideshow } from "../../components/public/home/Slideshow";
+import { FeaturedCategories } from "../../components/public/home/FeaturedCategories";
+import { FeaturedProducts } from "../../components/public/home/FeaturedProducts";
+import { OnSaleProducts } from "../../components/public/home/OnSaleProducts";
 
 export default function Home() {
   return (

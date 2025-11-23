@@ -188,7 +188,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                 <Input
                   id="price"
                   type="number"
-                  step="10000"
+                  step="0.01"
                   min="0"
                   required
                   value={formData.price}

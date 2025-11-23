@@ -8,7 +8,6 @@ export const requireAuth = async (req, res, next) => {
       return res.status(401).json({ error: "Unauthorized - No token provided" });
     }
 
-    // Verify JWT token networkless (không cần gọi API)
     const payload = await verifyToken(token, {
       secretKey: process.env.CLERK_SECRET_KEY,
     });
@@ -20,7 +19,7 @@ export const requireAuth = async (req, res, next) => {
     req.auth = { userId: payload.sub, sessionId: payload.sid };
     next();
   } catch (error) {
-    console.error("Auth error:", error);
+    console.error("Auth error:", error.message);
     return res.status(401).json({ error: "Unauthorized - Invalid token" });
   }
 };

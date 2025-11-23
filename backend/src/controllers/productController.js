@@ -1,5 +1,6 @@
 import { Category, Product } from "../models/associationsModel.js";
 import { Op } from "sequelize";
+import { getProductWithCategory, productIncludeOptions } from "../helpers/productHelper.js";
 
 export const createProduct = async (req, res) => {
   try {
@@ -38,13 +39,7 @@ export const createProduct = async (req, res) => {
     });
 
     // Fetch product with category info
-    const productWithCategory = await Product.findByPk(newProduct.productId, {
-      include: {
-        model: Category,
-        as: "category",
-        attributes: ["categoryId", "name"],
-      },
-    });
+    const productWithCategory = await getProductWithCategory(Product, newProduct.productId);
 
     return res.status(201).json({
       message: "Them san pham moi thanh cong",
@@ -83,13 +78,7 @@ export const updateProduct = async (req, res) => {
     });
 
     // Fetch product with category info
-    const productWithCategory = await Product.findByPk(product.productId, {
-      include: {
-        model: Category,
-        as: "category",
-        attributes: ["categoryId", "name"],
-      },
-    });
+    const productWithCategory = await getProductWithCategory(Product, product.productId);
 
     return res.status(200).json({
       message: "Cap nhat san pham thanh cong",
@@ -188,13 +177,7 @@ export const getAllProducts = async (req, res) => {
     // Truy van db de phan trang va sap xep
     const products = await Product.findAndCountAll({
       where,
-      include: [
-        {
-          model: Category,
-          as: "category",
-          attributes: ["categoryId", "name"],
-        },
-      ],
+      include: [productIncludeOptions],
       order: [[sortBy, order]],
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -228,13 +211,7 @@ export const toggleProductFeatured = async (req, res) => {
     await product.update({ isFeatured: isFeatured === "true" || isFeatured === true });
 
     // Fetch product with category info
-    const productWithCategory = await Product.findByPk(product.productId, {
-      include: {
-        model: Category,
-        as: "category",
-        attributes: ["categoryId", "name"],
-      },
-    });
+    const productWithCategory = await getProductWithCategory(Product, product.productId);
 
     return res.status(200).json({
       message: "Cap nhat trang thai noi bat thanh cong",
@@ -261,13 +238,7 @@ export const toggleProductOnSale = async (req, res) => {
     await product.update({ isOnSale: isOnSale === "true" || isOnSale === true });
 
     // Fetch product with category info
-    const productWithCategory = await Product.findByPk(product.productId, {
-      include: {
-        model: Category,
-        as: "category",
-        attributes: ["categoryId", "name"],
-      },
-    });
+    const productWithCategory = await getProductWithCategory(Product, product.productId);
 
     return res.status(200).json({
       message: "Cap nhat trang thai giam gia thanh cong",
@@ -285,13 +256,7 @@ export const getFeaturedProducts = async (req, res) => {
 
     const products = await Product.findAll({
       where: { isFeatured: true },
-      include: [
-        {
-          model: Category,
-          as: "category",
-          attributes: ["categoryId", "name"],
-        },
-      ],
+      include: [productIncludeOptions],
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
     });
@@ -312,13 +277,7 @@ export const getOnSaleProducts = async (req, res) => {
 
     const products = await Product.findAll({
       where: { isOnSale: true },
-      include: [
-        {
-          model: Category,
-          as: "category",
-          attributes: ["categoryId", "name"],
-        },
-      ],
+      include: [productIncludeOptions],
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
     });

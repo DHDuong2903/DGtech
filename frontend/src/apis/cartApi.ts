@@ -1,7 +1,7 @@
 import axiosInstance from "../lib/axios";
 import { Cart, AddToCartRequest, UpdateCartItemRequest } from "../types";
 
-const CART_API_URL = "/carts";
+const CART_API_URL = "/cart";
 
 export const cartApi = {
   // Get user's cart

@@ -10,6 +10,7 @@ import productRoute from "./routes/productRoute.js";
 import reviewRoute from "./routes/reviewRoute.js";
 import cartRoute from "./routes/cartRoute.js";
 import orderRoute from "./routes/orderRoute.js";
+import paymentRoute from "./routes/paymentRoute.js";
 
 dotenv.config();
 const app = express();
@@ -22,17 +23,17 @@ app.use(
   })
 );
 
-// Webhook route PHẢI đặt trước express.json() để giữ raw body
+// Webhook routes phai dung truoc express.json() vi webhook can dung express.raw()
 app.use("/api/webhooks", webhookRoute);
 
-// Các route khác dùng express.json()
 app.use(express.json());
 app.use("/api/users", userRoute);
 app.use("/api/categories", categoryRoute);
 app.use("/api/products", productRoute);
 app.use("/api/reviews", reviewRoute);
-app.use("/api/carts", cartRoute);
+app.use("/api/cart", cartRoute);
 app.use("/api/orders", orderRoute);
+app.use("/api/payments", paymentRoute);
 
 const startServer = async () => {
   await connectDB();

@@ -8,10 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package, MapPin, Phone, CreditCard, FileText } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency } from "../../../utils";
+import { formatCurrency, getStatusColor, getStatusLabel } from "../../../utils";
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
-import { Order } from "../../../types";
 import {
   Dialog,
   DialogContent,
@@ -20,40 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-const getStatusColor = (status: Order["status"]) => {
-  switch (status) {
-    case "PENDING":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "PROCESSING":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "SHIPPED":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "DELIVERED":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "CANCELLED":
-      return "bg-red-100 text-red-800 border-red-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-};
-
-const getStatusLabel = (status: Order["status"]) => {
-  switch (status) {
-    case "PENDING":
-      return "Chờ xử lý";
-    case "PROCESSING":
-      return "Đang xử lý";
-    case "SHIPPED":
-      return "Đang giao";
-    case "DELIVERED":
-      return "Đã giao";
-    case "CANCELLED":
-      return "Đã hủy";
-    default:
-      return status;
-  }
-};
 
 const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
   return method === "COD" ? "Thanh toán khi nhận hàng" : "Chuyển khoản ngân hàng";
@@ -130,7 +95,7 @@ export default function OrderDetailPage() {
             </div>
             <p className="text-gray-600">Đặt ngày: {new Date(currentOrder.createdAt).toLocaleString("vi-VN")}</p>
           </div>
-          {currentOrder.status === "PENDING" && (
+          {(currentOrder.status === "PENDING" || currentOrder.status === "PROCESSING") && (
             <Button variant="destructive" onClick={() => setShowCancelModal(true)}>
               Hủy đơn hàng
             </Button>

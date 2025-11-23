@@ -1,13 +1,12 @@
 "use client";
 
-import { useCartStore } from "../../stores";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { formatCurrency } from "../../utils";
 import { Checkbox } from "@/components/ui/checkbox";
-
-import { CartItem as CartItemType } from "../../types";
+import { CartItem as CartItemType } from "@/src/types";
+import { useCartStore } from "@/src/stores";
+import { formatCurrency } from "@/src/utils";
 
 interface CartItemProps {
   item: CartItemType;

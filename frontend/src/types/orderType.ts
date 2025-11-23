@@ -15,12 +15,13 @@ export interface Order {
   orderId: string;
   clerkId: string;
   totalPrice: number;
-  status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";
   shippingAddress: string;
   phone: string;
   paymentMethod: "COD" | "BANK_TRANSFER";
   notes?: string;
   items: OrderItem[];
+  payment?: any; // Payment info if exists
   createdAt: string;
   updatedAt: string;
 }

@@ -29,6 +29,11 @@ interface OrderState {
     notes?: string;
   }) => Promise<Order | null>;
   cancelOrder: (orderId: string) => Promise<void>;
+
+  // Admin actions
+  fetchAllOrders: (params?: { status?: string; page?: number; limit?: number }) => Promise<void>;
+  updateStatus: (orderId: string, status: string) => Promise<void>;
+
   setError: (error: string | null) => void;
   clearError: () => void;
   clearCurrentOrder: () => void;
@@ -127,6 +132,58 @@ export const useOrderStore = create<OrderState>()(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
           const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi hủy đơn hàng";
+          set({ error: errorMessage, loading: false });
+          toast.error(errorMessage);
+        }
+      },
+
+      // Admin: Fetch all orders
+      fetchAllOrders: async (params) => {
+        set({ loading: true, error: null });
+        try {
+          const response = await orderApi.getAllOrders(params);
+          set({
+            orders: response.orders,
+            pagination: response.pagination,
+            loading: false,
+          });
+        } catch (err) {
+          console.error("Error fetching all orders:", err);
+          const error = err as ApiError;
+          set({
+            error: error.message || "Lỗi khi tải danh sách đơn hàng",
+            loading: false,
+          });
+          toast.error(error.message || "Lỗi khi tải danh sách đơn hàng");
+        }
+      },
+
+      // Admin: Update order status
+      updateStatus: async (orderId: string, status: string) => {
+        set({ loading: true, error: null });
+        try {
+          const response = await orderApi.updateOrderStatus(orderId, status);
+
+          // Update orders list
+          const currentOrders = get().orders;
+          const updatedOrders = currentOrders.map((order) => (order.orderId === orderId ? response.order : order));
+
+          // Update current order if it's the same
+          const currentOrder = get().currentOrder;
+          const updatedCurrentOrder = currentOrder?.orderId === orderId ? response.order : currentOrder;
+
+          set({
+            orders: updatedOrders,
+            currentOrder: updatedCurrentOrder,
+            loading: false,
+          });
+
+          toast.success(response.message || "Cập nhật trạng thái thành công");
+        } catch (err: unknown) {
+          console.error("Error updating order status:", err);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const error = err as any;
+          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi cập nhật trạng thái";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }

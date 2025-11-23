@@ -1,7 +1,7 @@
 "use client";
 
 import { UserButton, useUser } from "@clerk/nextjs";
-import { LayoutDashboard, Package, Tag, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Package, Tag, ShoppingBag, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -21,16 +21,28 @@ const menuItems: MenuItem[] = [
     href: "/admin",
   },
   {
-    id: "categories",
-    label: "Quản lý danh mục",
-    icon: <Tag size={20} />,
-    href: "/admin/categories",
+    id: "orders",
+    label: "Quản lý đơn hàng",
+    icon: <ShoppingBag size={20} />,
+    href: "/admin/orders",
   },
   {
     id: "products",
     label: "Quản lý sản phẩm",
     icon: <Package size={20} />,
     href: "/admin/products",
+  },
+  {
+    id: "categories",
+    label: "Quản lý danh mục",
+    icon: <Tag size={20} />,
+    href: "/admin/categories",
+  },
+  {
+    id: "users",
+    label: "Quản lý người dùng",
+    icon: <Users size={20} />,
+    href: "/admin/users",
   },
 ];
 
@@ -60,9 +72,7 @@ export const AdminSidebar = () => {
               <p className="text-sm font-semibold text-gray-900 truncate">
                 {user?.fullName || user?.username || "Admin"}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.primaryEmailAddress?.emailAddress}
-              </p>
+              <p className="text-xs text-gray-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
             </div>
           )}
         </div>
@@ -82,15 +92,9 @@ export const AdminSidebar = () => {
                   : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
-              <span className={isActive ? "text-orange-600" : "text-gray-500"}>
-                {item.icon}
-              </span>
-              {!collapsed && (
-                <span className="flex-1 text-sm">{item.label}</span>
-              )}
-              {!collapsed && isActive && (
-                <ChevronRight size={16} className="text-orange-600" />
-              )}
+              <span className={isActive ? "text-orange-600" : "text-gray-500"}>{item.icon}</span>
+              {!collapsed && <span className="flex-1 text-sm">{item.label}</span>}
+              {!collapsed && isActive && <ChevronRight size={16} className="text-orange-600" />}
             </Link>
           );
         })}

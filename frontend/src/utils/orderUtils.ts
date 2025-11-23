@@ -10,6 +10,8 @@ export const getStatusColor = (status: Order["status"]) => {
       return "bg-purple-100 text-purple-800 border-purple-200";
     case "DELIVERED":
       return "bg-green-100 text-green-800 border-green-200";
+    case "COMPLETED":
+      return "bg-teal-100 text-teal-800 border-teal-200";
     case "CANCELLED":
       return "bg-red-100 text-red-800 border-red-200";
     default:
@@ -20,13 +22,15 @@ export const getStatusColor = (status: Order["status"]) => {
 export const getStatusLabel = (status: Order["status"]) => {
   switch (status) {
     case "PENDING":
-      return "Chờ xử lý";
+      return "Chờ thanh toán";
     case "PROCESSING":
-      return "Đang xử lý";
+      return "Đang chuẩn bị";
     case "SHIPPED":
-      return "Đang giao";
+      return "Đang giao hàng";
     case "DELIVERED":
-      return "Đã giao";
+      return "Đã giao hàng";
+    case "COMPLETED":
+      return "Hoàn thành";
     case "CANCELLED":
       return "Đã hủy";
     default:

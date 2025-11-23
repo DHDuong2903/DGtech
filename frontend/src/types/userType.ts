@@ -3,6 +3,7 @@ export interface User {
   clerkId: string;
   username: string;
   email: string;
+  imageUrl?: string;
   phone?: string;
   role: "user" | "admin";
   createdAt?: string;
