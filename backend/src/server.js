@@ -56,7 +56,7 @@ if (process.env.NODE_ENV === "production") {
   app.use("/images", express.static(path.join(publicPath, "images")));
 
   // Serve Next.js pages
-  app.get("*", (req, res, next) => {
+  app.get("/*", (req, res, next) => {
     // Skip API routes
     if (req.path.startsWith("/api")) {
       return next();
