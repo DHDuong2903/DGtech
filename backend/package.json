@@ -15,6 +15,7 @@
     "@clerk/express": "^1.7.46",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
+    "dgtech": "file:..",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "multer": "^2.0.2",

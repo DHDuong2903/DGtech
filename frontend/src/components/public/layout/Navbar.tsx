@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/src/hooks";
 import { useCartStore } from "@/src/stores";
 
-const Navbar = () => {
+export const Navbar = () => {
   const { isAdmin, isLoading } = useAuth();
   const { cart, fetchCart } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
@@ -103,4 +103,3 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;

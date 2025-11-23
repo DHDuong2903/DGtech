@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import Navbar from "../components/public/layout/Navbar";
 import { ConditionalFooter } from "../components/ConditionalFooter";
 import { AuthProvider } from "../providers/AuthProvider";
 import { StoreInitializer } from "../providers/StoreInitializer";
 import { AxiosInterceptorSetup } from "../providers/AxiosInterceptorSetup";
 import { Toaster } from "@/src/components/ui/sonner";
+import { Navbar } from "../components/public";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
