@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./libs/db.js";
 import { syncModels } from "./libs/syncModels.js";
+
 import userRoute from "./routes/userRoute.js";
 import webhookRoute from "./routes/webhookRoute.js";
 import categoryRoute from "./routes/categoryRoute.js";
@@ -18,27 +19,36 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CORS configuration
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://dgtech-frontend.onrender.com",
+];
+
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? process.env.FRONTEND_URL || "https://dgtech-frontend.onrender.com"
-        : "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.log("Blocked by CORS:", origin);
+        return callback(new Error("CORS not allowed"));
+      }
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Webhook routes phai dung truoc express.json() vi webhook can dung express.raw()
 app.use("/api/webhooks", webhookRoute);
 
 app.use(express.json());
+
 app.use("/api/users", userRoute);
 app.use("/api/categories", categoryRoute);
 app.use("/api/products", productRoute);
@@ -50,6 +60,7 @@ app.use("/api/payments", paymentRoute);
 const startServer = async () => {
   await connectDB();
   await syncModels();
+
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
