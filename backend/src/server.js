@@ -27,8 +27,8 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? true // Allow same origin in production
-        : "http://localhost:3000", // Allow localhost in development
+        ? process.env.FRONTEND_URL || "https://dgtech-frontend.onrender.com"
+        : "http://localhost:3000",
     credentials: true,
   })
 );
@@ -44,40 +44,6 @@ app.use("/api/reviews", reviewRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/payments", paymentRoute);
-
-// Serve static files from Next.js build (production only)
-if (process.env.NODE_ENV === "production") {
-  const buildPath = path.join(__dirname, "../../frontend/.next");
-  const publicPath = path.join(__dirname, "../../frontend/public");
-  const staticPath = path.join(buildPath, "static");
-
-  // Serve Next.js static files
-  app.use("/_next/static", express.static(staticPath));
-
-  // Serve public files (images, etc.)
-  app.use(express.static(publicPath));
-
-  // Serve prerendered HTML pages
-  app.use((req, res, next) => {
-    // Skip API routes
-    if (req.path.startsWith("/api") || req.path.startsWith("/_next")) {
-      return next();
-    }
-
-    // Serve index.html for all other routes (client-side routing)
-    const indexPath = path.join(buildPath, "server/app", req.path, "index.html");
-    const rootIndexPath = path.join(buildPath, "server/app/index.html");
-
-    // Try specific path first, fallback to root index
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        res.sendFile(rootIndexPath, (err2) => {
-          if (err2) next();
-        });
-      }
-    });
-  });
-}
 
 const startServer = async () => {
   await connectDB();

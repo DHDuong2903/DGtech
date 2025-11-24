@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone", // For deployment with custom server
+  // Removed output: "standalone" - using default Next.js server
   images: {
     remotePatterns: [
       {

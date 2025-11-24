@@ -1,13 +1,8 @@
 import axios from "axios";
 
-// Sử dụng relative URL khi deploy cùng backend, absolute URL cho development
+// Use environment variable for API URL (required for separate services)
 const getBaseURL = () => {
-  // Nếu có NEXT_PUBLIC_API_URL thì dùng (development)
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  // Production: dùng relative URL (cùng domain với backend)
-  return "/api";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 };
 
 const axiosInstance = axios.create({
