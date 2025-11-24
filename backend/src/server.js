@@ -64,7 +64,7 @@ if (process.env.NODE_ENV === "production") {
 
     try {
       // Import and use Next.js standalone server
-      const nextServerPath = path.join(frontendPath, "frontend/server.js");
+      const nextServerPath = path.join(frontendPath, "server.js");
       const nextHandler = await import(nextServerPath);
       nextHandler.default(req, res);
     } catch (error) {
