@@ -55,8 +55,8 @@ if (process.env.NODE_ENV === "production") {
   app.use("/_next/static", express.static(staticPath));
   app.use(express.static(publicPath));
 
-  // Serve Next.js pages - catch all routes
-  app.get("*", async (req, res, next) => {
+  // Serve Next.js pages - use middleware instead of route for catch-all
+  app.use(async (req, res, next) => {
     // Skip API routes
     if (req.path.startsWith("/api")) {
       return next();

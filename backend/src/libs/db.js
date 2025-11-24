@@ -1,9 +1,9 @@
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({ silent: true });
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.DATABASE_URL;
 
 export const sequelize = new Sequelize(databaseUrl, {
   dialect: "postgres",
@@ -17,7 +17,7 @@ export const sequelize = new Sequelize(databaseUrl, {
           }
         : false,
   },
-  logging: process.env.NODE_ENV === "development",
+  logging: false,
 });
 
 export const connectDB = async () => {
