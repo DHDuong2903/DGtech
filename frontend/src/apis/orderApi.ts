@@ -1,12 +1,12 @@
 import axiosInstance from "../lib/axios";
 import { Order, CreateOrderRequest } from "../types";
 
-const ORDER_API_URL = "/orders";
+const ORDERS_URL = "/orders";
 
 export const orderApi = {
   // Create new order
   createOrder: async (data: CreateOrderRequest): Promise<{ order: Order; message: string }> => {
-    const response = await axiosInstance.post(ORDER_API_URL, data);
+    const response = await axiosInstance.post(ORDERS_URL, data);
     return response.data;
   },
 
@@ -24,19 +24,19 @@ export const orderApi = {
       totalPages: number;
     };
   }> => {
-    const response = await axiosInstance.get(ORDER_API_URL, { params });
+    const response = await axiosInstance.get(ORDERS_URL, { params });
     return response.data;
   },
 
   // Get order by ID
   getOrderById: async (orderId: string): Promise<{ order: Order }> => {
-    const response = await axiosInstance.get(`${ORDER_API_URL}/${orderId}`);
+    const response = await axiosInstance.get(`${ORDERS_URL}/${orderId}`);
     return response.data;
   },
 
   // Cancel order
   cancelOrder: async (orderId: string): Promise<{ order: Order; message: string }> => {
-    const response = await axiosInstance.put(`${ORDER_API_URL}/${orderId}/cancel`);
+    const response = await axiosInstance.put(`${ORDERS_URL}/${orderId}/cancel`);
     return response.data;
   },
 
@@ -54,13 +54,13 @@ export const orderApi = {
       totalPages: number;
     };
   }> => {
-    const response = await axiosInstance.get(`${ORDER_API_URL}/admin/all`, { params });
+    const response = await axiosInstance.get(`${ORDERS_URL}/admin/all`, { params });
     return response.data;
   },
 
   // Admin: Update order status
   updateOrderStatus: async (orderId: string, status: string): Promise<{ order: Order; message: string }> => {
-    const response = await axiosInstance.put(`${ORDER_API_URL}/admin/${orderId}/status`, {
+    const response = await axiosInstance.put(`${ORDERS_URL}/admin/${orderId}/status`, {
       status,
     });
     return response.data;

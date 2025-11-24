@@ -3,8 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Hỗ trợ cả DATABASE_URL và DATABASE_URI
-const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_URI;
+const databaseUrl = process.env.DATABASE_URL
 
 export const sequelize = new Sequelize(databaseUrl, {
   dialect: "postgres",

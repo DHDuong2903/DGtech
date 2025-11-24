@@ -53,22 +53,24 @@ if (process.env.NODE_ENV === "production") {
 
   // Serve static files
   app.use("/_next/static", express.static(staticPath));
-  app.use("/images", express.static(path.join(publicPath, "images")));
+  app.use(express.static(publicPath));
 
-  // Serve Next.js pages
-  app.get("/*", (req, res, next) => {
+  // Serve Next.js pages - catch all routes
+  app.get("*", async (req, res, next) => {
     // Skip API routes
     if (req.path.startsWith("/api")) {
       return next();
     }
 
-    // Serve Next.js
-    const nextServer = path.join(frontendPath, "server.js");
-    import(nextServer)
-      .then((mod) => {
-        mod.default(req, res);
-      })
-      .catch(next);
+    try {
+      // Import and use Next.js standalone server
+      const nextServerPath = path.join(frontendPath, "frontend/server.js");
+      const nextHandler = await import(nextServerPath);
+      nextHandler.default(req, res);
+    } catch (error) {
+      console.error("Error serving Next.js:", error);
+      next(error);
+    }
   });
 }
 
@@ -77,7 +79,6 @@ const startServer = async () => {
   await syncModels();
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
   });
 };
 

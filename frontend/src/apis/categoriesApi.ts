@@ -1,15 +1,13 @@
 // Categories API Service
 import axiosInstance from "../lib/axios";
 import type { Category } from "../types";
-import { API_ENDPOINTS } from "../constants";
+
+const CATEGORIES_URL = "/categories";
 
 export const categoriesApi = {
-  /**
-   * Get all categories
-   */
   getAll: async (): Promise<Category[]> => {
     try {
-      const response = await axiosInstance.get<{ message: string; categories: Category[] }>(API_ENDPOINTS.CATEGORIES);
+      const response = await axiosInstance.get<{ message: string; categories: Category[] }>(CATEGORIES_URL);
       return response.data.categories || [];
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -17,14 +15,9 @@ export const categoriesApi = {
     }
   },
 
-  /**
-   * Get category by ID
-   */
   getById: async (id: number): Promise<Category> => {
     try {
-      const response = await axiosInstance.get<{ message: string; category: Category }>(
-        API_ENDPOINTS.CATEGORY_BY_ID(id)
-      );
+      const response = await axiosInstance.get<{ message: string; category: Category }>(`${CATEGORIES_URL}/${id}`);
       return response.data.category;
     } catch (error) {
       console.error(`Error fetching category ${id}:`, error);
@@ -32,13 +25,10 @@ export const categoriesApi = {
     }
   },
 
-  /**
-   * Create new category
-   */
   create: async (categoryData: { name: string; description: string }): Promise<Category> => {
     try {
       const response = await axiosInstance.post<{ message: string; newCategory: Category }>(
-        API_ENDPOINTS.CATEGORIES,
+        CATEGORIES_URL,
         categoryData
       );
       return response.data.newCategory;
@@ -48,13 +38,10 @@ export const categoriesApi = {
     }
   },
 
-  /**
-   * Update category
-   */
   update: async (id: number, categoryData: { name: string; description: string }): Promise<Category> => {
     try {
       const response = await axiosInstance.put<{ message: string; category: Category }>(
-        API_ENDPOINTS.CATEGORY_BY_ID(id),
+        `${CATEGORIES_URL}/${id}`,
         categoryData
       );
       return response.data.category;
@@ -64,12 +51,9 @@ export const categoriesApi = {
     }
   },
 
-  /**
-   * Delete category
-   */
   delete: async (id: number): Promise<void> => {
     try {
-      await axiosInstance.delete(API_ENDPOINTS.CATEGORY_BY_ID(id));
+      await axiosInstance.delete(`${CATEGORIES_URL}/${id}`);
     } catch (error) {
       console.error(`Error deleting category ${id}:`, error);
       throw error;

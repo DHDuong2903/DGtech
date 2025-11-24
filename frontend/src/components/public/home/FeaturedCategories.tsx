@@ -1,10 +1,61 @@
 "use client";
 
-import { Tag } from "lucide-react";
+import {
+  Tag,
+  Smartphone,
+  Laptop,
+  Watch,
+  Tablet,
+  Camera,
+  Volume2,
+  Keyboard,
+  Mouse,
+  Monitor,
+  Headphones,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/src/components/ui/carousel";
 import { useCategoryStore } from "@/src/stores";
-import { getCategoryIcon } from "@/src/constants";
+
+// Category Icon Mapping
+const getCategoryIcon = (categoryName: string): LucideIcon => {
+  const normalizedName = categoryName.toLowerCase().replace(/\s+/g, "_");
+
+  const iconMap: Record<string, LucideIcon> = {
+    headphone: Headphones,
+    tai_nghe: Headphones,
+    earphone: Headphones,
+    phone: Smartphone,
+    điện_thoại: Smartphone,
+    mobile: Smartphone,
+    laptop: Laptop,
+    máy_tính: Laptop,
+    computer: Laptop,
+    watch: Watch,
+    đồng_hồ: Watch,
+    tablet: Tablet,
+    máy_tính_bảng: Tablet,
+    camera: Camera,
+    máy_ảnh: Camera,
+    speaker: Volume2,
+    loa: Volume2,
+    keyboard: Keyboard,
+    bàn_phím: Keyboard,
+    mouse: Mouse,
+    chuột: Mouse,
+    monitor: Monitor,
+    màn_hình: Monitor,
+  };
+
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (normalizedName.includes(key)) {
+      return icon;
+    }
+  }
+
+  return Tag;
+};
 
 export const FeaturedCategories = () => {
   const { categories, loading } = useCategoryStore();

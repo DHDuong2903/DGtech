@@ -1,5 +1,8 @@
 // Validation utilities
-import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE } from '../constants';
+
+// Constants
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 /**
  * Validate email format
@@ -14,7 +17,7 @@ export const isValidEmail = (email: string): boolean => {
  */
 export const isValidPhone = (phone: string): boolean => {
   const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-  return phoneRegex.test(phone.replace(/\s+/g, ''));
+  return phoneRegex.test(phone.replace(/\s+/g, ""));
 };
 
 /**
@@ -25,7 +28,7 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return {
       valid: false,
-      error: 'Chỉ chấp nhận file ảnh (JPG, PNG, WebP)',
+      error: "Chỉ chấp nhận file ảnh (JPG, PNG, WebP)",
     };
   }
 
@@ -45,7 +48,7 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
  */
 export const isRequired = (value: string | number | undefined | null): boolean => {
   if (value === undefined || value === null) return false;
-  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
   return true;
 };
 

@@ -1,15 +1,13 @@
 // Users API Service
 import axiosInstance from "../lib/axios";
 import type { User, ApiResponse } from "../types";
-import { API_ENDPOINTS } from "../constants";
+
+const USERS_URL = "/users";
 
 export const usersApi = {
-  /**
-   * Get user by Clerk ID
-   */
   getByClerkId: async (clerkId: string): Promise<User> => {
     try {
-      const { data } = await axiosInstance.get<ApiResponse<User>>(API_ENDPOINTS.USER_BY_CLERK_ID(clerkId));
+      const { data } = await axiosInstance.get<ApiResponse<User>>(`${USERS_URL}/${clerkId}`);
       return data.user!;
     } catch (error) {
       console.error(`Error fetching user ${clerkId}:`, error);
@@ -17,12 +15,9 @@ export const usersApi = {
     }
   },
 
-  /**
-   * Create or update user (used by webhook)
-   */
   createOrUpdate: async (userData: Partial<User>): Promise<User> => {
     try {
-      const { data } = await axiosInstance.post<ApiResponse<User>>(API_ENDPOINTS.USERS, userData);
+      const { data } = await axiosInstance.post<ApiResponse<User>>(USERS_URL, userData);
       return data.user!;
     } catch (error) {
       console.error("Error creating/updating user:", error);
@@ -30,12 +25,9 @@ export const usersApi = {
     }
   },
 
-  /**
-   * Get all users (Admin only)
-   */
   getAllUsers: async (): Promise<{ users: User[]; total: number }> => {
     try {
-      const { data } = await axiosInstance.get(API_ENDPOINTS.USERS);
+      const { data } = await axiosInstance.get(USERS_URL);
       return data;
     } catch (error) {
       console.error("Error fetching all users:", error);
@@ -43,12 +35,9 @@ export const usersApi = {
     }
   },
 
-  /**
-   * Update user role (Admin only)
-   */
   updateUserRole: async (clerkId: string, role: "user" | "admin"): Promise<User> => {
     try {
-      const { data } = await axiosInstance.put<ApiResponse<User>>(`${API_ENDPOINTS.USERS}/${clerkId}/role`, { role });
+      const { data } = await axiosInstance.put<ApiResponse<User>>(`${USERS_URL}/${clerkId}/role`, { role });
       return data.user!;
     } catch (error) {
       console.error(`Error updating user role ${clerkId}:`, error);
@@ -56,12 +45,9 @@ export const usersApi = {
     }
   },
 
-  /**
-   * Delete user (Admin only)
-   */
   deleteUser: async (clerkId: string): Promise<void> => {
     try {
-      await axiosInstance.delete(`${API_ENDPOINTS.USERS}/${clerkId}`);
+      await axiosInstance.delete(`${USERS_URL}/${clerkId}`);
     } catch (error) {
       console.error(`Error deleting user ${clerkId}:`, error);
       throw error;
