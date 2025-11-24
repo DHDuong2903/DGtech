@@ -47,30 +47,35 @@ app.use("/api/payments", paymentRoute);
 
 // Serve static files from Next.js build (production only)
 if (process.env.NODE_ENV === "production") {
-  const frontendPath = path.join(__dirname, "../../frontend/.next/standalone");
+  const buildPath = path.join(__dirname, "../../frontend/.next");
   const publicPath = path.join(__dirname, "../../frontend/public");
-  const staticPath = path.join(__dirname, "../../frontend/.next/static");
+  const staticPath = path.join(buildPath, "static");
 
-  // Serve static files
+  // Serve Next.js static files
   app.use("/_next/static", express.static(staticPath));
+
+  // Serve public files (images, etc.)
   app.use(express.static(publicPath));
 
-  // Serve Next.js pages - use middleware instead of route for catch-all
-  app.use(async (req, res, next) => {
+  // Serve prerendered HTML pages
+  app.use((req, res, next) => {
     // Skip API routes
-    if (req.path.startsWith("/api")) {
+    if (req.path.startsWith("/api") || req.path.startsWith("/_next")) {
       return next();
     }
 
-    try {
-      // Import and use Next.js standalone server
-      const nextServerPath = path.join(frontendPath, "server.js");
-      const nextHandler = await import(nextServerPath);
-      nextHandler.default(req, res);
-    } catch (error) {
-      console.error("Error serving Next.js:", error);
-      next(error);
-    }
+    // Serve index.html for all other routes (client-side routing)
+    const indexPath = path.join(buildPath, "server/app", req.path, "index.html");
+    const rootIndexPath = path.join(buildPath, "server/app/index.html");
+
+    // Try specific path first, fallback to root index
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        res.sendFile(rootIndexPath, (err2) => {
+          if (err2) next();
+        });
+      }
+    });
   });
 }
 
