@@ -41,7 +41,7 @@ export const DashboardContent = () => {
   const dashboardLoading = productsLoading || categoriesLoading || usersLoading || ordersLoading;
 
   useEffect(() => {
-    fetchProducts({});
+    fetchProducts({}, { adminCatalog: true });
     fetchCategories();
     fetchAllUsers();
     fetchAllOrders({});

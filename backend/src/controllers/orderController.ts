@@ -33,7 +33,7 @@ export const createOrder = async (req: any, res: any) => {
         {
           model: Product,
           as: "product",
-          attributes: ["productId", "name", "price", "stock"],
+          attributes: ["productId", "name", "price", "stock", "status"],
         },
       ],
       transaction,
@@ -42,6 +42,15 @@ export const createOrder = async (req: any, res: any) => {
     if (cartItems.length === 0) {
       await transaction.rollback();
       return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
+    }
+
+    for (const cartItem of cartItems) {
+      if (cartItem.product.status !== "ACTIVE") {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: `Sản phẩm "${cartItem.product.name}" không còn được bán`,
+        });
+      }
     }
 
     // Check stock

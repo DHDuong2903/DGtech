@@ -1,7 +1,6 @@
 import { Slideshow } from "../../components/public/home/Slideshow";
 import { FeaturedCategories } from "../../components/public/home/FeaturedCategories";
 import { FeaturedProducts } from "../../components/public/home/FeaturedProducts";
-import { OnSaleProducts } from "../../components/public/home/OnSaleProducts";
 
 export default function Home() {
   return (
@@ -13,9 +12,6 @@ export default function Home() {
 
       {/* Featured Products Section */}
       <FeaturedProducts />
-
-      {/* On Sale Products Section */}
-      <OnSaleProducts />
     </div>
   );
 }

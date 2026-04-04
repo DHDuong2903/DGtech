@@ -1,4 +1,6 @@
 // Product Types
+export type ProductStatus = "ACTIVE" | "DRAFT";
+
 export interface Product {
   productId: string;
   name: string;
@@ -7,8 +9,7 @@ export interface Product {
   stock: number;
   imageUrl?: string;
   categoryId: number;
-  isFeatured: boolean;
-  isOnSale: boolean;
+  status: ProductStatus;
   category?: {
     categoryId: number;
     name: string;
@@ -23,8 +24,7 @@ export interface ProductFormData {
   price: number;
   stock: number;
   categoryId: number;
-  isFeatured: boolean;
-  isOnSale: boolean;
+  status: ProductStatus;
   image?: File;
 }
 

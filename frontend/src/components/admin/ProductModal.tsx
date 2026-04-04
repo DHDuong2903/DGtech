@@ -14,9 +14,9 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Switch } from "@/src/components/ui/switch";
-import { Product, Category } from "../../types";
+import type { Product, Category, ProductStatus } from "../../types";
 import { isValidImage } from "../../utils";
+import { toast } from "sonner";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -37,8 +37,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: product.price.toString(),
         stock: product.stock.toString(),
         categoryId: product.categoryId.toString(),
-        isFeatured: product.isFeatured || false,
-        isOnSale: product.isOnSale || false,
+        status: (product.status ?? "DRAFT") as ProductStatus,
       };
     }
     return {
@@ -47,8 +46,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
       price: "",
       stock: "",
       categoryId: "",
-      isFeatured: false,
-      isOnSale: false,
+      status: "DRAFT" as ProductStatus,
     };
   };
 
@@ -72,7 +70,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
     if (file) {
       const validation = isValidImage(file);
       if (!validation.valid) {
-        alert(validation.error);
+        toast.error(validation.error ?? "Invalid image");
         e.target.value = "";
         return;
       }
@@ -96,8 +94,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
     data.append("price", formData.price);
     data.append("stock", formData.stock);
     data.append("categoryId", formData.categoryId);
-    data.append("isFeatured", formData.isFeatured.toString());
-    data.append("isOnSale", formData.isOnSale.toString());
+    data.append("status", formData.status);
 
     if (imageFile) {
       data.append("image", imageFile);
@@ -114,8 +111,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: "",
         stock: "",
         categoryId: "",
-        isFeatured: false,
-        isOnSale: false,
+        status: "DRAFT",
       });
       setImageFile(null);
       setImagePreview("");
@@ -132,8 +128,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: "",
         stock: "",
         categoryId: "",
-        isFeatured: false,
-        isOnSale: false,
+        status: "DRAFT",
       });
       setImageFile(null);
       setImagePreview("");
@@ -145,9 +140,9 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Thêm sản phẩm mới" : "Chỉnh sửa sản phẩm"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? "Add product" : "Edit product"}</DialogTitle>
           <DialogDescription>
-            {mode === "create" ? "Thêm một sản phẩm mới cho cửa hàng." : "Thay đổi sản phẩm ở đây."}
+            {mode === "create" ? "Add a new product to your catalog." : "Update product details below."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -155,7 +150,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             {/* Product Name */}
             <div className="grid gap-2">
               <Label htmlFor="name">
-                Tên sản phẩm <span className="text-red-500">*</span>
+                Product name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
@@ -163,18 +158,18 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nhập tên"
+                placeholder="Name"
               />
             </div>
 
             {/* Description */}
             <div className="grid gap-2">
-              <Label htmlFor="description">Mô tả</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Nhập mô tả"
+                placeholder="Description"
                 rows={3}
               />
             </div>
@@ -183,7 +178,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="price">
-                  Giá (VND) <span className="text-red-500">*</span>
+                  Price (VND) <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="price"
@@ -199,7 +194,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
 
               <div className="grid gap-2">
                 <Label htmlFor="stock">
-                  Số lượng trong kho <span className="text-red-500">*</span>
+                  Stock <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="stock"
@@ -216,7 +211,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             {/* Category */}
             <div className="grid gap-2">
               <Label htmlFor="category">
-                Danh mục <span className="text-red-500">*</span>
+                Category <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={formData.categoryId}
@@ -224,7 +219,7 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn danh mục" />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -236,9 +231,29 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
               </Select>
             </div>
 
+            {/* Status */}
+            <div className="grid gap-2">
+              <Label htmlFor="status">
+                Status <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: ProductStatus) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">Draft products are hidden from the shop.</p>
+            </div>
+
             {/* Image Upload */}
             <div className="grid gap-2">
-              <Label htmlFor="image">Ảnh sản phẩm</Label>
+              <Label htmlFor="image">Product image</Label>
               <Input id="image" type="file" accept="image/*" onChange={handleImageChange} />
               {imagePreview && (
                 <div className="mt-2">
@@ -247,37 +262,12 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                 </div>
               )}
             </div>
-
-            {/* Featured and On Sale Switches */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between space-x-2 border rounded-lg p-3">
-                <Label htmlFor="isFeatured" className="cursor-pointer">
-                  Sản phẩm nổi bật
-                </Label>
-                <Switch
-                  id="isFeatured"
-                  checked={formData.isFeatured}
-                  onCheckedChange={(checked: boolean) => setFormData({ ...formData, isFeatured: checked })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between space-x-2 border rounded-lg p-3">
-                <Label htmlFor="isOnSale" className="cursor-pointer">
-                  Đang giảm giá
-                </Label>
-                <Switch
-                  id="isOnSale"
-                  checked={formData.isOnSale}
-                  onCheckedChange={(checked: boolean) => setFormData({ ...formData, isOnSale: checked })}
-                />
-              </div>
-            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Hủy
+              Cancel
             </Button>
-            <Button type="submit">{mode === "create" ? "Thêm" : "Lưu thay đổi"}</Button>
+            <Button type="submit">{mode === "create" ? "Create" : "Save changes"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

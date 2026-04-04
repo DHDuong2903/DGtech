@@ -1,15 +1,12 @@
 import { Card } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
-import { Star, BadgePercent, Package } from "lucide-react";
+import { Package } from "lucide-react";
 
 interface ProductImageProps {
   imageUrl?: string;
   name: string;
-  isFeatured?: boolean;
-  isOnSale?: boolean;
 }
 
-export const ProductImage = ({ imageUrl, name, isFeatured, isOnSale }: ProductImageProps) => {
+export const ProductImage = ({ imageUrl, name }: ProductImageProps) => {
   return (
     <div className="flex justify-center">
       <div className="w-full max-w-lg">
@@ -23,22 +20,6 @@ export const ProductImage = ({ imageUrl, name, isFeatured, isOnSale }: ProductIm
                 <Package className="h-24 w-24 text-gray-400" />
               </div>
             )}
-
-            {/* Badges */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2">
-              {isFeatured && (
-                <Badge className="bg-yellow-600 hover:bg-yellow-700">
-                  <Star className="h-3 w-3 mr-1" />
-                  Nổi bật
-                </Badge>
-              )}
-              {isOnSale && (
-                <Badge className="bg-red-600 hover:bg-red-700">
-                  <BadgePercent className="h-3 w-3 mr-1" />
-                  Giảm giá
-                </Badge>
-              )}
-            </div>
           </div>
         </Card>
       </div>

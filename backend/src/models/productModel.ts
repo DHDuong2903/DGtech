@@ -34,15 +34,10 @@ export const Product = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    isFeatured: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+    status: {
+      type: DataTypes.ENUM("ACTIVE", "DRAFT"),
       allowNull: false,
-    },
-    isOnSale: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-      allowNull: false,
+      defaultValue: "ACTIVE",
     },
   },
   {

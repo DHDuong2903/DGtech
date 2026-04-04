@@ -3,24 +3,42 @@ import { API_ROUTE } from "../constant";
 import axiosInstance from "../lib/axios";
 import type { Product, PaginatedResponse, ApiResponse } from "../types";
 
+export type ProductListParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  minStock?: number;
+  maxStock?: number;
+  sortBy?: string;
+  order?: "ASC" | "DESC";
+  /** Admin inventory only: filter by status */
+  status?: "ACTIVE" | "DRAFT";
+};
+
 export const productsApi = {
-  getAll: async (params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    categoryId?: number;
-    minPrice?: number;
-    maxPrice?: number;
-    minStock?: number;
-    maxStock?: number;
-    sortBy?: string;
-    order?: "ASC" | "DESC";
-  }): Promise<PaginatedResponse<Product>> => {
+  getAll: async (params?: ProductListParams): Promise<PaginatedResponse<Product>> => {
     try {
       const { data } = await axiosInstance.get<PaginatedResponse<Product>>(API_ROUTE.PRODUCTS, { params });
       return data;
     } catch (error) {
       console.error("Error fetching products:", error);
+      throw error;
+    }
+  },
+
+  /** Admin: all products (draft + active). Requires auth + admin role. */
+  getAdminInventory: async (params?: ProductListParams): Promise<PaginatedResponse<Product>> => {
+    try {
+      const { data } = await axiosInstance.get<PaginatedResponse<Product>>(
+        `${API_ROUTE.PRODUCTS}/admin/inventory`,
+        { params },
+      );
+      return data;
+    } catch (error) {
+      console.error("Error fetching admin inventory:", error);
       throw error;
     }
   },
@@ -64,50 +82,17 @@ export const productsApi = {
     }
   },
 
-  toggleFeatured: async (id: string, isFeatured: boolean): Promise<Product> => {
-    try {
-      const { data } = await axiosInstance.patch<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}/toggle-featured`, {
-        isFeatured,
-      });
-      return data.product!;
-    } catch (error) {
-      console.error(`Error toggling featured for product ${id}:`, error);
-      throw error;
-    }
-  },
-
-  toggleOnSale: async (id: string, isOnSale: boolean): Promise<Product> => {
-    try {
-      const { data } = await axiosInstance.patch<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}/toggle-on-sale`, {
-        isOnSale,
-      });
-      return data.product!;
-    } catch (error) {
-      console.error(`Error toggling on sale for product ${id}:`, error);
-      throw error;
-    }
-  },
-
   getFeatured: async (limit: number = 8): Promise<Product[]> => {
     try {
-      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(`${API_ROUTE.PRODUCTS}/featured`, {
-        params: { limit },
-      });
+      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(
+        `${API_ROUTE.PRODUCTS}/featured`,
+        {
+          params: { limit },
+        },
+      );
       return data.products || [];
     } catch (error) {
       console.error("Error fetching featured products:", error);
-      throw error;
-    }
-  },
-
-  getOnSale: async (limit: number = 8): Promise<Product[]> => {
-    try {
-      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(`${API_ROUTE.PRODUCTS}/on-sale`, {
-        params: { limit },
-      });
-      return data.products || [];
-    } catch (error) {
-      console.error("Error fetching on sale products:", error);
       throw error;
     }
   },

@@ -19,7 +19,6 @@ export function createAdminCategoryColumns(handlers: {
   return [
     {
       id: "select",
-      enableHiding: false,
       header: ({ table }) => (
         <Checkbox
           checked={
@@ -40,17 +39,14 @@ export function createAdminCategoryColumns(handlers: {
           aria-label="Select row"
         />
       ),
-      enableSorting: false,
     },
     {
       accessorKey: "name",
-      enableSorting: false,
       header: "Category Name",
       cell: ({ row }) => <span>{row.original.name}</span>,
     },
     {
       accessorKey: "description",
-      enableSorting: false,
       header: "Description",
       cell: ({ row }) => {
         const d = row.original.description?.trim();
@@ -64,7 +60,6 @@ export function createAdminCategoryColumns(handlers: {
     {
       accessorFn: (row) => row.createdAt ?? "",
       id: "createdAt",
-      enableSorting: false,
       header: "Created",
       cell: ({ row }) => {
         const d = row.original.createdAt;
@@ -79,8 +74,6 @@ export function createAdminCategoryColumns(handlers: {
     },
     {
       id: "actions",
-      enableHiding: false,
-      enableSorting: false,
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const category = row.original;
@@ -95,11 +88,11 @@ export function createAdminCategoryColumns(handlers: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handlers.onEdit(category)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onClick={() => handlers.onDelete(category)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>

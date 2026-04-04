@@ -26,7 +26,7 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
   if (!(ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(file.type)) {
     return {
       valid: false,
-      error: "Chỉ chấp nhận file ảnh (JPG, PNG, WebP)",
+      error: "Only JPG, PNG, or WebP images are allowed",
     };
   }
 
@@ -34,7 +34,7 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
   if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
     return {
       valid: false,
-      error: `Kích thước file không được vượt quá ${MAX_IMAGE_FILE_SIZE_BYTES / 1024 / 1024}MB`,
+      error: `Image must be at most ${MAX_IMAGE_FILE_SIZE_BYTES / 1024 / 1024}MB`,
     };
   }
 

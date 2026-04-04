@@ -39,15 +39,10 @@ export function createAdminUserColumns(handlers: {
   return [
     {
       id: "select",
-      enableHiding: false,
       header: ({ table }) => (
         <Checkbox
           checked={
-            table.getIsAllPageRowsSelected()
-              ? true
-              : table.getIsSomePageRowsSelected()
-                ? "indeterminate"
-                : false
+            table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -60,11 +55,9 @@ export function createAdminUserColumns(handlers: {
           aria-label="Select row"
         />
       ),
-      enableSorting: false,
     },
     {
       accessorKey: "role",
-      enableSorting: false,
       header: "Role",
       cell: ({ row }) => {
         const role = row.original.role;
@@ -87,30 +80,25 @@ export function createAdminUserColumns(handlers: {
     },
     {
       accessorKey: "tier",
-      enableSorting: false,
       header: "Tier",
       cell: ({ row }) => <TierBadge tier={row.original.tier} />,
     },
     {
       accessorKey: "username",
-      enableSorting: false,
       header: "Username",
       cell: ({ row }) => row.original.username || "—",
     },
     {
       accessorKey: "email",
-      enableSorting: false,
       header: "Email",
     },
     {
       accessorKey: "phone",
-      enableSorting: false,
       header: "Phone",
       cell: ({ row }) => row.original.phone || "—",
     },
     {
       accessorKey: "address",
-      enableSorting: false,
       header: "Address",
       cell: ({ row }) => {
         const addr = row.original.address?.trim();
@@ -124,7 +112,6 @@ export function createAdminUserColumns(handlers: {
     {
       accessorFn: (row) => row.createdAt ?? "",
       id: "createdAt",
-      enableSorting: false,
       header: "Created",
       cell: ({ row }) => {
         const d = row.original.createdAt;
@@ -139,8 +126,6 @@ export function createAdminUserColumns(handlers: {
     },
     {
       id: "actions",
-      enableHiding: false,
-      enableSorting: false,
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const user = row.original;
@@ -155,11 +140,11 @@ export function createAdminUserColumns(handlers: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handlers.onRole(user)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onClick={() => handlers.onDelete(user)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -112,12 +112,7 @@ const ProductDetailPage = () => {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          <ProductImage
-            imageUrl={product.imageUrl}
-            name={product.name}
-            isFeatured={product.isFeatured}
-            isOnSale={product.isOnSale}
-          />
+          <ProductImage imageUrl={product.imageUrl} name={product.name} />
 
           <div className="flex flex-col space-y-6">
             <ProductInfo

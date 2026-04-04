@@ -10,8 +10,6 @@ export const ADMIN_BELOW_NAV_HEIGHT = "h-[calc(100dvh-4.5rem)] min-h-[calc(100dv
 
 /** Default props for admin list screens using DataTable (Users, Categories, …). */
 export const ADMIN_LIST_DATA_TABLE_PROPS = {
-  showColumnVisibility: false,
-  enableSorting: false,
   showFooterSelectionSummary: false,
   pageSize: 8,
 } as const;

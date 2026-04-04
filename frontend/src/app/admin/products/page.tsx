@@ -1,63 +1,76 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
+import {
+  AdminProductFilters,
+  buildAdminProductQueryParams,
+  countAppliedAdminProductFilters,
+  defaultAdminProductFilters,
+} from "../../../components/admin/AdminProductFilters";
+import { createAdminProductColumns } from "../../../components/admin/AdminProductTable";
+import { ADMIN_LIST_DATA_TABLE_PROPS } from "@/src/constant";
 import { ProductModal } from "../../../components/admin/ProductModal";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
-import { ProductImage } from "../../../components/admin/ProductImage";
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Package, DollarSign, Archive } from "lucide-react";
 import { useProductStore, useCategoryStore } from "../../../stores";
-import { Product } from "../../../types";
-import { formatCurrency } from "../../../utils";
+import type { Product } from "../../../types";
 import { Button } from "@/src/components/ui/button";
-import { Card, CardContent } from "@/src/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
-import { Badge } from "@/src/components/ui/badge";
-import { Switch } from "@/src/components/ui/switch";
-import { Label } from "@/src/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
+import { DataTable } from "@/src/components/ui/data-table";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
+import { Plus, Package, FilterX } from "lucide-react";
 
 const ProductsPage = () => {
-  const {
-    products,
-    loading,
-    error,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    toggleFeatured,
-    toggleOnSale,
-    setError,
-  } = useProductStore();
-  const { categories } = useCategoryStore();
+  const { products, loading, error, fetchProducts, createProduct, updateProduct, deleteProduct, deleteProducts } =
+    useProductStore();
+  const { categories, fetchCategories } = useCategoryStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Product[] | null>(null);
+  const [bulkWorking, setBulkWorking] = useState(false);
+  const clearTableSelectionRef = useRef<(() => void) | null>(null);
 
-  // Handle create product
+  const [appliedFilters, setAppliedFilters] = useState(defaultAdminProductFilters);
+
+  const refreshProducts = useCallback(() => {
+    fetchProducts(buildAdminProductQueryParams(appliedFilters), { adminCatalog: true });
+  }, [appliedFilters, fetchProducts]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
+
+  const activeFilterCount = countAppliedAdminProductFilters(appliedFilters);
+
   const handleCreateProduct = async (productData: FormData) => {
     const result = await createProduct(productData);
     return result.success;
   };
 
-  // Handle update product
   const handleUpdateProduct = async (productData: FormData) => {
     if (!selectedProduct) return false;
-
     const result = await updateProduct(selectedProduct.productId, productData);
-    if (result.success) {
-      setSelectedProduct(null);
-    }
+    if (result.success) setSelectedProduct(null);
     return result.success;
   };
 
-  // Handle delete product
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
-
     const result = await deleteProduct(selectedProduct.productId);
     if (result.success) {
       setIsDeleteModalOpen(false);
@@ -65,246 +78,177 @@ const ProductsPage = () => {
     }
   };
 
-  // Open create modal
+  const handleBulkDeleteConfirm = async () => {
+    if (!bulkDeleteTargets?.length) return;
+    setBulkWorking(true);
+    try {
+      const result = await deleteProducts(bulkDeleteTargets.map((p) => p.productId));
+      if (result.success) {
+        setBulkDeleteTargets(null);
+        clearTableSelectionRef.current?.();
+      }
+    } finally {
+      setBulkWorking(false);
+    }
+  };
+
   const openCreateModal = () => {
     setModalMode("create");
     setSelectedProduct(null);
     setIsModalOpen(true);
   };
 
-  // Open edit modal
-  const openEditModal = (product: Product) => {
+  const handleEditClick = useCallback((product: Product) => {
     setModalMode("edit");
     setSelectedProduct(product);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  // Open delete modal
-  const openDeleteModal = (product: Product) => {
+  const handleDeleteClick = useCallback((product: Product) => {
     setSelectedProduct(product);
     setIsDeleteModalOpen(true);
-  };
+  }, []);
 
-  // Handle toggle featured
-  const handleToggleFeatured = async (product: Product, isFeatured: boolean) => {
-    try {
-      await toggleFeatured(product.productId, isFeatured);
-      setError(null);
-    } catch (err) {
-      console.error("Error toggling featured:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to toggle featured status");
-    }
-  };
-
-  // Handle toggle on sale
-  const handleToggleOnSale = async (product: Product, isOnSale: boolean) => {
-    try {
-      await toggleOnSale(product.productId, isOnSale);
-      setError(null);
-    } catch (err) {
-      console.error("Error toggling on sale:", err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to toggle on sale status");
-    }
-  };
-
-  // Calculate total value
-  const totalValue = products.reduce((sum, product) => sum + product.price * product.stock, 0);
-
-  // Calculate low stock items
-  const lowStockCount = products.filter((p) => p.stock < 10).length;
+  const columns = useMemo(
+    () =>
+      createAdminProductColumns({
+        onEdit: handleEditClick,
+        onDelete: handleDeleteClick,
+      }),
+    [handleEditClick, handleDeleteClick],
+  );
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Các sản phẩm</h1>
-            <p className="text-muted-foreground mt-1">Quản lý kho sản phẩm của bạn</p>
+            <h1 className="text-xl font-bold tracking-tight">Products Management</h1>
           </div>
-          <Button onClick={openCreateModal}>
-            <Plus className="mr-2 h-4 w-4" />
-            Thêm sản phẩm
+          <Button onClick={openCreateModal} size="sm">
+            <Plus className="h-4 w-4" />
+            Add product
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Tổng số sản phẩm</p>
-                  <h3 className="text-2xl font-bold mt-2">{products.length}</h3>
-                </div>
-                <Package className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Tổng giá trị</p>
-                  <h3 className="text-2xl font-bold mt-2 tracking-tight">{formatCurrency(totalValue)}</h3>
-                </div>
-                <DollarSign className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Sản phẩm có số lượng thấp</p>
-                  <h3 className="text-2xl font-bold mt-2">{lowStockCount}</h3>
-                </div>
-                <Archive className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Error Alert */}
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* Products Table */}
-        <Card>
-          <CardContent className="p-6">
-            {loading ? (
-              <AdminContentLoader minHeightClass="min-h-[320px]" />
-            ) : products.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">Chưa có sản phẩm nào</h3>
-                <p className="text-muted-foreground mt-2">Bắt đầu bằng cách tạo sản phẩm đầu tiên của bạn.</p>
-                <Button onClick={openCreateModal} className="mt-4">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Thêm sản phẩm
+        {loading ? (
+          <AdminContentLoader minHeightClass="min-h-[320px]" />
+        ) : products.length === 0 ? (
+          <div className="py-12 text-center">
+            <Package className="text-muted-foreground mx-auto h-12 w-12" />
+            {activeFilterCount > 0 ? (
+              <>
+                <h3 className="mt-4 text-lg font-semibold">No products match your filters</h3>
+                <p className="text-muted-foreground mt-2">Try adjusting filters or clear them to see all products.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setAppliedFilters(defaultAdminProductFilters)}
+                >
+                  <FilterX className="h-4 w-4" />
+                  Clear filters
                 </Button>
-              </div>
+              </>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Hình ảnh</TableHead>
-                      <TableHead>Tên</TableHead>
-                      <TableHead>Danh mục</TableHead>
-                      <TableHead>Giá</TableHead>
-                      <TableHead>Tồn kho</TableHead>
-                      <TableHead>Nổi bật</TableHead>
-                      <TableHead>Giảm giá</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead className="text-right">Hành động</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((product) => (
-                      <TableRow key={product.productId}>
-                        <TableCell>
-                          <ProductImage imageUrl={product.imageUrl} alt={product.name} />
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{product.name}</p>
-                            {product.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-1">{product.description}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{product.category?.name || "N/A"}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{formatCurrency(product.price)}</TableCell>
-                        <TableCell>
-                          <span className={product.stock < 10 ? "text-orange-600 font-medium" : ""}>
-                            {product.stock}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={product.isFeatured || false}
-                              onCheckedChange={(checked) => handleToggleFeatured(product, checked)}
-                            />
-                            <Label className="text-sm text-muted-foreground">
-                              {product.isFeatured ? "Có" : "Không"}
-                            </Label>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={product.isOnSale || false}
-                              onCheckedChange={(checked) => handleToggleOnSale(product, checked)}
-                            />
-                            <Label className="text-sm text-muted-foreground">{product.isOnSale ? "Có" : "Không"}</Label>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {product.stock === 0 ? (
-                            <Badge variant="destructive">Hết hàng</Badge>
-                          ) : product.stock < 10 ? (
-                            <Badge variant="outline" className="text-orange-600 border-orange-600">
-                              Sắp hết hàng
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-green-600">Còn hàng</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => openEditModal(product)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openDeleteModal(product)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <>
+                <h3 className="mt-4 text-lg font-semibold">No products yet</h3>
+                <p className="text-muted-foreground mt-2">Create your first product to get started.</p>
+                <Button onClick={openCreateModal} className="mt-4">
+                  <Plus className="h-4 w-4" />
+                  Add product
+                </Button>
+              </>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Product Modal */}
-        <ProductModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedProduct(null);
-          }}
-          onSave={modalMode === "create" ? handleCreateProduct : handleUpdateProduct}
-          product={selectedProduct}
-          categories={categories}
-          mode={modalMode}
-        />
-
-        {/* Delete Confirmation Modal */}
-        <DeleteConfirmModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => {
-            setIsDeleteModalOpen(false);
-            setSelectedProduct(null);
-          }}
-          onConfirm={handleDeleteProduct}
-          itemName={selectedProduct?.name || ""}
-          itemType="product"
-        />
+          </div>
+        ) : (
+          <DataTable
+            {...ADMIN_LIST_DATA_TABLE_PROPS}
+            columns={columns}
+            data={products}
+            getRowId={(row) => row.productId}
+            filterColumnId="name"
+            filterPlaceholder="Search by name…"
+            toolbarEnd={
+              <AdminProductFilters categories={categories} applied={appliedFilters} onApply={setAppliedFilters} />
+            }
+            bulkSelectionActions={({ selectedData, clearSelection }) => {
+              clearTableSelectionRef.current = clearSelection;
+              const n = selectedData.length;
+              return (
+                <>
+                  <span className="text-muted-foreground text-sm font-medium">{n} selected</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={n === 0}
+                    onClick={() => setBulkDeleteTargets(selectedData)}
+                  >
+                    Delete selected
+                  </Button>
+                </>
+              );
+            }}
+          />
+        )}
       </div>
+
+      <ProductModal
+        key={selectedProduct?.productId ?? "new"}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        onSave={modalMode === "create" ? handleCreateProduct : handleUpdateProduct}
+        product={selectedProduct}
+        categories={categories}
+        mode={modalMode}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        onConfirm={handleDeleteProduct}
+        itemName={selectedProduct?.name ?? ""}
+        itemType="product"
+        title="Delete product"
+        description={
+          <>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-foreground">{selectedProduct?.name}</span>? This cannot be undone.
+          </>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+      />
+
+      <Dialog open={!!bulkDeleteTargets} onOpenChange={(open) => !open && setBulkDeleteTargets(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {bulkDeleteTargets?.length ?? 0} products?</DialogTitle>
+            <DialogDescription>This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteTargets(null)} disabled={bulkWorking}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
+              {bulkWorking ? "Deleting…" : "Delete all"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/src/components/ui/badge";
-import { Star, BadgePercent } from "lucide-react";
 import { Product } from "@/src/types";
 import { formatCurrency } from "@/src/utils";
 
@@ -36,22 +35,6 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             <span className="text-gray-400 text-4xl">🖼️</span>
           </div>
         )}
-
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-2">
-          {product.isFeatured && (
-            <Badge className="bg-yellow-600 hover:bg-yellow-700">
-              <Star className="h-3 w-3 mr-1" />
-              Nổi bật
-            </Badge>
-          )}
-          {product.isOnSale && (
-            <Badge className="bg-red-600 hover:bg-red-700">
-              <BadgePercent className="h-3 w-3 mr-1" />
-              Giảm giá
-            </Badge>
-          )}
-        </div>
 
         {/* Stock badge */}
         {product.stock === 0 && (

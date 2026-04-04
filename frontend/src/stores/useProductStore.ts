@@ -17,23 +17,26 @@ interface ProductState {
   currentPage: number;
 
   // Actions
-  fetchProducts: (params?: {
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    order?: "ASC" | "DESC";
-    categoryId?: number;
-    search?: string;
-    minPrice?: number;
-    maxPrice?: number;
-  }) => Promise<void>;
+  fetchProducts: (
+    params?: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      order?: "ASC" | "DESC";
+      categoryId?: number;
+      search?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      status?: "ACTIVE" | "DRAFT";
+    },
+    options?: { adminCatalog?: boolean },
+  ) => Promise<void>;
   fetchProductById: (id: string) => Promise<void>;
   fetchRelatedProducts: (categoryId: number, excludeId: string) => Promise<void>;
   createProduct: (formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   updateProduct: (id: string, formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
-  toggleFeatured: (id: string, isFeatured: boolean) => Promise<{ success: boolean; data?: Product; error?: string }>;
-  toggleOnSale: (id: string, isOnSale: boolean) => Promise<{ success: boolean; data?: Product; error?: string }>;
+  deleteProducts: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -52,19 +55,25 @@ export const useProductStore = create<ProductState>()(
       currentPage: 1,
 
       // Fetch products with filters and pagination
-      fetchProducts: async (params?: {
-        page?: number;
-        limit?: number;
-        sortBy?: string;
-        order?: "ASC" | "DESC";
-        categoryId?: number;
-        search?: string;
-        minPrice?: number;
-        maxPrice?: number;
-      }) => {
+      fetchProducts: async (
+        params?: {
+          page?: number;
+          limit?: number;
+          sortBy?: string;
+          order?: "ASC" | "DESC";
+          categoryId?: number;
+          search?: string;
+          minPrice?: number;
+          maxPrice?: number;
+          status?: "ACTIVE" | "DRAFT";
+        },
+        options?: { adminCatalog?: boolean },
+      ) => {
         set({ loading: true, error: null });
         try {
-          const response = await productsApi.getAll(params);
+          const response = options?.adminCatalog
+            ? await productsApi.getAdminInventory(params)
+            : await productsApi.getAll(params);
           set({
             products: response.data || [],
             totalItems: response.totalItems || 0,
@@ -111,14 +120,14 @@ export const useProductStore = create<ProductState>()(
             products: [...state.products, newProduct],
             error: null,
           }));
-          toast.success("Sản phẩm đã được tạo mới thành công!");
+          toast.success("Product created");
           return { success: true, data: newProduct };
         } catch (err) {
           console.error("Error creating product:", err);
           const error = err as ApiError;
           const errorMessage = error.message || "Failed to create product";
           set({ error: errorMessage });
-          toast.error("Không thể tạo sản phẩm. Vui lòng thử lại!");
+          toast.error("Could not create product");
           return { success: false, error: errorMessage };
         }
       },
@@ -131,14 +140,14 @@ export const useProductStore = create<ProductState>()(
             products: state.products.map((prod) => (prod.productId === id ? updatedProduct : prod)),
             error: null,
           }));
-          toast.success("Sản phẩm đã được cập nhật thành công");
+          toast.success("Product updated");
           return { success: true, data: updatedProduct };
         } catch (err) {
           console.error("Error updating product:", err);
           const error = err as ApiError;
           const errorMessage = error.message || "Failed to update product";
           set({ error: errorMessage });
-          toast.error("Không thể cập nhật sản phẩm. Vui lòng thử lại");
+          toast.error("Could not update product");
           return { success: false, error: errorMessage };
         }
       },
@@ -151,54 +160,34 @@ export const useProductStore = create<ProductState>()(
             products: state.products.filter((prod) => prod.productId !== id),
             error: null,
           }));
-          toast.success("Sản phẩm đã được xóa thành công");
+          toast.success("Product deleted");
           return { success: true };
         } catch (err) {
           console.error("Error deleting product:", err);
           const error = err as ApiError;
           const errorMessage = error.message || "Failed to delete product";
           set({ error: errorMessage });
-          toast.error("Không thể xóa sản phẩm. Vui lòng thử lại");
+          toast.error("Could not delete product");
           return { success: false, error: errorMessage };
         }
       },
 
-      // Toggle featured status
-      toggleFeatured: async (id: string, isFeatured: boolean) => {
+      deleteProducts: async (ids: string[]) => {
+        if (ids.length === 0) return { success: true };
         try {
-          const updatedProduct = await productsApi.toggleFeatured(id, isFeatured);
+          await Promise.all(ids.map((id) => productsApi.delete(id)));
           set((state) => ({
-            products: state.products.map((prod) => (prod.productId === id ? { ...prod, isFeatured } : prod)),
+            products: state.products.filter((p) => !ids.includes(p.productId)),
             error: null,
           }));
-          toast.success(isFeatured ? "Đã đánh dấu là sản phẩm nổi bật" : "Đã bỏ đánh dấu sản phẩm nổi bật");
-          return { success: true, data: updatedProduct };
+          toast.success(ids.length === 1 ? "Product deleted" : `Deleted ${ids.length} products`);
+          return { success: true };
         } catch (err) {
-          console.error("Error toggling featured:", err);
+          console.error("Error bulk deleting products:", err);
           const error = err as ApiError;
-          const errorMessage = error.message || "Failed to toggle featured status";
+          const errorMessage = error.message || "Failed to delete products";
           set({ error: errorMessage });
-          toast.error("Không thể cập nhật trạng thái nổi bật. Vui lòng thử lại");
-          return { success: false, error: errorMessage };
-        }
-      },
-
-      // Toggle on sale status
-      toggleOnSale: async (id: string, isOnSale: boolean) => {
-        try {
-          const updatedProduct = await productsApi.toggleOnSale(id, isOnSale);
-          set((state) => ({
-            products: state.products.map((prod) => (prod.productId === id ? { ...prod, isOnSale } : prod)),
-            error: null,
-          }));
-          toast.success(isOnSale ? "Đã đánh dấu là đang giảm giá" : "Đã bỏ đánh dấu giảm giá");
-          return { success: true, data: updatedProduct };
-        } catch (err) {
-          console.error("Error toggling on sale:", err);
-          const error = err as ApiError;
-          const errorMessage = error.message || "Failed to toggle on sale status";
-          set({ error: errorMessage });
-          toast.error("Không thể cập nhật trạng thái giảm giá. Vui lòng thử lại");
+          toast.error("Could not delete selected products");
           return { success: false, error: errorMessage };
         }
       },

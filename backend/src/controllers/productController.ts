@@ -1,11 +1,25 @@
 // @ts-nocheck
 import { Category, Product } from "../models/associationsModel.js";
+import { User } from "../models/userModel.js";
 import { Op } from "sequelize";
 import { getProductWithCategory, productIncludeOptions } from "../helpers/productHelper.js";
 
+function normalizeProductStatus(value: unknown): "ACTIVE" | "DRAFT" | null {
+  if (value === undefined || value === null || value === "") return null;
+  const u = String(value).toUpperCase();
+  if (u === "ACTIVE" || u === "DRAFT") return u;
+  return null;
+}
+
+async function userIsAdmin(req: any): Promise<boolean> {
+  if (!req.auth?.userId) return false;
+  const user = await User.findOne({ where: { clerkId: req.auth.userId } });
+  return user?.role === "admin";
+}
+
 export const createProduct = async (req: any, res: any) => {
   try {
-    const { name, description, price, stock, categoryId, isFeatured, isOnSale } = req.body;
+    const { name, description, price, stock, categoryId } = req.body;
 
     if (!name || !price || !categoryId) {
       return res.status(400).json({ error: "Thieu thong tin bat buoc" });
@@ -23,6 +37,7 @@ export const createProduct = async (req: any, res: any) => {
     }
 
     const imageUrl = req.file ? req.file.path : null;
+    const status = normalizeProductStatus(req.body.status) ?? "DRAFT";
 
     const newProduct = await Product.create({
       name,
@@ -31,8 +46,7 @@ export const createProduct = async (req: any, res: any) => {
       imageUrl,
       stock: parseInt(stock) || 0,
       categoryId: parseInt(categoryId),
-      isFeatured: isFeatured === "true" || isFeatured === true,
-      isOnSale: isOnSale === "true" || isOnSale === true,
+      status,
     });
 
     const productWithCategory = await getProductWithCategory(Product, newProduct.productId);
@@ -50,7 +64,7 @@ export const createProduct = async (req: any, res: any) => {
 export const updateProduct = async (req: any, res: any) => {
   try {
     const { productId } = req.params;
-    const { name, description, price, stock, categoryId, isFeatured, isOnSale } = req.body;
+    const { name, description, price, stock, categoryId } = req.body;
 
     const product = await Product.findByPk(productId);
     if (!product) {
@@ -58,6 +72,7 @@ export const updateProduct = async (req: any, res: any) => {
     }
 
     const imageUrl = req.file ? req.file.path : product.imageUrl;
+    const nextStatus = normalizeProductStatus(req.body.status);
 
     await product.update({
       name: name || product.name,
@@ -66,10 +81,7 @@ export const updateProduct = async (req: any, res: any) => {
       imageUrl,
       stock: stock !== undefined ? parseInt(stock) : product.stock,
       categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
-      isFeatured:
-        isFeatured !== undefined ? isFeatured === "true" || isFeatured === true : product.isFeatured,
-      isOnSale:
-        isOnSale !== undefined ? isOnSale === "true" || isOnSale === true : product.isOnSale,
+      status: nextStatus ?? product.status,
     });
 
     const productWithCategory = await getProductWithCategory(Product, product.productId);
@@ -116,6 +128,11 @@ export const getProductById = async (req: any, res: any) => {
       return res.status(404).json({ error: "San pham khong ton tai" });
     }
 
+    const admin = await userIsAdmin(req);
+    if (product.status === "DRAFT" && !admin) {
+      return res.status(404).json({ error: "San pham khong ton tai" });
+    }
+
     return res.status(200).json({ message: "Lay san pham thanh cong", product });
   } catch (error: any) {
     console.log("Loi khi goi getProductById", error);
@@ -123,44 +140,55 @@ export const getProductById = async (req: any, res: any) => {
   }
 };
 
+const buildProductListWhere = (req: any) => {
+  const {
+    search,
+    categoryId,
+    minPrice,
+    maxPrice,
+    minStock,
+    maxStock,
+  } = req.query;
+
+  const where: any = {};
+
+  if (search) {
+    where.name = { [Op.iLike]: `%${search}%` };
+  }
+
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  if (minPrice || maxPrice) {
+    where.price = {};
+    if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
+    if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
+  }
+
+  if (minStock || maxStock) {
+    where.stock = {};
+    if (minStock) where.stock[Op.gte] = parseInt(minStock);
+    if (maxStock) where.stock[Op.lte] = parseInt(maxStock);
+  }
+
+  return where;
+};
+
+/** Public + shop: only ACTIVE products */
 export const getAllProducts = async (req: any, res: any) => {
   try {
     const {
       page = 1,
       limit = 10,
-      search,
-      categoryId,
-      minPrice,
-      maxPrice,
       sortBy = "createdAt",
-      minStock,
-      maxStock,
       order = "DESC",
     } = req.query;
 
     const offset = (page - 1) * limit;
 
-    const where: any = {};
-
-    if (search) {
-      where.name = { [Op.iLike]: `%${search}%` };
-    }
-
-    if (categoryId) {
-      where.categoryId = categoryId;
-    }
-
-    if (minPrice || maxPrice) {
-      where.price = {};
-      if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
-      if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
-    }
-
-    if (minStock || maxStock) {
-      where.stock = {};
-      if (minStock) where.stock[Op.gte] = parseInt(minStock);
-      if (maxStock) where.stock[Op.lte] = parseInt(maxStock);
-    }
+    const where = buildProductListWhere(req);
+    where.status = "ACTIVE";
 
     const products = await Product.findAndCountAll({
       where,
@@ -183,51 +211,42 @@ export const getAllProducts = async (req: any, res: any) => {
   }
 };
 
-export const toggleProductFeatured = async (req: any, res: any) => {
+/** Admin inventory: all statuses; optional ?status=ACTIVE|DRAFT */
+export const getAdminInventory = async (req: any, res: any) => {
   try {
-    const { productId } = req.params;
-    const { isFeatured } = req.body;
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      order = "DESC",
+    } = req.query;
 
-    const product = await Product.findByPk(productId);
-    if (!product) {
-      return res.status(404).json({ error: "San pham khong ton tai" });
+    const offset = (page - 1) * limit;
+
+    const where = buildProductListWhere(req);
+    const statusFilter = normalizeProductStatus(req.query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
-    await product.update({ isFeatured: isFeatured === "true" || isFeatured === true });
-
-    const productWithCategory = await getProductWithCategory(Product, product.productId);
+    const products = await Product.findAndCountAll({
+      where,
+      include: [productIncludeOptions],
+      order: [[sortBy, order]],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
 
     return res.status(200).json({
-      message: "Cap nhat trang thai noi bat thanh cong",
-      product: productWithCategory,
+      message: "Lay danh sach san pham thanh cong",
+      totalItems: products.count,
+      totalPages: Math.ceil(products.count / limit),
+      currentPage: parseInt(page),
+      data: products.rows,
     });
   } catch (error: any) {
-    console.error("Loi khi goi toggleProductFeatured:", error);
-    return res.status(500).json({ error: "Loi he thong", details: error?.message });
-  }
-};
-
-export const toggleProductOnSale = async (req: any, res: any) => {
-  try {
-    const { productId } = req.params;
-    const { isOnSale } = req.body;
-
-    const product = await Product.findByPk(productId);
-    if (!product) {
-      return res.status(404).json({ error: "San pham khong ton tai" });
-    }
-
-    await product.update({ isOnSale: isOnSale === "true" || isOnSale === true });
-
-    const productWithCategory = await getProductWithCategory(Product, product.productId);
-
-    return res.status(200).json({
-      message: "Cap nhat trang thai giam gia thanh cong",
-      product: productWithCategory,
-    });
-  } catch (error: any) {
-    console.error("Loi khi goi toggleProductOnSale:", error);
-    return res.status(500).json({ error: "Loi he thong", details: error?.message });
+    console.log("Loi khi goi getAdminInventory", error);
+    return res.status(500).json({ error: "Loi he thong" });
   }
 };
 
@@ -236,7 +255,7 @@ export const getFeaturedProducts = async (req: any, res: any) => {
     const { limit = 8 } = req.query;
 
     const products = await Product.findAll({
-      where: { isFeatured: true },
+      where: { status: "ACTIVE" },
       include: [productIncludeOptions],
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
@@ -251,25 +270,3 @@ export const getFeaturedProducts = async (req: any, res: any) => {
     return res.status(500).json({ error: "Loi he thong", details: error?.message });
   }
 };
-
-export const getOnSaleProducts = async (req: any, res: any) => {
-  try {
-    const { limit = 8 } = req.query;
-
-    const products = await Product.findAll({
-      where: { isOnSale: true },
-      include: [productIncludeOptions],
-      order: [["createdAt", "DESC"]],
-      limit: parseInt(limit),
-    });
-
-    return res.status(200).json({
-      message: "Lay danh sach san pham dang giam gia thanh cong",
-      products,
-    });
-  } catch (error: any) {
-    console.error("Loi khi goi getOnSaleProducts:", error);
-    return res.status(500).json({ error: "Loi he thong", details: error?.message });
-  }
-};
-

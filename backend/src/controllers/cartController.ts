@@ -38,6 +38,10 @@ export const addToCart = async (req: any, res: any) => {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
     }
 
+    if (product.status !== "ACTIVE") {
+      return res.status(400).json({ error: "Sản phẩm không khả dụng" });
+    }
+
     if (product.stock < quantity) {
       return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
@@ -103,6 +107,10 @@ export const updateCartItem = async (req: any, res: any) => {
 
     if (!cartItem) {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
+    }
+
+    if (cartItem.product.status !== "ACTIVE") {
+      return res.status(400).json({ error: "Sản phẩm không khả dụng" });
     }
 
     if (cartItem.product.stock < quantity) {

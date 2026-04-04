@@ -2,29 +2,18 @@
 
 import * as React from "react";
 import {
-  type Column,
   type ColumnDef,
   type ColumnFiltersState,
   type Row,
-  type SortingState,
   type Table as TanstackTable,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown } from "lucide-react";
 
 import { Button } from "@/src/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
 import { Input } from "@/src/components/ui/input";
 import {
   Table,
@@ -34,33 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table";
-import { cn } from "@/src/lib/utils";
-
-export function DataTableColumnHeader<TData, TValue>({
-  column,
-  title,
-  className,
-}: {
-  column: Column<TData, TValue>;
-  title: string;
-  className?: string;
-}) {
-  if (!column.getCanSort()) {
-    return <div className={cn(className)}>{title}</div>;
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={cn("-ml-3 h-8", className)}
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-    >
-      {title}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
-    </Button>
-  );
-}
 
 export interface DataTableBulkContext<TData> {
   table: TanstackTable<TData>;
@@ -78,11 +40,11 @@ export interface DataTableProps<TData, TValue> {
   filterColumnId?: string;
   filterPlaceholder?: string;
   showToolbar?: boolean;
-  showColumnVisibility?: boolean;
-  enableSorting?: boolean;
   showFooterSelectionSummary?: boolean;
   enableRowSelection?: boolean;
   bulkSelectionActions?: (ctx: DataTableBulkContext<TData>) => React.ReactNode;
+  /** Rendered to the right of the search input in the toolbar (e.g. filter popover). */
+  toolbarEnd?: React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -93,15 +55,12 @@ export function DataTable<TData, TValue>({
   filterColumnId,
   filterPlaceholder = "Filter…",
   showToolbar = true,
-  showColumnVisibility = true,
-  enableSorting = true,
   showFooterSelectionSummary = true,
   enableRowSelection = true,
   bulkSelectionActions,
+  toolbarEnd,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
@@ -113,20 +72,15 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    ...(enableSorting
-      ? { getSortedRowModel: getSortedRowModel(), onSortingChange: setSorting }
-      : { enableSorting: false }),
+    enableSorting: false,
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     enableRowSelection,
     initialState: {
       pagination: { pageSize },
     },
     state: {
-      ...(enableSorting ? { sorting } : {}),
       columnFilters,
-      columnVisibility,
       rowSelection,
     },
   });
@@ -150,7 +104,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full space-y-4">
-      {showToolbar && (
+      {showToolbar && (filterColumn || toolbarEnd) && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
             {filterColumn && (
@@ -161,37 +115,8 @@ export function DataTable<TData, TValue>({
                 className="max-w-sm"
               />
             )}
+            {toolbarEnd}
           </div>
-          {showColumnVisibility && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shrink-0">
-                  Columns
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {table
-                  .getAllColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => {
-                    const label =
-                      (column.columnDef.meta as { label?: string } | undefined)?.label ??
-                      column.id;
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                      >
-                        {label}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       )}
 
