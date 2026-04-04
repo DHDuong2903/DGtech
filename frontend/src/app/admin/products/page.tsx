@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminLayout } from "../../../components/admin/AdminLayout";
+import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { ProductModal } from "../../../components/admin/ProductModal";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
 import { ProductImage } from "../../../components/admin/ProductImage";
@@ -179,9 +180,7 @@ const ProductsPage = () => {
         <Card>
           <CardContent className="p-6">
             {loading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Tải sản phẩm...</p>
-              </div>
+              <AdminContentLoader minHeightClass="min-h-[320px]" />
             ) : products.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="mx-auto h-12 w-12 text-muted-foreground" />

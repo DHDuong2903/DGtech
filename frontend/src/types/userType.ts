@@ -5,6 +5,8 @@ export interface User {
   email: string;
   imageUrl?: string;
   phone?: string;
+  address?: string | null;
+  tier?: "bronze" | "silver" | "gold";
   role: "user" | "admin";
   createdAt?: string;
   updatedAt?: string;

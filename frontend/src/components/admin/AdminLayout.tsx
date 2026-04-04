@@ -4,6 +4,9 @@ import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AdminSidebar } from "./AdminSidebar";
+import { SidebarInset, SidebarProvider } from "@/src/components/ui/sidebar";
+import { ADMIN_BELOW_NAV_HEIGHT } from "./adminShell";
+import { AdminSpinner } from "./AdminLoading";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,42 +17,35 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Đợi loading xong mới check
     if (!isLoading) {
       if (!user) {
-        // Chưa đăng nhập
         router.push("/");
       } else if (!isAdmin) {
-        // Đã đăng nhập nhưng không phải admin
         router.push("/");
       }
     }
   }, [isAdmin, isLoading, user, router]);
 
-  // Hiển thị loading khi đang check auth
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600">Đang tải...</p>
-        </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <AdminSpinner />
       </div>
     );
   }
 
-  // Không phải admin thì không render gì (sẽ redirect)
   if (!isAdmin) {
     return null;
   }
 
-  // Layout cho admin
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <main className="flex-1 overflow-x-hidden">
-        <div className="p-8">{children}</div>
-      </main>
+    <div className={`flex w-full flex-1 flex-col ${ADMIN_BELOW_NAV_HEIGHT}`}>
+      <SidebarProvider defaultOpen className={`flex w-full flex-1 flex-row items-stretch ${ADMIN_BELOW_NAV_HEIGHT}`}>
+        <AdminSidebar />
+        <SidebarInset className={`min-w-0 overflow-y-auto bg-background ${ADMIN_BELOW_NAV_HEIGHT}`}>
+          <div className="flex flex-col gap-4 p-4">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
     </div>
   );
 };

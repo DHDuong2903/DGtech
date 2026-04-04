@@ -19,6 +19,8 @@ interface UserStore {
   fetchAllUsers: () => Promise<void>;
   updateUserRole: (clerkId: string, role: "user" | "admin") => Promise<void>;
   deleteUser: (clerkId: string) => Promise<void>;
+  updateUsersRole: (clerkIds: string[], role: "user" | "admin") => Promise<void>;
+  deleteUsers: (clerkIds: string[]) => Promise<void>;
 }
 
 export const useUserStore = create<UserStore>()(
@@ -75,6 +77,39 @@ export const useUserStore = create<UserStore>()(
           } catch (error) {
             console.error("Error deleting user:", error);
             toast.error("Không thể xóa người dùng");
+            throw error;
+          }
+        },
+
+        updateUsersRole: async (clerkIds: string[], role: "user" | "admin") => {
+          if (clerkIds.length === 0) return;
+          try {
+            const updated = await Promise.all(clerkIds.map((id) => usersApi.updateUserRole(id, role)));
+            set((state) => ({
+              users: state.users.map((u) => {
+                const next = updated.find((x) => x.clerkId === u.clerkId);
+                return next ?? u;
+              }),
+            }));
+            toast.success(`Đã cập nhật vai trò cho ${clerkIds.length} người dùng`);
+          } catch (error) {
+            console.error("Error bulk updating roles:", error);
+            toast.error("Không thể cập nhật vai trò hàng loạt");
+            throw error;
+          }
+        },
+
+        deleteUsers: async (clerkIds: string[]) => {
+          if (clerkIds.length === 0) return;
+          try {
+            await Promise.all(clerkIds.map((id) => usersApi.deleteUser(id)));
+            set((state) => ({
+              users: state.users.filter((u) => !clerkIds.includes(u.clerkId)),
+            }));
+            toast.success(`Đã xóa ${clerkIds.length} người dùng`);
+          } catch (error) {
+            console.error("Error bulk deleting users:", error);
+            toast.error("Không thể xóa hàng loạt");
             throw error;
           }
         },

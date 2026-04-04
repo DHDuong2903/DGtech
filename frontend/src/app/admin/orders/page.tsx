@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useOrderStore } from "../../../stores";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
+import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
@@ -150,10 +151,7 @@ const AdminOrdersPage = () => {
         <Card>
           <CardContent className="p-6">
             {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="mt-4 text-muted-foreground">Đang tải đơn hàng...</p>
-              </div>
+              <AdminContentLoader minHeightClass="min-h-[320px]" />
             ) : orders.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="mx-auto h-12 w-12 text-muted-foreground" />

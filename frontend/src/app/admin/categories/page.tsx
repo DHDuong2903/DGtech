@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminLayout } from "../../../components/admin/AdminLayout";
+import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { CategoryModal } from "../../../components/admin/CategoryModal";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
 import { useState } from "react";
@@ -111,8 +112,8 @@ const CategoriesPage = () => {
         {/* Table */}
         <Card>
           {loading ? (
-            <CardContent className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <CardContent className="p-6">
+              <AdminContentLoader minHeightClass="min-h-[320px]" />
             </CardContent>
           ) : categories.length === 0 ? (
             <CardContent className="text-center py-12">

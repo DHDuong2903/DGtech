@@ -23,6 +23,15 @@ export const User = sequelize.define(
     phone: {
       type: DataTypes.STRING,
     },
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    tier: {
+      type: DataTypes.ENUM("bronze", "silver", "gold"),
+      allowNull: false,
+      defaultValue: "bronze",
+    },
     role: {
       type: DataTypes.ENUM("user", "admin"),
       defaultValue: "user",

@@ -195,6 +195,7 @@ export const handleClerkWebhook = async (req: any, res: any) => {
         imageUrl: image_url || null,
         phone: phone_numbers[0]?.phone_number || null,
         role: "user",
+        tier: "bronze",
       };
 
       try {
