@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Tag, ShoppingBag, Users } from "lucide-react";
+import { ADMIN_BELOW_NAV_HEIGHT, ADMIN_SIDEBAR_NAV_ITEMS } from "@/src/constant";
 import {
   Sidebar,
   SidebarContent,
@@ -12,15 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/src/components/ui/sidebar";
-import { ADMIN_BELOW_NAV_HEIGHT } from "./adminShell";
-
-const menuItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/admin/orders" },
-  { id: "products", label: "Products", icon: Package, href: "/admin/products" },
-  { id: "categories", label: "Categories", icon: Tag, href: "/admin/categories" },
-  { id: "users", label: "Users", icon: Users, href: "/admin/users" },
-] as const;
 
 export const AdminSidebar = () => {
   const pathname = usePathname();
@@ -34,7 +25,7 @@ export const AdminSidebar = () => {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {ADMIN_SIDEBAR_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.id}>

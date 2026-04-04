@@ -5,6 +5,7 @@ import { useUserStore } from "../../../stores";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { createAdminUserColumns } from "../../../components/admin/AdminUserTable";
+import { ADMIN_LIST_DATA_TABLE_PROPS } from "@/src/constant";
 import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
@@ -123,14 +124,12 @@ const AdminUsersPage = () => {
           </div>
         ) : (
           <DataTable
+            {...ADMIN_LIST_DATA_TABLE_PROPS}
             columns={columns}
             data={users}
-            pageSize={10}
+            getRowId={(row) => row.clerkId}
             filterColumnId="email"
             filterPlaceholder="Search by email…"
-            showColumnVisibility={false}
-            enableSorting={false}
-            showFooterSelectionSummary={false}
             bulkSelectionActions={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;
               const actionable = actionableFromSelection(selectedData);
@@ -232,7 +231,7 @@ const AdminUsersPage = () => {
           <DialogHeader>
             <DialogTitle>Delete {bulkDeleteTargets?.length ?? 0} users?</DialogTitle>
             <DialogDescription>
-              This cannot be undone. All selected accounts (except yours) will be removed from the database.
+              This cannot be undone
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

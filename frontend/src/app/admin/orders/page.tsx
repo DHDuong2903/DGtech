@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ORDER_STATUS_FILTER_OPTIONS } from "@/src/constant";
 import { useOrderStore } from "../../../stores";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
@@ -135,7 +136,7 @@ const AdminOrdersPage = () => {
 
         {/* Filter Tabs */}
         <div className="flex flex-wrap gap-2">
-          {["ALL", "PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"].map((status) => (
+          {ORDER_STATUS_FILTER_OPTIONS.map((status) => (
             <Button
               key={status}
               variant={filter === status ? "default" : "outline"}

@@ -19,6 +19,7 @@ interface CategoryState {
     data: CategoryFormData
   ) => Promise<{ success: boolean; data?: Category; error?: string }>;
   deleteCategory: (id: number) => Promise<{ success: boolean; error?: string }>;
+  deleteCategories: (ids: number[]) => Promise<{ success: boolean; error?: string }>;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -40,7 +41,7 @@ export const useCategoryStore = create<CategoryState>()(
         } catch (err) {
           console.error("Error fetching categories:", err);
           const error = err as ApiError;
-          set({ error: error.message || "Failed to fetch categories", loading: false });
+          set({ error: error.message || "Could not load categories", loading: false });
         }
       },
 
@@ -52,14 +53,14 @@ export const useCategoryStore = create<CategoryState>()(
             categories: [...state.categories, newCategory],
             error: null,
           }));
-          toast.success("Danh mục đã được tạo mới thành công");
+          toast.success("Category created");
           return { success: true, data: newCategory };
         } catch (err) {
           console.error("Error creating category:", err);
           const error = err as ApiError;
           const errorMessage = error.message || "Failed to create category";
           set({ error: errorMessage });
-          toast.error("Không thể tạo danh mục. Vui lòng thử lại");
+          toast.error("Could not create category");
           return { success: false, error: errorMessage };
         }
       },
@@ -72,14 +73,14 @@ export const useCategoryStore = create<CategoryState>()(
             categories: state.categories.map((cat) => (cat.categoryId === id ? updatedCategory : cat)),
             error: null,
           }));
-          toast.success("Danh mục đã được cập nhật thành công");
+          toast.success("Category updated");
           return { success: true, data: updatedCategory };
         } catch (err) {
           console.error("Error updating category:", err);
           const error = err as ApiError;
           const errorMessage = error.message || "Failed to update category";
           set({ error: errorMessage });
-          toast.error("Không thể cập nhật danh mục. Vui lòng thử lại");
+          toast.error("Could not update category");
           return { success: false, error: errorMessage };
         }
       },
@@ -92,14 +93,36 @@ export const useCategoryStore = create<CategoryState>()(
             categories: state.categories.filter((cat) => cat.categoryId !== id),
             error: null,
           }));
-          toast.success("Danh mục đã được xóa thành công");
+          toast.success("Category deleted");
           return { success: true };
         } catch (err) {
           console.error("Error deleting category:", err);
           const error = err as ApiError;
           const errorMessage = error.message || "Failed to delete category";
           set({ error: errorMessage });
-          toast.error("Không thể xóa danh mục. Vui lòng thử lại");
+          toast.error("Could not delete category");
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      deleteCategories: async (ids: number[]) => {
+        if (ids.length === 0) return { success: true };
+        try {
+          await Promise.all(ids.map((id) => categoriesApi.delete(id)));
+          set((state) => ({
+            categories: state.categories.filter((cat) => !ids.includes(cat.categoryId)),
+            error: null,
+          }));
+          toast.success(
+            ids.length === 1 ? "Category deleted" : `Deleted ${ids.length} categories`
+          );
+          return { success: true };
+        } catch (err) {
+          console.error("Error bulk deleting categories:", err);
+          const error = err as ApiError;
+          const errorMessage = error.message || "Failed to delete categories";
+          set({ error: errorMessage });
+          toast.error("Could not delete selected categories");
           return { success: false, error: errorMessage };
         }
       },

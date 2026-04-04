@@ -72,6 +72,8 @@ export interface DataTableBulkContext<TData> {
 export interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  /** Stable row id for selection (e.g. primary key). Defaults to row index if omitted. */
+  getRowId?: (originalRow: TData, index: number) => string;
   pageSize?: number;
   filterColumnId?: string;
   filterPlaceholder?: string;
@@ -86,6 +88,7 @@ export interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
+  getRowId,
   pageSize = 10,
   filterColumnId,
   filterPlaceholder = "Filter…",
@@ -104,6 +107,9 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
+    ...(getRowId
+      ? { getRowId: (originalRow: TData, index: number) => getRowId(originalRow, index) }
+      : {}),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -126,6 +132,10 @@ export function DataTable<TData, TValue>({
   });
 
   const filterColumn = filterColumnId ? table.getColumn(filterColumnId) : undefined;
+
+  const pageCount = table.getPageCount();
+  const currentPage = pageCount > 0 ? table.getState().pagination.pageIndex + 1 : 1;
+  const totalPages = pageCount > 0 ? pageCount : 1;
 
   const selectedModel = table.getFilteredSelectedRowModel();
   const bulkCtx: DataTableBulkContext<TData> | null =
@@ -229,18 +239,19 @@ export function DataTable<TData, TValue>({
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {enableRowSelection && showFooterSelectionSummary ? (
-          <div className="text-muted-foreground flex-1 text-sm">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
-        ) : !enableRowSelection ? (
-          <div className="text-muted-foreground flex-1 text-sm">
-            {table.getFilteredRowModel().rows.length} row(s).
-          </div>
-        ) : (
-          <div className="flex-1" />
-        )}
+        <div className="text-muted-foreground flex flex-1 flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          {enableRowSelection && showFooterSelectionSummary ? (
+            <span>
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
+            </span>
+          ) : !enableRowSelection ? (
+            <span>{table.getFilteredRowModel().rows.length} row(s).</span>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2 sm:justify-end">
           <Button
             variant="outline"

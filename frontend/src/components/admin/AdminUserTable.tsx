@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Shield, UserCheck, Trash2, UserCog, Award, MoreHorizontal } from "lucide-react";
+import { Award, MoreHorizontal, Pencil, Shield, Trash2, UserCheck } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -155,12 +155,12 @@ export function createAdminUserColumns(handlers: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handlers.onRole(user)}>
-                  <UserCog className="mr-2 h-4 w-4" />
-                  Change role
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onClick={() => handlers.onDelete(user)}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete user
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

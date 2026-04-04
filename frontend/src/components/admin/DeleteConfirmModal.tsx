@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,12 @@ interface DeleteConfirmModalProps {
   onConfirm: () => void;
   itemName: string;
   itemType?: string;
+  /** Overrides default title (e.g. Vietnamese “Xóa …”). */
+  title?: string;
+  /** Overrides default description body. */
+  description?: ReactNode;
+  cancelLabel?: string;
+  confirmLabel?: string;
 }
 
 export const DeleteConfirmModal = ({
@@ -25,28 +32,37 @@ export const DeleteConfirmModal = ({
   onConfirm,
   itemName,
   itemType = "category",
+  title,
+  description,
+  cancelLabel = "Hủy",
+  confirmLabel = "Xóa",
 }: DeleteConfirmModalProps) => {
   const capitalizedType = itemType.charAt(0).toUpperCase() + itemType.slice(1);
+  const dialogTitle = title ?? `Xóa ${capitalizedType}`;
+  const dialogDescription =
+    description ?? (
+      <>
+        Bạn có chắc là muốn xóa <span className="font-semibold text-foreground">{itemName}</span>? Hành động này không
+        thể hoàn tác.
+      </>
+    );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            <DialogTitle>Xóa {capitalizedType}</DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
           </div>
-          <DialogDescription className="pt-2">
-            Bạn có chắc là muốn xóa <span className="font-semibold text-foreground">{itemName}</span>? Hành động này
-            không thể hoàn tác.
-          </DialogDescription>
+          <DialogDescription className="pt-2">{dialogDescription}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
-            Hủy
+            {cancelLabel}
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm}>
-            Xóa
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

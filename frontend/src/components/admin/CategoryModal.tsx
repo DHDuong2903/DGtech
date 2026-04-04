@@ -31,18 +31,13 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Call onSave and wait for it to complete
     const success = await onSave(formData);
-
-    // Only close modal and reset form if save was successful
     if (success) {
       setFormData({ name: "", description: "" });
       onClose();
     }
   };
 
-  // Reset form when modal closes or when category/mode changes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setFormData({ name: "", description: "" });
@@ -54,16 +49,18 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Thêm mới danh mục" : "Chỉnh sửa danh mục"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? "Add category" : "Edit category"}</DialogTitle>
           <DialogDescription>
-            {mode === "create" ? "Tạo một danh mục mới cho sản phẩm." : "Thay đổi danh mục ở đây."}
+            {mode === "create"
+              ? "Create a new category for your products."
+              : "Update the category details below."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">
-                Tên danh mục sản phẩm <span className="text-red-500">*</span>
+                Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
@@ -71,25 +68,25 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nhập tên"
+                placeholder="Category name"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Mô tả</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Nhập mô tả"
+                placeholder="Optional description"
                 rows={4}
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Hủy
+              Cancel
             </Button>
-            <Button type="submit">{mode === "create" ? "Thêm" : "Lưu thay đổi"}</Button>
+            <Button type="submit">{mode === "create" ? "Create" : "Save changes"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,8 +1,6 @@
 // Validation utilities
 
-// Constants
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_FILE_SIZE_BYTES } from "../constant";
 
 /**
  * Validate email format
@@ -25,7 +23,7 @@ export const isValidPhone = (phone: string): boolean => {
  */
 export const isValidImage = (file: File): { valid: boolean; error?: string } => {
   // Check file type
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+  if (!(ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(file.type)) {
     return {
       valid: false,
       error: "Chỉ chấp nhận file ảnh (JPG, PNG, WebP)",
@@ -33,10 +31,10 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
   }
 
   // Check file size
-  if (file.size > MAX_FILE_SIZE) {
+  if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
     return {
       valid: false,
-      error: `Kích thước file không được vượt quá ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+      error: `Kích thước file không được vượt quá ${MAX_IMAGE_FILE_SIZE_BYTES / 1024 / 1024}MB`,
     };
   }
 

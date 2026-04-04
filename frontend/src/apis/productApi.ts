@@ -1,8 +1,7 @@
 // Products API Service
+import { API_ROUTE } from "../constant";
 import axiosInstance from "../lib/axios";
 import type { Product, PaginatedResponse, ApiResponse } from "../types";
-
-const PRODUCTS_URL = "/products";
 
 export const productsApi = {
   getAll: async (params?: {
@@ -18,7 +17,7 @@ export const productsApi = {
     order?: "ASC" | "DESC";
   }): Promise<PaginatedResponse<Product>> => {
     try {
-      const { data } = await axiosInstance.get<PaginatedResponse<Product>>(PRODUCTS_URL, { params });
+      const { data } = await axiosInstance.get<PaginatedResponse<Product>>(API_ROUTE.PRODUCTS, { params });
       return data;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -28,7 +27,7 @@ export const productsApi = {
 
   getById: async (id: string): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.get<ApiResponse<Product>>(`${PRODUCTS_URL}/${id}`);
+      const { data } = await axiosInstance.get<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}`);
       return data.product!;
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
@@ -38,7 +37,7 @@ export const productsApi = {
 
   create: async (productData: FormData): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.post<ApiResponse<Product>>(PRODUCTS_URL, productData);
+      const { data } = await axiosInstance.post<ApiResponse<Product>>(API_ROUTE.PRODUCTS, productData);
       return data.newProduct!;
     } catch (error) {
       console.error("Error creating product:", error);
@@ -48,7 +47,7 @@ export const productsApi = {
 
   update: async (id: string, productData: FormData): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.put<ApiResponse<Product>>(`${PRODUCTS_URL}/${id}`, productData);
+      const { data } = await axiosInstance.put<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}`, productData);
       return data.product!;
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
@@ -58,7 +57,7 @@ export const productsApi = {
 
   delete: async (id: string): Promise<void> => {
     try {
-      await axiosInstance.delete(`${PRODUCTS_URL}/${id}`);
+      await axiosInstance.delete(`${API_ROUTE.PRODUCTS}/${id}`);
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
       throw error;
@@ -67,7 +66,7 @@ export const productsApi = {
 
   toggleFeatured: async (id: string, isFeatured: boolean): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.patch<ApiResponse<Product>>(`${PRODUCTS_URL}/${id}/toggle-featured`, {
+      const { data } = await axiosInstance.patch<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}/toggle-featured`, {
         isFeatured,
       });
       return data.product!;
@@ -79,7 +78,7 @@ export const productsApi = {
 
   toggleOnSale: async (id: string, isOnSale: boolean): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.patch<ApiResponse<Product>>(`${PRODUCTS_URL}/${id}/toggle-on-sale`, {
+      const { data } = await axiosInstance.patch<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}/toggle-on-sale`, {
         isOnSale,
       });
       return data.product!;
@@ -91,7 +90,7 @@ export const productsApi = {
 
   getFeatured: async (limit: number = 8): Promise<Product[]> => {
     try {
-      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(`${PRODUCTS_URL}/featured`, {
+      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(`${API_ROUTE.PRODUCTS}/featured`, {
         params: { limit },
       });
       return data.products || [];
@@ -103,7 +102,7 @@ export const productsApi = {
 
   getOnSale: async (limit: number = 8): Promise<Product[]> => {
     try {
-      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(`${PRODUCTS_URL}/on-sale`, {
+      const { data } = await axiosInstance.get<{ message: string; products: Product[] }>(`${API_ROUTE.PRODUCTS}/on-sale`, {
         params: { limit },
       });
       return data.products || [];
