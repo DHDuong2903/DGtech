@@ -7,57 +7,54 @@ export const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-white border-t border-gray-200 mt-auto">
-      {/* Main Footer */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Company Info */}
+    <footer className="bg-background mt-auto border-t border-border">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
           <div>
-            <h3 className="text-orange-600 text-xl font-bold mb-3">DGTech</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              Điểm đến cho những sản phẩm công nghệ mới nhất và tốt nhất.
+            <h3 className="mb-2 text-sm font-semibold text-orange-600">DGTech</h3>
+            <p className="text-muted-foreground text-xs leading-relaxed sm:text-sm">
+              Furniture and home interiors for living, dining, and bedrooms—curated pieces to make your space feel
+              like home.
             </p>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h3 className="text-gray-900 font-semibold mb-3">Liên kết nhanh</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="mb-2 text-sm font-semibold text-foreground">Quick links</h3>
+            <ul className="space-y-1.5 text-xs sm:text-sm">
               <li>
-                <Link href="/" className="text-gray-600 hover:text-orange-600 transition-colors">
-                  Trang chủ
+                <Link href="/" className="text-muted-foreground transition-colors hover:text-orange-600">
+                  Home
                 </Link>
               </li>
               <li>
-                <Link href="/shop" className="text-gray-600 hover:text-orange-600 transition-colors">
-                  Sản phẩm
+                <Link href="/shop" className="text-muted-foreground transition-colors hover:text-orange-600">
+                  Shop
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-600 hover:text-orange-600 transition-colors">
-                  Về chúng tôi
+                <Link href="#" className="text-muted-foreground transition-colors hover:text-orange-600">
+                  About us
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Contact Info */}
           <div>
-            <h3 className="text-gray-900 font-semibold mb-3">Liên hệ</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start">
-                <MapPin className="h-4 w-4 mr-2 mt-1 shrink-0 text-orange-600" />
-                <span>Hà Đông - Hà Nội</span>
+            <h3 className="mb-2 text-sm font-semibold text-foreground">Contact</h3>
+            <ul className="text-muted-foreground space-y-1.5 text-xs sm:text-sm">
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-600 sm:h-4 sm:w-4" />
+                <span>Showroom — Ha Dong, Hanoi</span>
               </li>
-              <li className="flex items-center">
-                <Phone className="h-4 w-4 mr-2 shrink-0 text-orange-600" />
-                <a href="tel:0123456789" className="hover:text-orange-600 transition-colors">
+              <li className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 shrink-0 text-orange-600 sm:h-4 sm:w-4" />
+                <a href="tel:0123456789" className="transition-colors hover:text-orange-600">
                   0123 456 789
                 </a>
               </li>
-              <li className="flex items-center">
-                <Mail className="h-4 w-4 mr-2 shrink-0 text-orange-600" />
-                <a href="mailto:contact@dgtech.com" className="hover:text-orange-600 transition-colors">
+              <li className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-orange-600 sm:h-4 sm:w-4" />
+                <a href="mailto:contact@dgtech.com" className="transition-colors hover:text-orange-600">
                   contact@dgtech.com
                 </a>
               </li>
@@ -66,10 +63,11 @@ export const Footer = () => {
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="bg-orange-600 py-2">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-white text-sm">&copy; {currentYear} DGTech. All rights reserved.</p>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs text-white sm:text-sm">
+            &copy; {currentYear} DGTech. Furniture & interiors. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

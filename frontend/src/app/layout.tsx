@@ -7,6 +7,7 @@ import { AuthProvider } from "../providers/AuthProvider";
 import { StoreInitializer } from "../providers/StoreInitializer";
 import { AxiosInterceptorSetup } from "../providers/AxiosInterceptorSetup";
 import { Toaster } from "@/src/components/ui/sonner";
+import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { Navbar } from "../components/public";
 
 const geistSans = Geist({
@@ -20,9 +21,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DGTech - Cửa Hàng Công Nghệ Uy Tín",
+  title: "DGTech — Furniture & home interiors",
   description:
-    "Cung cấp các sản phẩm công nghệ chất lượng cao với giá cả hợp lý. Laptop, điện thoại, phụ kiện công nghệ chính hãng.",
+    "Discover curated furniture and interior pieces for every room. Quality materials, thoughtful design, and a seamless shopping experience.",
+  icons: {
+    icon: [{ url: "/logodg.png", type: "image/png" }],
+    apple: [{ url: "/logodg.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -32,18 +37,20 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
-          <AuthProvider>
-            <AxiosInterceptorSetup>
-              <StoreInitializer>
-                <Navbar />
-                <main className="flex min-h-0 flex-1 flex-col">{children}</main>
-                <ConditionalFooter />
-                <Toaster />
-              </StoreInitializer>
-            </AxiosInterceptorSetup>
-          </AuthProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased flex min-h-screen flex-col`}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <AuthProvider>
+              <AxiosInterceptorSetup>
+                <StoreInitializer>
+                  <Navbar />
+                  <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+                  <ConditionalFooter />
+                  <Toaster />
+                </StoreInitializer>
+              </AxiosInterceptorSetup>
+            </AuthProvider>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

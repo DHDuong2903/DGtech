@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Category } from "../../types";
 import { categoriesApi } from "../../apis";
 import { ProductCard } from "../../components/public/product/ProductCard";
@@ -12,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/ca
 import { Filter, Search, X, ChevronUp } from "lucide-react";
 import { useProductStore } from "../../stores";
 
-const ShopPage = () => {
+const ShopPageContent = () => {
+  const searchParams = useSearchParams();
   const { products, loading, totalItems, totalPages, currentPage: storePage, fetchProducts } = useProductStore();
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,6 +30,13 @@ const ShopPage = () => {
   // UI states
   const [showFilters, setShowFilters] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  const qFromUrl = searchParams.get("q") ?? "";
+
+  useEffect(() => {
+    setSearchQuery(qFromUrl);
+    setCurrentPage(1);
+  }, [qFromUrl]);
 
   // Fetch categories
   useEffect(() => {
@@ -399,4 +408,16 @@ const ShopPage = () => {
   );
 };
 
-export default ShopPage;
+export default function ShopPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center bg-gray-50 text-sm text-muted-foreground">
+          Loading shop…
+        </div>
+      }
+    >
+      <ShopPageContent />
+    </Suspense>
+  );
+}

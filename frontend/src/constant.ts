@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, Package, ShoppingBag, Tag, Users } from "lucide-react";
+import { LayoutDashboard, Package, Sofa, Tag, Users } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Admin layout
@@ -23,8 +23,8 @@ export type AdminSidebarNavItem = {
 
 export const ADMIN_SIDEBAR_NAV_ITEMS: AdminSidebarNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/admin/orders" },
-  { id: "products", label: "Products", icon: Package, href: "/admin/products" },
+  { id: "orders", label: "Orders", icon: Package, href: "/admin/orders" },
+  { id: "products", label: "Products", icon: Sofa, href: "/admin/products" },
   { id: "categories", label: "Categories", icon: Tag, href: "/admin/categories" },
   { id: "users", label: "Users", icon: Users, href: "/admin/users" },
 ];
