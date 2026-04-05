@@ -96,6 +96,9 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
       data.append("price", formData.price);
       data.append("stock", formData.stock);
       data.append("categoryId", formData.categoryId);
+      if (mode === "create") {
+        data.append("status", "ACTIVE");
+      }
 
       if (imageFile) {
         data.append("image", imageFile);

@@ -31,34 +31,58 @@ function newSlideId() {
   return `slide-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-const emptySlide = (): HeroSlide => ({
+/** Local slide row: URL from server and/or pending file (uploaded on Save, like product modal). */
+type ModalSlide = {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  imageFile: File | null;
+  imagePreview: string | null;
+  cta?: HeroSlide["cta"];
+};
+
+const emptySlide = (): ModalSlide => ({
   id: newSlideId(),
   title: "",
   description: "",
   image: "",
+  imageFile: null,
+  imagePreview: null,
 });
 
-function prepareSlidesForSave(slides: HeroSlide[]): HeroSlide[] {
-  const out: HeroSlide[] = [];
+function heroSlideFromModal(s: ModalSlide, imageUrl: string): HeroSlide {
+  const title = s.title.trim();
+  const description = s.description.trim();
+  const text = s.cta?.text?.trim() ?? "";
+  const link = s.cta?.link?.trim() ?? "";
+  const hasCta = text && link;
+  const base = { id: s.id, title, description: description || "", image: imageUrl };
+  if (!hasCta) return base;
+  return { ...base, cta: { text, link } };
+}
+
+/** Validate, upload pending files, return API-ready slides. */
+async function buildHeroSlidesForSave(slides: ModalSlide[]): Promise<HeroSlide[]> {
+  type Row = { slide: ModalSlide; imagePromise: Promise<string> };
+  const rows: Row[] = [];
+
   for (const s of slides) {
     const title = s.title.trim();
     const description = s.description.trim();
-    const image = s.image.trim();
-    if (!title && !description && !image) continue;
-    if (!title || !image) {
+    const hasImage = !!s.imageFile || !!s.image.trim();
+    if (!title && !description && !hasImage) continue;
+    if (!title || !hasImage) {
       throw new Error("Each slide needs a title and an image (use Upload). Remove incomplete slides.");
     }
-    const text = s.cta?.text?.trim() ?? "";
-    const link = s.cta?.link?.trim() ?? "";
-    const hasCta = text && link;
-    if (!hasCta) {
-      const { cta: _, ...rest } = s;
-      out.push({ ...rest, title, description: description || "", image });
-    } else {
-      out.push({ ...s, title, description: description || "", image, cta: { text, link } });
-    }
+    const imagePromise = s.imageFile
+      ? slideshowsApi.uploadImage(s.imageFile)
+      : Promise.resolve(s.image.trim());
+    rows.push({ slide: s, imagePromise });
   }
-  return out;
+
+  const imageUrls = await Promise.all(rows.map((r) => r.imagePromise));
+  return rows.map((r, i) => heroSlideFromModal(r.slide, imageUrls[i]));
 }
 
 interface SlideshowCampaignModalProps {
@@ -71,9 +95,8 @@ interface SlideshowCampaignModalProps {
 
 export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode }: SlideshowCampaignModalProps) => {
   const [name, setName] = useState("");
-  const [slides, setSlides] = useState<HeroSlide[]>([]);
+  const [slides, setSlides] = useState<ModalSlide[]>([]);
   const [activateOnCreate, setActivateOnCreate] = useState(false);
-  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -82,7 +105,12 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
       setName(campaign.name);
       setSlides(
         Array.isArray(campaign.slides) && campaign.slides.length > 0
-          ? campaign.slides.map((s) => ({ ...s, id: s.id || newSlideId() }))
+          ? campaign.slides.map((s) => ({
+              ...s,
+              id: s.id || newSlideId(),
+              imageFile: null,
+              imagePreview: null,
+            }))
           : [emptySlide()],
       );
       setActivateOnCreate(false);
@@ -93,7 +121,7 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
     }
   }, [isOpen, mode, campaign]);
 
-  const updateSlide = (index: number, patch: Partial<HeroSlide>) => {
+  const updateSlide = (index: number, patch: Partial<ModalSlide>) => {
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   };
 
@@ -106,14 +134,14 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
         const link = nextCta.link ?? "";
         if (!text.trim() && !link.trim()) {
           const { cta: _, ...rest } = s;
-          return rest as HeroSlide;
+          return rest as ModalSlide;
         }
         return { ...s, cta: { text, link } };
       }),
     );
   };
 
-  const handleImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -122,17 +150,14 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
       toast.error(v.error ?? "Invalid image");
       return;
     }
-    setUploadingIndex(index);
-    try {
-      const url = await slideshowsApi.uploadImage(file);
-      updateSlide(index, { image: url });
-      toast.success("Image uploaded");
-    } catch (err) {
-      console.error(err);
-      toast.error("Upload failed");
-    } finally {
-      setUploadingIndex(null);
-    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateSlide(index, {
+        imageFile: file,
+        imagePreview: reader.result as string,
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   const addSlide = () => {
@@ -165,16 +190,20 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
       toast.error("Slideshow name is required");
       return;
     }
-    let prepared: HeroSlide[];
-    try {
-      prepared = prepareSlidesForSave(slides);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid slides");
-      return;
-    }
-
     setSaving(true);
     try {
+      let prepared: HeroSlide[];
+      try {
+        prepared = await buildHeroSlidesForSave(slides);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Invalid slides");
+        return;
+      }
+      if (prepared.length === 0) {
+        toast.error("Add at least one complete slide.");
+        return;
+      }
+
       const payload: SlideshowCampaignFormData = {
         name: trimmedName,
         slides: prepared,
@@ -182,6 +211,9 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
       };
       const ok = await onSave(payload);
       if (ok) onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Upload or save failed");
     } finally {
       setSaving(false);
     }
@@ -296,33 +328,28 @@ export const SlideshowCampaignModal = ({ isOpen, onClose, onSave, campaign, mode
                             type="button"
                             variant="secondary"
                             size="sm"
-                            disabled={uploadingIndex === index || saving}
+                            disabled={saving}
                             onClick={() => document.getElementById(`modal-file-${slide.id}`)?.click()}
                           >
-                            {uploadingIndex === index ? (
-                              <>
-                                <Spinner data-icon="inline-start" />
-                                Uploading
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="h-4 w-4" />
-                                Upload Image
-                              </>
-                            )}
+                            <Upload className="h-4 w-4" />
+                            Upload Image
                           </Button>
                           <input
                             id={`modal-file-${slide.id}`}
                             type="file"
                             accept="image/jpeg,image/jpg,image/png,image/webp"
                             className="hidden"
-                            onChange={(e) => void handleImageUpload(index, e)}
+                            onChange={(e) => handleImageChange(index, e)}
                           />
                         </div>
-                        {slide.image ? (
-                          <div className="bg-muted relative mt-1 aspect-video max-w-md overflow-hidden rounded-md border">
+                        {slide.imagePreview || slide.image ? (
+                          <div className="bg-muted relative mt-1 aspect-video w-full min-w-0 overflow-hidden rounded-md border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={slide.image} alt="" className="size-full object-cover" />
+                            <img
+                              src={slide.imagePreview || slide.image}
+                              alt=""
+                              className="size-full object-cover"
+                            />
                           </div>
                         ) : null}
                       </div>

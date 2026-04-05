@@ -37,7 +37,7 @@ export const createProduct = async (req: any, res: any) => {
     }
 
     const imageUrl = req.file ? req.file.path : null;
-    const status = normalizeProductStatus(req.body.status) ?? "DRAFT";
+    const status = normalizeProductStatus(req.body.status) ?? "ACTIVE";
 
     const newProduct = await Product.create({
       name,
