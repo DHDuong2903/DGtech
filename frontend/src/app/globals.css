@@ -120,7 +120,7 @@
   }
 }
 
-/* Slideshow animations */
+/* Slideshows (hero carousel) animations */
 @keyframes fade-in-up {
   from {
     opacity: 0;

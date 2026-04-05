@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { AlertTriangle } from "lucide-react";
 
 interface DeleteConfirmModalProps {
@@ -18,12 +19,11 @@ interface DeleteConfirmModalProps {
   onConfirm: () => void;
   itemName: string;
   itemType?: string;
-  /** Overrides default title (e.g. Vietnamese “Xóa …”). */
   title?: string;
-  /** Overrides default description body. */
   description?: ReactNode;
   cancelLabel?: string;
   confirmLabel?: string;
+  confirmLoading?: boolean;
 }
 
 export const DeleteConfirmModal = ({
@@ -36,6 +36,7 @@ export const DeleteConfirmModal = ({
   description,
   cancelLabel = "Hủy",
   confirmLabel = "Xóa",
+  confirmLoading = false,
 }: DeleteConfirmModalProps) => {
   const capitalizedType = itemType.charAt(0).toUpperCase() + itemType.slice(1);
   const dialogTitle = title ?? `Xóa ${capitalizedType}`;
@@ -58,11 +59,18 @@ export const DeleteConfirmModal = ({
           <DialogDescription className="pt-2">{dialogDescription}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={confirmLoading}>
             {cancelLabel}
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
-            {confirmLabel}
+          <Button type="button" variant="destructive" onClick={onConfirm} disabled={confirmLoading}>
+            {confirmLoading ? (
+              <>
+                <Spinner data-icon="inline-start" />
+                {confirmLabel}
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

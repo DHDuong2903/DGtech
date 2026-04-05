@@ -5,3 +5,4 @@ export { useCartStore } from "./useCartStore";
 export { useOrderStore } from "./useOrderStore";
 export { useUserStore } from "./useUserStore";
 export { useReviewStore } from "./useReviewStore";
+export { useSlideshowStore } from "./useSlideshowStore";

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import type { Product } from "@/src/types";
@@ -18,6 +19,8 @@ import { ProductImage } from "./ProductImage";
 export function createAdminProductColumns(handlers: {
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  onSetActive: (product: Product) => void;
+  onSetDraft: (product: Product) => void;
 }): ColumnDef<Product>[] {
   return [
     {
@@ -25,11 +28,7 @@ export function createAdminProductColumns(handlers: {
       header: ({ table }) => (
         <Checkbox
           checked={
-            table.getIsAllPageRowsSelected()
-              ? true
-              : table.getIsSomePageRowsSelected()
-                ? "indeterminate"
-                : false
+            table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -58,7 +57,7 @@ export function createAdminProductColumns(handlers: {
         const p = row.original;
         return (
           <div>
-            <p className="font-medium">{p.name}</p>
+            <p>{p.name}</p>
             {p.description?.trim() ? (
               <p className="text-muted-foreground line-clamp-1 text-sm" title={p.description}>
                 {p.description}
@@ -72,23 +71,19 @@ export function createAdminProductColumns(handlers: {
       accessorFn: (row) => row.category?.name ?? "",
       id: "categoryName",
       header: "Category",
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.original.category?.name ?? "—"}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.category?.name ?? "—"}</Badge>,
     },
     {
       accessorKey: "price",
       header: "Price",
-      cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.price)}</span>,
+      cell: ({ row }) => <span>{formatCurrency(row.original.price)}</span>,
     },
     {
       accessorKey: "stock",
       header: "Stock",
       cell: ({ row }) => {
         const stock = row.original.stock;
-        return (
-          <span className={stock < 10 ? "font-medium text-orange-600" : ""}>{stock}</span>
-        );
+        return <span className={stock < 10 ? "font-medium text-orange-600" : ""}>{stock}</span>;
       },
     },
     {
@@ -97,7 +92,11 @@ export function createAdminProductColumns(handlers: {
       cell: ({ row }) => {
         const s = row.original.status;
         if (s === "ACTIVE") {
-          return <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>;
+          return (
+            <Badge variant="success" className="font-normal">
+              Active
+            </Badge>
+          );
         }
         return (
           <Badge variant="secondary" className="text-muted-foreground">
@@ -125,6 +124,18 @@ export function createAdminProductColumns(handlers: {
                   <Pencil className="h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
+                {product.status !== "ACTIVE" ? (
+                  <DropdownMenuItem onClick={() => handlers.onSetActive(product)}>
+                    <Power className="h-4 w-4" />
+                    Set active
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => handlers.onSetDraft(product)}>
+                    <PowerOff className="h-4 w-4" />
+                    Mark as draft
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => handlers.onDelete(product)}>
                   <Trash2 className="h-4 w-4" />
                   Delete

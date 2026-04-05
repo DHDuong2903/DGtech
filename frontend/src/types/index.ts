@@ -6,6 +6,7 @@ export * from "./reviewType";
 export * from "./cartType";
 export * from "./orderType";
 export * from "./paymentType";
+export * from "./slideshowsType";
 
 // API Response Types
 export interface ApiResponse<T> {

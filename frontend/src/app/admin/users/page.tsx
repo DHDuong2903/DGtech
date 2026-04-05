@@ -7,6 +7,7 @@ import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { createAdminUserColumns } from "../../../components/admin/AdminUserTable";
 import { ADMIN_LIST_DATA_TABLE_PROPS } from "@/src/constant";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -199,7 +200,14 @@ const AdminUsersPage = () => {
               Cancel
             </Button>
             <Button onClick={handleRoleUpdate} disabled={updating}>
-              {updating ? "Saving…" : "Save"}
+              {updating ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -220,7 +228,14 @@ const AdminUsersPage = () => {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteUser} disabled={updating}>
-              {updating ? "Deleting…" : "Delete user"}
+              {updating ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete user"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -239,7 +254,14 @@ const AdminUsersPage = () => {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
-              {bulkWorking ? "Deleting…" : "Delete all"}
+              {bulkWorking ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete all"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

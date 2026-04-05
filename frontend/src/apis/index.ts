@@ -5,6 +5,7 @@ export * from "./userApi";
 export * from "./reviewApi";
 export * from "./cartApi";
 export * from "./paymentApi";
+export * from "./slideshowsApi";
 
 // Re-export for convenience
 export { categoriesApi } from "./categoriesApi";
@@ -12,3 +13,4 @@ export { productsApi } from "./productApi";
 export { usersApi } from "./userApi";
 export { reviewsApi } from "./reviewApi";
 export { cartApi } from "./cartApi";
+export { slideshowsApi } from "./slideshowsApi";

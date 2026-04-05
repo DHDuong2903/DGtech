@@ -16,6 +16,7 @@ import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal
 import { useProductStore, useCategoryStore } from "../../../stores";
 import type { Product } from "../../../types";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -29,8 +30,17 @@ import { Alert, AlertDescription } from "@/src/components/ui/alert";
 import { Plus, Package, FilterX } from "lucide-react";
 
 const ProductsPage = () => {
-  const { products, loading, error, fetchProducts, createProduct, updateProduct, deleteProduct, deleteProducts } =
-    useProductStore();
+  const {
+    products,
+    loading,
+    error,
+    fetchProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    deleteProducts,
+    updateProductStatus,
+  } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,6 +49,7 @@ const ProductsPage = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Product[] | null>(null);
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [deleteWorking, setDeleteWorking] = useState(false);
   const clearTableSelectionRef = useRef<(() => void) | null>(null);
 
   const [appliedFilters, setAppliedFilters] = useState(defaultAdminProductFilters);
@@ -71,10 +82,15 @@ const ProductsPage = () => {
 
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
-    const result = await deleteProduct(selectedProduct.productId);
-    if (result.success) {
-      setIsDeleteModalOpen(false);
-      setSelectedProduct(null);
+    setDeleteWorking(true);
+    try {
+      const result = await deleteProduct(selectedProduct.productId);
+      if (result.success) {
+        setIsDeleteModalOpen(false);
+        setSelectedProduct(null);
+      }
+    } finally {
+      setDeleteWorking(false);
     }
   };
 
@@ -109,13 +125,29 @@ const ProductsPage = () => {
     setIsDeleteModalOpen(true);
   }, []);
 
+  const handleSetActive = useCallback(
+    (product: Product) => {
+      void updateProductStatus(product.productId, "ACTIVE");
+    },
+    [updateProductStatus]
+  );
+
+  const handleSetDraft = useCallback(
+    (product: Product) => {
+      void updateProductStatus(product.productId, "DRAFT");
+    },
+    [updateProductStatus]
+  );
+
   const columns = useMemo(
     () =>
       createAdminProductColumns({
         onEdit: handleEditClick,
         onDelete: handleDeleteClick,
+        onSetActive: handleSetActive,
+        onSetDraft: handleSetDraft,
       }),
-    [handleEditClick, handleDeleteClick],
+    [handleEditClick, handleDeleteClick, handleSetActive, handleSetDraft],
   );
 
   return (
@@ -231,6 +263,7 @@ const ProductsPage = () => {
         }
         cancelLabel="Cancel"
         confirmLabel="Delete"
+        confirmLoading={deleteWorking}
       />
 
       <Dialog open={!!bulkDeleteTargets} onOpenChange={(open) => !open && setBulkDeleteTargets(null)}>
@@ -244,7 +277,14 @@ const ProductsPage = () => {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
-              {bulkWorking ? "Deleting…" : "Delete all"}
+              {bulkWorking ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete all"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

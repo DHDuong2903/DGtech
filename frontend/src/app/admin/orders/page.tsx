@@ -6,6 +6,7 @@ import { useOrderStore } from "../../../stores";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
@@ -252,7 +253,14 @@ const AdminOrdersPage = () => {
               Hủy
             </Button>
             <Button onClick={handleStatusUpdate} disabled={updating}>
-              {updating ? "Đang cập nhật..." : "Xác nhận"}
+              {updating ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Đang cập nhật…
+                </>
+              ) : (
+                "Xác nhận"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

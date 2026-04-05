@@ -37,6 +37,7 @@ interface ProductState {
   updateProduct: (id: string, formData: FormData) => Promise<{ success: boolean; data?: Product; error?: string }>;
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
   deleteProducts: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
+  updateProductStatus: (id: string, status: "ACTIVE" | "DRAFT") => Promise<{ success: boolean; error?: string }>;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -188,6 +189,27 @@ export const useProductStore = create<ProductState>()(
           const errorMessage = error.message || "Failed to delete products";
           set({ error: errorMessage });
           toast.error("Could not delete selected products");
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      updateProductStatus: async (id, status) => {
+        try {
+          const fd = new FormData();
+          fd.append("status", status);
+          const updatedProduct = await productsApi.update(id, fd);
+          set((state) => ({
+            products: state.products.map((prod) => (prod.productId === id ? updatedProduct : prod)),
+            error: null,
+          }));
+          toast.success(status === "ACTIVE" ? "Product is now active" : "Product marked as draft");
+          return { success: true };
+        } catch (err) {
+          console.error("Error updating product status:", err);
+          const error = err as ApiError;
+          const errorMessage = error.message || "Failed to update status";
+          set({ error: errorMessage });
+          toast.error("Could not update product status");
           return { success: false, error: errorMessage };
         }
       },

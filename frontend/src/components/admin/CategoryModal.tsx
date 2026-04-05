@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
@@ -28,13 +29,19 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
     name: category && mode === "edit" ? category.name : "",
     description: category && mode === "edit" ? category.description || "" : "",
   });
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await onSave(formData);
-    if (success) {
-      setFormData({ name: "", description: "" });
-      onClose();
+    setSaving(true);
+    try {
+      const success = await onSave(formData);
+      if (success) {
+        setFormData({ name: "", description: "" });
+        onClose();
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -60,7 +67,7 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">
-                Name <span className="text-destructive">*</span>
+                Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
@@ -77,16 +84,27 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
+                placeholder="Short description"
                 rows={4}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">{mode === "create" ? "Create" : "Save changes"}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  {mode === "create" ? "Creating…" : "Saving…"}
+                </>
+              ) : mode === "create" ? (
+                "Create"
+              ) : (
+                "Save"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

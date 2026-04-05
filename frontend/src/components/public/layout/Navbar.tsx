@@ -1,14 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import {
-  Home,
-  LayoutDashboard,
-  Package,
-  Search,
-  ShoppingCart,
-  Store,
-} from "lucide-react";
+import { Home, LayoutDashboard, Package, Search, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -26,15 +19,7 @@ const navUnderline =
   "after:rounded-full after:bg-orange-500 after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] " +
   "hover:after:scale-x-100";
 
-function NavLink({
-  href,
-  children,
-  className,
-}: {
-  href: string;
-  children: ReactNode;
-  className?: string;
-}) {
+function NavLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (
     <Link href={href} className={cn(navUnderline, className)}>
       {children}
@@ -123,21 +108,21 @@ export const Navbar = () => {
 
         {isSignedIn && (
           <NavLink href="/orders">
-            <Package className="h-4 w-4 shrink-0" />
-            <span className="hidden md:inline">Orders</span>
+            <Package className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
+            <span className="hidden sm:inline">Orders</span>
           </NavLink>
         )}
 
         <NavLink href="/cart">
           <div className="relative">
-            <ShoppingCart className="h-4 w-4 shrink-0" />
+            <ShoppingCart className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
             {isSignedIn && cart?.items && cart.items.length > 0 && (
               <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-0.5 text-[10px] font-medium text-white">
                 {cart.items.length}
               </span>
             )}
           </div>
-          <span className="hidden md:inline">Cart</span>
+          <span className="hidden sm:inline">Cart</span>
         </NavLink>
 
         <ThemeToggle />

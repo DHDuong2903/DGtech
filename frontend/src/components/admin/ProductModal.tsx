@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,13 +10,15 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import type { Product, Category, ProductStatus } from "../../types";
+import type { Product, Category } from "../../types";
 import { isValidImage } from "../../utils";
 import { toast } from "sonner";
+import { Upload } from "lucide-react";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -37,7 +39,6 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: product.price.toString(),
         stock: product.stock.toString(),
         categoryId: product.categoryId.toString(),
-        status: (product.status ?? "DRAFT") as ProductStatus,
       };
     }
     return {
@@ -46,13 +47,14 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
       price: "",
       stock: "",
       categoryId: "",
-      status: "DRAFT" as ProductStatus,
     };
   };
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(product?.imageUrl || "");
+  const [saving, setSaving] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Update form when modal opens with different product or mode
   useEffect(() => {
@@ -67,55 +69,54 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const validation = isValidImage(file);
-      if (!validation.valid) {
-        toast.error(validation.error ?? "Invalid image");
-        e.target.value = "";
-        return;
-      }
+    e.target.value = "";
+    if (!file) return;
 
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const validation = isValidImage(file);
+    if (!validation.valid) {
+      toast.error(validation.error ?? "Invalid image");
+      return;
     }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    try {
+      const data = new FormData();
+      data.append("name", formData.name);
+      data.append("description", formData.description);
+      data.append("price", formData.price);
+      data.append("stock", formData.stock);
+      data.append("categoryId", formData.categoryId);
 
-    // Create FormData for file upload
-    const data = new FormData();
-    data.append("name", formData.name);
-    data.append("description", formData.description);
-    data.append("price", formData.price);
-    data.append("stock", formData.stock);
-    data.append("categoryId", formData.categoryId);
-    data.append("status", formData.status);
+      if (imageFile) {
+        data.append("image", imageFile);
+      }
 
-    if (imageFile) {
-      data.append("image", imageFile);
-    }
+      const success = await onSave(data);
 
-    // Call onSave and wait for it to complete
-    const success = await onSave(data);
-
-    // Only close modal and reset form if save was successful
-    if (success) {
-      setFormData({
-        name: "",
-        description: "",
-        price: "",
-        stock: "",
-        categoryId: "",
-        status: "DRAFT",
-      });
-      setImageFile(null);
-      setImagePreview("");
-      onClose();
+      if (success) {
+        setFormData({
+          name: "",
+          description: "",
+          price: "",
+          stock: "",
+          categoryId: "",
+        });
+        setImageFile(null);
+        setImagePreview("");
+        onClose();
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -128,7 +129,6 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         price: "",
         stock: "",
         categoryId: "",
-        status: "DRAFT",
       });
       setImageFile(null);
       setImagePreview("");
@@ -147,19 +147,43 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            {/* Product Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="name">
-                Product name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Name"
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
+              <div className="grid min-w-0 gap-2">
+                <Label htmlFor="name">
+                  Product name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Name"
+                  className="w-full min-w-0"
+                />
+              </div>
+
+              <div className="grid min-w-0 gap-2">
+                <Label htmlFor="category">
+                  Category <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value: string) => setFormData({ ...formData, categoryId: value })}
+                  required
+                >
+                  <SelectTrigger id="category" className="w-full min-w-0">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.categoryId} value={category.categoryId.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Description */}
@@ -175,8 +199,8 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
             </div>
 
             {/* Price and Stock */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
+              <div className="grid min-w-0 gap-2">
                 <Label htmlFor="price">
                   Price (VND) <span className="text-red-500">*</span>
                 </Label>
@@ -189,10 +213,11 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   placeholder="1000000"
+                  className="w-full min-w-0"
                 />
               </div>
 
-              <div className="grid gap-2">
+              <div className="grid min-w-0 gap-2">
                 <Label htmlFor="stock">
                   Stock <span className="text-red-500">*</span>
                 </Label>
@@ -204,70 +229,57 @@ export const ProductModal = ({ isOpen, onClose, onSave, product, categories, mod
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                   placeholder="0"
+                  className="w-full min-w-0"
                 />
               </div>
             </div>
 
-            {/* Category */}
-            <div className="grid gap-2">
-              <Label htmlFor="category">
-                Category <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value: string) => setFormData({ ...formData, categoryId: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.categoryId} value={category.categoryId.toString()}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Status */}
-            <div className="grid gap-2">
-              <Label htmlFor="status">
-                Status <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: ProductStatus) => setFormData({ ...formData, status: value })}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">Draft products are hidden from the shop.</p>
-            </div>
-
             {/* Image Upload */}
             <div className="grid gap-2">
-              <Label htmlFor="image">Product image</Label>
-              <Input id="image" type="file" accept="image/*" onChange={handleImageChange} />
-              {imagePreview && (
-                <div className="mt-2">
+              <Label>Product image</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Image
+                </Button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </div>
+              {imagePreview ? (
+                <div className="bg-muted relative mt-1 aspect-video w-full min-w-0 overflow-hidden rounded-md border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-md border" />
+                  <img src={imagePreview} alt="" className="size-full object-cover" />
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">{mode === "create" ? "Create" : "Save changes"}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  {mode === "create" ? "Creating…" : "Saving…"}
+                </>
+              ) : mode === "create" ? (
+                "Create"
+              ) : (
+                "Save"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
