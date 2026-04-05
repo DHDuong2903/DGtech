@@ -9,6 +9,7 @@ import { CartItem } from "../models/cartItemModel.js";
 import { Order } from "../models/orderModel.js";
 import { OrderItem } from "../models/orderItemModel.js";
 import { Payment } from "../models/paymentModel.js";
+import { Slideshow } from "../models/slideshowModel.js";
 
 // Import associations
 import "../models/associationsModel.js";

@@ -15,6 +15,7 @@ import reviewRoute from "./routes/reviewRoute.js";
 import cartRoute from "./routes/cartRoute.js";
 import orderRoute from "./routes/orderRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
+import slideshowsRoute from "./routes/slideshowsRoute.js";
 
 dotenv.config();
 const app = express();
@@ -56,6 +57,7 @@ app.use("/api/reviews", reviewRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/payments", paymentRoute);
+app.use("/api/slideshows", slideshowsRoute);
 
 const startServer = async () => {
   await connectDB();
