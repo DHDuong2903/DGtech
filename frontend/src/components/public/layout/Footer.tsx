@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { Mail, Phone, MapPin } from "lucide-react";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="bg-background mt-auto border-t border-border">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className={cn("mx-auto max-w-7xl py-6 sm:py-8", STOREFRONT_H_PADDING)}>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
           <div>
             <h3 className="mb-2 text-sm font-semibold text-orange-600">DGTech</h3>
@@ -64,7 +66,7 @@ export const Footer = () => {
       </div>
 
       <div className="bg-orange-600 py-2">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
           <p className="text-center text-xs text-white sm:text-sm">
             &copy; {currentYear} DGTech. Furniture & interiors. All rights reserved.
           </p>

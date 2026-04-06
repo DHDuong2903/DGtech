@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Filter, Search, X, ChevronUp } from "lucide-react";
 import { useProductStore } from "../../stores";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 const ShopPageContent = () => {
   const searchParams = useSearchParams();
@@ -32,11 +34,19 @@ const ShopPageContent = () => {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const qFromUrl = searchParams.get("q") ?? "";
+  const categoryFromUrl = searchParams.get("category");
 
   useEffect(() => {
     setSearchQuery(qFromUrl);
     setCurrentPage(1);
   }, [qFromUrl]);
+
+  useEffect(() => {
+    if (categoryFromUrl && /^\d+$/.test(categoryFromUrl)) {
+      setSelectedCategory(categoryFromUrl);
+      setCurrentPage(1);
+    }
+  }, [categoryFromUrl]);
 
   // Fetch categories
   useEffect(() => {
@@ -103,13 +113,13 @@ const ShopPageContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-background">
+      <div className={cn("mx-auto max-w-7xl py-8", STOREFRONT_H_PADDING)}>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cửa hàng</h1>
-          <p className="text-gray-600">
-            Hiển thị {products.length} / {totalItems} sản phẩm
+          <h1 className="text-3xl font-bold text-foreground mb-2">Shop</h1>
+          <p className="text-muted-foreground">
+            Showing {products.length} / {totalItems} products
           </p>
         </div>
 
@@ -131,7 +141,7 @@ const ShopPageContent = () => {
                   <CardTitle className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Filter className="h-5 w-5" />
-                      Bộ lọc
+                      Filters
                     </span>
                     <Button variant="ghost" size="sm" onClick={() => setShowFilters(false)}>
                       <ChevronUp className="h-4 w-4" />
@@ -141,11 +151,11 @@ const ShopPageContent = () => {
                 <CardContent className="space-y-6">
                   {/* Search */}
                   <div>
-                    <Label className="mb-2">Tìm kiếm</Label>
+                    <Label className="mb-2">Search</Label>
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                       <Input
-                        placeholder="Tên sản phẩm..."
+                        placeholder="Product name…"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10"
@@ -155,13 +165,13 @@ const ShopPageContent = () => {
 
                   {/* Category Filter */}
                   <div>
-                    <Label className="mb-2">Danh mục</Label>
+                    <Label className="mb-2">Category</Label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Chọn danh mục" />
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tất cả danh mục</SelectItem>
+                        <SelectItem value="all">All categories</SelectItem>
                         {categories.map((cat) => (
                           <SelectItem key={cat.categoryId} value={cat.categoryId.toString()}>
                             {cat.name}
@@ -173,17 +183,17 @@ const ShopPageContent = () => {
 
                   {/* Price Range */}
                   <div>
-                    <Label className="mb-2">Khoảng giá</Label>
+                    <Label className="mb-2">Price range</Label>
                     <div className="space-y-2">
                       <Input
                         type="number"
-                        placeholder="Giá tối thiểu"
+                        placeholder="Min price"
                         value={minPrice}
                         onChange={(e) => setMinPrice(e.target.value)}
                       />
                       <Input
                         type="number"
-                        placeholder="Giá tối đa"
+                        placeholder="Max price"
                         value={maxPrice}
                         onChange={(e) => setMaxPrice(e.target.value)}
                       />
@@ -192,15 +202,15 @@ const ShopPageContent = () => {
 
                   {/* Sort */}
                   <div>
-                    <Label className="mb-2">Sắp xếp theo</Label>
+                    <Label className="mb-2">Sort by</Label>
                     <Select value={sortBy} onValueChange={setSortBy}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="createdAt">Mới nhất</SelectItem>
-                        <SelectItem value="price">Giá</SelectItem>
-                        <SelectItem value="name">Tên</SelectItem>
+                        <SelectItem value="createdAt">Newest</SelectItem>
+                        <SelectItem value="price">Price</SelectItem>
+                        <SelectItem value="name">Name</SelectItem>
                       </SelectContent>
                     </Select>
                     <div className="flex gap-2 mt-2">
@@ -210,7 +220,7 @@ const ShopPageContent = () => {
                         onClick={() => setOrder("ASC")}
                         className="flex-1"
                       >
-                        Tăng dần
+                        Ascending
                       </Button>
                       <Button
                         variant={order === "DESC" ? "default" : "outline"}
@@ -218,7 +228,7 @@ const ShopPageContent = () => {
                         onClick={() => setOrder("DESC")}
                         className="flex-1"
                       >
-                        Giảm dần
+                        Descending
                       </Button>
                     </div>
                   </div>
@@ -226,7 +236,7 @@ const ShopPageContent = () => {
                   {/* Reset Button */}
                   <Button variant="outline" className="w-full" onClick={handleResetFilters}>
                     <X className="h-4 w-4 mr-2" />
-                    Xóa bộ lọc
+                    Clear filters
                   </Button>
                 </CardContent>
               </Card>
@@ -239,7 +249,7 @@ const ShopPageContent = () => {
             <div className="lg:hidden mb-4">
               <Button onClick={() => setIsMobileFilterOpen(true)} className="w-full">
                 <Filter className="h-4 w-4 mr-2" />
-                Bộ lọc
+                Filters
               </Button>
             </div>
 
@@ -247,13 +257,13 @@ const ShopPageContent = () => {
             {loading ? (
               <div className="text-center py-12">
                 <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-                <p className="mt-4 text-gray-600">Đang tải sản phẩm...</p>
+                <p className="text-muted-foreground mt-4">Loading products…</p>
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">Không tìm thấy sản phẩm nào</p>
+                <p className="text-muted-foreground text-lg">No products found</p>
                 <Button onClick={handleResetFilters} className="mt-4">
-                  Xóa bộ lọc
+                  Clear filters
                 </Button>
               </div>
             ) : (
@@ -272,17 +282,17 @@ const ShopPageContent = () => {
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
                     >
-                      Trước
+                      Previous
                     </Button>
-                    <span className="text-sm text-gray-600">
-                      Trang {currentPage} / {totalPages}
+                    <span className="text-muted-foreground text-sm">
+                      Page {currentPage} / {totalPages}
                     </span>
                     <Button
                       variant="outline"
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
                     >
-                      Sau
+                      Next
                     </Button>
                   </div>
                 )}
@@ -294,11 +304,11 @@ const ShopPageContent = () => {
 
       {/* Mobile Filter Modal */}
       {isMobileFilterOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
-          <div className="fixed inset-y-0 left-0 w-80 bg-white shadow-xl overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/50 lg:hidden">
+          <div className="bg-card border-border fixed inset-y-0 left-0 w-80 overflow-y-auto border-r shadow-xl">
             <div className="p-4">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">Bộ lọc</h2>
+                <h2 className="text-xl font-bold text-foreground">Filters</h2>
                 <Button variant="ghost" size="icon" onClick={() => setIsMobileFilterOpen(false)}>
                   <X className="h-5 w-5" />
                 </Button>
@@ -307,11 +317,11 @@ const ShopPageContent = () => {
               <div className="space-y-6">
                 {/* Search */}
                 <div>
-                  <Label className="mb-2">Tìm kiếm</Label>
+                  <Label className="mb-2">Search</Label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                     <Input
-                      placeholder="Tên sản phẩm..."
+                      placeholder="Product name…"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10"
@@ -321,13 +331,13 @@ const ShopPageContent = () => {
 
                 {/* Category */}
                 <div>
-                  <Label className="mb-2">Danh mục</Label>
+                  <Label className="mb-2">Category</Label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn danh mục" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tất cả danh mục</SelectItem>
+                      <SelectItem value="all">All categories</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat.categoryId} value={cat.categoryId.toString()}>
                           {cat.name}
@@ -339,17 +349,17 @@ const ShopPageContent = () => {
 
                 {/* Price Range */}
                 <div>
-                  <Label className="mb-2">Khoảng giá</Label>
+                  <Label className="mb-2">Price range</Label>
                   <div className="space-y-2">
                     <Input
                       type="number"
-                      placeholder="Giá tối thiểu"
+                      placeholder="Min price"
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
                     />
                     <Input
                       type="number"
-                      placeholder="Giá tối đa"
+                      placeholder="Max price"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
                     />
@@ -358,15 +368,15 @@ const ShopPageContent = () => {
 
                 {/* Sort */}
                 <div>
-                  <Label className="mb-2">Sắp xếp theo</Label>
+                  <Label className="mb-2">Sort by</Label>
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="createdAt">Mới nhất</SelectItem>
-                      <SelectItem value="price">Giá</SelectItem>
-                      <SelectItem value="name">Tên</SelectItem>
+                      <SelectItem value="createdAt">Newest</SelectItem>
+                      <SelectItem value="price">Price</SelectItem>
+                      <SelectItem value="name">Name</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="flex gap-2 mt-2">
@@ -376,7 +386,7 @@ const ShopPageContent = () => {
                       onClick={() => setOrder("ASC")}
                       className="flex-1"
                     >
-                      Tăng dần
+                      Ascending
                     </Button>
                     <Button
                       variant={order === "DESC" ? "default" : "outline"}
@@ -384,7 +394,7 @@ const ShopPageContent = () => {
                       onClick={() => setOrder("DESC")}
                       className="flex-1"
                     >
-                      Giảm dần
+                      Descending
                     </Button>
                   </div>
                 </div>
@@ -392,11 +402,11 @@ const ShopPageContent = () => {
                 {/* Buttons */}
                 <div className="space-y-2">
                   <Button className="w-full" onClick={handleApplyFilters}>
-                    Áp dụng
+                    Apply
                   </Button>
                   <Button variant="outline" className="w-full" onClick={handleResetFilters}>
                     <X className="h-4 w-4 mr-2" />
-                    Xóa bộ lọc
+                    Clear filters
                   </Button>
                 </div>
               </div>
@@ -412,7 +422,7 @@ export default function ShopPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[50vh] items-center justify-center bg-gray-50 text-sm text-muted-foreground">
+        <div className="bg-background flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
           Loading shop…
         </div>
       }

@@ -22,13 +22,13 @@ export const PaymentExpired = ({ orderId, onViewOrder, onContinueShopping }: Pay
           </svg>
         </div>
       </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Phiên thanh toán đã hết hạn</h2>
-      <p className="text-gray-600 mb-6">Vui lòng tạo lại đơn hàng hoặc liên hệ hỗ trợ</p>
+      <h2 className="text-foreground mb-2 text-2xl font-bold">Payment session expired</h2>
+      <p className="text-muted-foreground mb-6">Place a new order or contact support for help.</p>
       <div className="flex gap-3 justify-center">
         <Button variant="outline" onClick={onViewOrder}>
-          Xem đơn hàng
+          View orders
         </Button>
-        <Button onClick={onContinueShopping}>Tiếp tục mua sắm</Button>
+        <Button onClick={onContinueShopping}>Continue shopping</Button>
       </div>
     </Card>
   );

@@ -13,6 +13,8 @@ import {
   CancelOrderDialog,
   LoadingState,
 } from "../../components/public/order";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -34,12 +36,12 @@ export default function OrdersPage() {
     setCancelling(true);
     try {
       await cancelOrder(selectedOrderId);
-      toast.success("Đơn hàng đã được hủy thành công");
+      toast.success("Order cancelled successfully");
       setCancelModalOpen(false);
       setSelectedOrderId(null);
     } catch (error) {
       console.error("Error cancelling order:", error);
-      toast.error("Không thể hủy đơn hàng. Vui lòng thử lại");
+      toast.error("Could not cancel the order. Please try again.");
     } finally {
       setCancelling(false);
     }
@@ -62,8 +64,8 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+      <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         <OrdersPageHeader orderCount={orders.length} />
 
         <OrderStatusFilter currentFilter={filter} onFilterChange={setFilter} />

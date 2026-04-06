@@ -11,13 +11,13 @@ export const ProductImage = ({ imageUrl, name }: ProductImageProps) => {
     <div className="flex justify-center">
       <div className="w-full max-w-lg">
         <Card className="overflow-hidden">
-          <div className="aspect-square bg-white relative">
+          <div className="bg-card relative aspect-square">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt={name} className="w-full h-full object-contain p-4" />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <Package className="h-24 w-24 text-gray-400" />
+                <Package className="text-muted-foreground h-24 w-24" />
               </div>
             )}
           </div>

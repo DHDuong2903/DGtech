@@ -7,6 +7,8 @@ import { ArrowRight } from "lucide-react";
 import { Product } from "@/src/types";
 import { productsApi } from "@/src/apis";
 import { ProductCard } from "../product";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,8 +32,8 @@ export const FeaturedProducts = () => {
 
   if (loading) {
     return (
-      <section className="bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-muted/40 py-16">
+        <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
           <div className="text-center py-12">
             <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
           </div>
@@ -45,18 +47,18 @@ export const FeaturedProducts = () => {
   }
 
   return (
-    <section className="bg-gray-50 py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="bg-muted/40 py-16">
+      <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">Sản Phẩm Nổi Bật</h2>
-            <p className="text-gray-600 mt-2">Những sản phẩm được yêu thích nhất</p>
+            <h2 className="text-3xl font-bold text-foreground">Featured products</h2>
+            <p className="text-muted-foreground mt-2">Hand-picked pieces customers love</p>
           </div>
           <Link
             href="/shop"
             className="flex items-center text-orange-600 hover:text-orange-700 font-semibold transition-colors"
           >
-            Xem tất cả
+            View all
             <ArrowRight className="h-4 w-4 ml-1" />
           </Link>
         </div>

@@ -29,7 +29,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
   const subtotal = item.product.price * item.quantity;
 
   return (
-    <div className="flex gap-4 border rounded-lg p-4 md:p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-card border-border flex gap-4 rounded-lg border p-4 shadow-sm transition-shadow hover:shadow-md md:p-6">
       {/* Checkbox */}
       <div className="flex items-start pt-2">
         <Checkbox
@@ -40,7 +40,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
       </div>
 
       {/* Product Image */}
-      <div className="relative w-28 h-28 md:w-36 md:h-36 shrink-0 bg-gray-50 rounded-lg overflow-hidden">
+      <div className="bg-muted relative h-28 w-28 shrink-0 overflow-hidden rounded-lg md:h-36 md:w-36">
         <Image
           src={item.product.imageUrl || "/images/placeholder.png"}
           alt={item.product.name}
@@ -53,7 +53,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
       <div className="flex-1 min-w-0">
         <div className="flex justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base md:text-lg mb-1 truncate text-gray-900">{item.product.name}</h3>
+            <h3 className="text-foreground mb-1 truncate text-base font-semibold md:text-lg">{item.product.name}</h3>
             <p className="text-orange-600 font-bold text-lg md:text-xl">{formatCurrency(item.product.price)}</p>
           </div>
 
@@ -72,12 +72,12 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
         {/* Quantity Controls & Subtotal */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600 font-medium">Số lượng:</span>
-            <div className="flex items-center gap-1 border rounded-lg bg-gray-50">
+            <span className="text-muted-foreground text-sm font-medium">Quantity:</span>
+            <div className="bg-muted border-border flex items-center gap-1 rounded-lg border">
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-9 w-9 hover:bg-gray-100"
+                className="hover:bg-accent h-9 w-9"
                 onClick={() => handleUpdateQuantity(item.quantity - 1)}
                 disabled={item.quantity <= 1 || loading}
               >
@@ -87,7 +87,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-9 w-9 hover:bg-gray-100"
+                className="hover:bg-accent h-9 w-9"
                 onClick={() => handleUpdateQuantity(item.quantity + 1)}
                 disabled={item.quantity >= item.product.stock || loading}
               >
@@ -98,7 +98,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
 
           {/* Subtotal */}
           <div className="text-left sm:text-right">
-            <p className="text-xs sm:text-sm text-gray-600">Tạm tính</p>
+            <p className="text-muted-foreground text-xs sm:text-sm">Line total</p>
             <p className="font-bold text-lg sm:text-xl text-orange-600">{formatCurrency(subtotal)}</p>
           </div>
         </div>
@@ -112,7 +112,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
           disabled={loading}
         >
           <Trash2 className="h-4 w-4 mr-2" />
-          Xóa sản phẩm
+          Remove item
         </Button>
       </div>
     </div>

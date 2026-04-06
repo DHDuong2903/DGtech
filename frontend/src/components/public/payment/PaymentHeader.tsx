@@ -20,18 +20,18 @@ export const PaymentHeader = ({ orderId, isPaid, isExpired, timeLeft, onBackToOr
     <div className="mb-6">
       <Button variant="ghost" onClick={onBackToOrder} className="mb-4">
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Quay lại đơn hàng
+        Back to orders
       </Button>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {isPaid ? "Thanh toán thành công" : "Thông tin thanh toán"}
+          <h1 className="text-3xl font-bold text-foreground">
+            {isPaid ? "Payment successful" : "Payment details"}
           </h1>
-          <p className="text-gray-600 mt-2">Đơn hàng #{orderId.slice(0, 8)}</p>
+          <p className="text-muted-foreground mt-2">Order #{orderId.slice(0, 8)}</p>
         </div>
         {!isPaid && !isExpired && (
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">Thời gian còn lại</p>
+            <p className="text-muted-foreground mb-1 text-sm">Time remaining</p>
             <p className={`text-2xl font-bold ${timeLeft < 60 ? "text-red-600" : "text-orange-600"}`}>
               {formatTime(timeLeft)}
             </p>

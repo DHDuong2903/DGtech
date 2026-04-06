@@ -15,6 +15,8 @@ import {
   PaymentQRCode,
   PaymentBankInfo,
 } from "../../../components/public/payment";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export default function PaymentPage() {
   const params = useParams();
@@ -36,7 +38,7 @@ export default function PaymentPage() {
       setPayment(response.payment);
     } catch (error) {
       console.error("Error fetching payment:", error);
-      toast.error("Không thể tải thông tin thanh toán");
+      toast.error("Could not load payment details");
     } finally {
       setLoading(false);
     }
@@ -48,15 +50,15 @@ export default function PaymentPage() {
       const response = await paymentApi.checkPaymentStatus(orderId);
 
       if (response.status === "PAID") {
-        toast.success("Thanh toán thành công! Đơn hàng đang được giao...");
+        toast.success("Payment received. Your order is being processed.");
         // Refresh payment info
         await fetchPayment();
       } else {
-        toast.info("Chưa nhận được thanh toán");
+        toast.info("Payment not detected yet");
       }
     } catch (error) {
       console.error("Error checking payment:", error);
-      toast.error("Không thể kiểm tra trạng thái thanh toán");
+      toast.error("Could not check payment status");
     } finally {
       setChecking(false);
     }
@@ -65,7 +67,7 @@ export default function PaymentPage() {
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopied(field);
-    toast.success(`Đã sao chép ${field}`);
+    toast.success(`Copied ${field}`);
     setTimeout(() => setCopied(null), 2000);
   };
 
@@ -76,7 +78,7 @@ export default function PaymentPage() {
   }, [isLoaded, isSignedIn, router]);
 
   useEffect(() => {
-    // Chỉ fetch khi đã authenticated
+    // Fetch only when authenticated
     if (isLoaded && isSignedIn && orderId) {
       fetchPayment();
     }
@@ -107,7 +109,7 @@ export default function PaymentPage() {
       try {
         const { orderApi } = await import("../../../apis/orderApi");
         await orderApi.cancelOrder(orderId);
-        toast.error("Đơn hàng đã bị hủy do quá thời gian thanh toán");
+        toast.error("Order cancelled: payment time expired");
       } catch (error) {
         console.error("Error canceling expired order:", error);
       }
@@ -138,8 +140,8 @@ export default function PaymentPage() {
   const isPaid = payment.status === "PAID";
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background py-8">
+      <div className={cn("mx-auto max-w-4xl", STOREFRONT_H_PADDING)}>
         <PaymentHeader
           orderId={orderId}
           isPaid={isPaid}

@@ -9,49 +9,51 @@ interface CartSummaryProps {
 
 export function CartSummary({ totalItems, totalPrice, onCheckout }: CartSummaryProps) {
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm sticky top-4 border">
-      <h2 className="text-xl font-bold mb-4 text-gray-900">Tóm tắt đơn hàng</h2>
+    <div className="bg-card border-border sticky top-4 rounded-lg border p-6 shadow-sm">
+      <h2 className="text-foreground mb-4 text-xl font-bold">Order summary</h2>
 
       {totalItems === 0 ? (
         <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">Vui lòng chọn sản phẩm để thanh toán</p>
+          <p className="text-muted-foreground text-sm">Select items to checkout</p>
         </div>
       ) : (
         <>
           <div className="space-y-3 mb-6 pb-4 border-b">
-            <div className="flex justify-between text-gray-700">
-              <span>Tạm tính ({totalItems} sản phẩm):</span>
+            <div className="text-foreground flex justify-between">
+              <span>
+                Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"}):
+              </span>
               <span className="font-semibold">{formatCurrency(totalPrice)}</span>
             </div>
-            <div className="flex justify-between text-gray-700">
-              <span>Phí vận chuyển:</span>
-              <span className="font-semibold text-green-600">Miễn phí</span>
+            <div className="text-foreground flex justify-between">
+              <span>Shipping:</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
             </div>
           </div>
 
           <div className="flex justify-between items-center mb-6">
-            <span className="text-lg font-bold text-gray-900">Tổng cộng:</span>
+            <span className="text-foreground text-lg font-bold">Total:</span>
             <span className="text-2xl font-bold text-orange-600">{formatCurrency(totalPrice)}</span>
           </div>
         </>
       )}
 
       <Button className="w-full mb-4" size="lg" disabled={totalItems === 0} onClick={onCheckout}>
-        {totalItems === 0 ? "Chọn sản phẩm để thanh toán" : "Tiến hành thanh toán"}
+        {totalItems === 0 ? "Select items to checkout" : "Proceed to checkout"}
       </Button>
 
-      <div className="space-y-2 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
+      <div className="bg-muted text-muted-foreground space-y-2 rounded-lg p-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-green-600">✓</span>
-          <span>Miễn phí vận chuyển</span>
+          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
+          <span>Free shipping</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-green-600">✓</span>
-          <span>Đổi trả trong 7 ngày</span>
+          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
+          <span>7-day returns</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-green-600">✓</span>
-          <span>Bảo hành chính hãng</span>
+          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
+          <span>Manufacturer warranty</span>
         </div>
       </div>
     </div>

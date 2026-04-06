@@ -18,6 +18,8 @@ import {
   ReviewsList,
   RelatedProducts,
 } from "../../../components/public/product";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 const ProductDetailPage = () => {
   const params = useParams();
@@ -60,7 +62,7 @@ const ProductDetailPage = () => {
 
   const handleAddToCart = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
+      toast.error("Please sign in to add items to your cart");
       return;
     }
 
@@ -76,12 +78,12 @@ const ProductDetailPage = () => {
 
   const handleSubmitReviewWrapper = async (rating: number, comment: string) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để đánh giá sản phẩm");
+      toast.error("Please sign in to write a review");
       return;
     }
 
     if (!comment.trim()) {
-      toast.error("Vui lòng nhập nội dung đánh giá");
+      toast.error("Please enter your review");
       return;
     }
 
@@ -103,12 +105,12 @@ const ProductDetailPage = () => {
   const isOutOfStock = product.stock === 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-background">
+      <div className={cn("mx-auto max-w-7xl py-8", STOREFRONT_H_PADDING)}>
         {/* Back Button */}
         <Button variant="outline" onClick={() => router.back()} className="mb-6" size="sm">
           <ArrowLeft className="h-4 w-4" />
-          Quay lại
+          Back
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
@@ -138,7 +140,7 @@ const ProductDetailPage = () => {
 
         {/* Reviews & Rating Section */}
         <div className="mt-16 border-t pt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Đánh giá sản phẩm</h2>
+          <h2 className="text-foreground mb-6 text-2xl font-bold">Customer reviews</h2>
 
           <RatingSummary reviews={reviews} />
 

@@ -51,7 +51,7 @@ export const API_ROUTE = {
 
 export const SIDEBAR_COOKIE_NAME = "sidebar_state";
 export const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-export const SIDEBAR_WIDTH = "16rem";
+export const SIDEBAR_WIDTH = "13rem";
 export const SIDEBAR_WIDTH_MOBILE = "18rem";
 export const SIDEBAR_WIDTH_ICON = "3rem";
 export const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -59,6 +59,9 @@ export const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 // ---------------------------------------------------------------------------
 // Layout / responsive
 // ---------------------------------------------------------------------------
+
+/** Storefront horizontal padding for `max-w-7xl` shells (`lg:px-20` = 5rem). */
+export const STOREFRONT_H_PADDING = "px-4 sm:px-6 md:px-10 lg:px-18";
 
 export const MOBILE_BREAKPOINT_PX = 768;
 

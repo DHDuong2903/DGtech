@@ -13,6 +13,8 @@ import Link from "next/link";
 import { formatCurrency } from "../../utils";
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -87,11 +89,9 @@ function CheckoutContent() {
         console.error("Error refreshing cart:", error);
       }
 
-      // Nếu là BANK_TRANSFER và có payment info, chuyển sang trang thanh toán
       if (paymentMethod === "BANK_TRANSFER" && order.payment) {
         router.push(`/payment/${order.orderId}`);
       } else {
-        // COD thì chuyển về trang order detail
         router.push(`/orders/${order.orderId}`);
       }
     }
@@ -99,10 +99,10 @@ function CheckoutContent() {
 
   if (!isLoaded || cartLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Đang tải...</p>
+          <p className="mt-4 text-muted-foreground">Loading…</p>
         </div>
       </div>
     );
@@ -110,14 +110,14 @@ function CheckoutContent() {
 
   if (checkoutItems.length === 0) {
     return (
-      <div className="min-h-[calc(100vh-200px)] bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-md mx-auto text-center py-16 bg-white rounded-lg shadow-sm">
-            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Không có sản phẩm</h2>
-            <p className="text-gray-600 mb-6">Vui lòng chọn sản phẩm từ giỏ hàng</p>
+      <div className="min-h-[calc(100vh-200px)] bg-background py-16">
+        <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
+          <div className="bg-card border-border mx-auto max-w-md rounded-lg border py-16 text-center shadow-sm">
+            <Package className="text-muted-foreground mx-auto mb-4 h-16 w-16" />
+            <h2 className="text-foreground text-2xl font-bold mb-2">No items to checkout</h2>
+            <p className="text-muted-foreground mb-6">Select items in your cart to continue.</p>
             <Link href="/cart">
-              <Button>Về giỏ hàng</Button>
+              <Button>Back to cart</Button>
             </Link>
           </div>
         </div>
@@ -126,8 +126,8 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+      <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/cart">
@@ -136,8 +136,10 @@ function CheckoutContent() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Thanh toán</h1>
-            <p className="text-gray-600">{totalItems} sản phẩm</p>
+            <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
+            <p className="text-muted-foreground">
+              {totalItems} {totalItems === 1 ? "item" : "items"}
+            </p>
           </div>
         </div>
 
@@ -145,17 +147,17 @@ function CheckoutContent() {
           {/* Checkout Form */}
           <div className="lg:col-span-2">
             <Card className="p-6">
-              <h2 className="text-xl font-bold mb-6">Thông tin giao hàng</h2>
+              <h2 className="text-xl font-bold mb-6">Shipping details</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <Label htmlFor="shippingAddress">
-                    Địa chỉ giao hàng <span className="text-red-500">*</span>
+                    Shipping address <span className="text-red-500">*</span>
                   </Label>
                   <Textarea
                     id="shippingAddress"
                     value={shippingAddress}
                     onChange={(e) => setShippingAddress(e.target.value)}
-                    placeholder="Nhập địa chỉ đầy đủ (số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố)"
+                    placeholder="Full address (street, city, state/province, postal code)"
                     rows={3}
                     required
                     className="mt-2"
@@ -164,21 +166,21 @@ function CheckoutContent() {
 
                 <div>
                   <Label htmlFor="phone">
-                    Số điện thoại <span className="text-red-500">*</span>
+                    Phone number <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Nhập số điện thoại"
+                    placeholder="Your phone number"
                     required
                     className="mt-2"
                   />
                 </div>
 
                 <div>
-                  <Label>Phương thức thanh toán</Label>
+                  <Label>Payment method</Label>
                   <div className="mt-3 space-y-3">
                     <div className="flex items-center">
                       <input
@@ -191,7 +193,7 @@ function CheckoutContent() {
                         className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                       />
                       <Label htmlFor="cod" className="ml-3 cursor-pointer">
-                        Thanh toán khi nhận hàng (COD)
+                        Cash on delivery (COD)
                       </Label>
                     </div>
                     <div className="flex items-center">
@@ -205,26 +207,26 @@ function CheckoutContent() {
                         className="w-4 h-4 text-orange-600 focus:ring-orange-500"
                       />
                       <Label htmlFor="bank" className="ml-3 cursor-pointer">
-                        Chuyển khoản ngân hàng
+                        Bank transfer
                       </Label>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="notes">Ghi chú (tùy chọn)</Label>
+                  <Label htmlFor="notes">Order notes (optional)</Label>
                   <Textarea
                     id="notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Ghi chú cho đơn hàng (ví dụ: giao hàng vào buổi sáng)"
+                    placeholder="Delivery instructions (e.g. morning delivery)"
                     rows={3}
                     className="mt-2"
                   />
                 </div>
 
                 <Button type="submit" size="lg" className="w-full" disabled={orderLoading}>
-                  {orderLoading ? "Đang xử lý..." : "Xác nhận đặt hàng"}
+                  {orderLoading ? "Placing order…" : "Place order"}
                 </Button>
               </form>
             </Card>
@@ -233,12 +235,12 @@ function CheckoutContent() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-4">
-              <h2 className="text-xl font-bold mb-4">Đơn hàng của bạn</h2>
+              <h2 className="text-xl font-bold mb-4">Your order</h2>
 
               <div className="space-y-4 mb-6">
                 {checkoutItems.map((item) => (
                   <div key={item.cartItemId} className="flex gap-3">
-                    <div className="relative w-16 h-16 bg-gray-100 rounded shrink-0">
+                    <div className="bg-muted relative h-16 w-16 shrink-0 rounded">
                       <Image
                         src={item.product.imageUrl || "/images/placeholder.png"}
                         alt={item.product.name}
@@ -248,7 +250,7 @@ function CheckoutContent() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.product.name}</p>
-                      <p className="text-sm text-gray-600">Số lượng: {item.quantity}</p>
+                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       <p className="text-sm font-semibold text-orange-600">
                         {formatCurrency(item.product.price * item.quantity)}
                       </p>
@@ -258,16 +260,18 @@ function CheckoutContent() {
               </div>
 
               <div className="border-t pt-4 space-y-3">
-                <div className="flex justify-between text-gray-700">
-                  <span>Tạm tính ({totalItems} sản phẩm):</span>
+                <div className="text-foreground flex justify-between">
+                  <span>
+                    Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"}):
+                  </span>
                   <span className="font-semibold">{formatCurrency(totalPrice)}</span>
                 </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>Phí vận chuyển:</span>
-                  <span className="font-semibold text-green-600">Miễn phí</span>
+                <div className="text-foreground flex justify-between">
+                  <span>Shipping:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
                 </div>
                 <div className="flex justify-between items-center border-t pt-3">
-                  <span className="text-lg font-bold">Tổng cộng:</span>
+                  <span className="text-lg font-bold">Total:</span>
                   <span className="text-2xl font-bold text-orange-600">{formatCurrency(totalPrice)}</span>
                 </div>
               </div>
@@ -283,10 +287,10 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-4 text-gray-600">Đang tải...</p>
+            <p className="mt-4 text-muted-foreground">Loading…</p>
           </div>
         </div>
       }

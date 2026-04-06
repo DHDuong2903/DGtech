@@ -13,6 +13,8 @@ import {
   CartDeleteModal,
   CartLoadingState,
 } from "../../components/public/cart";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export default function CartPage() {
   const { cart, loading, fetchCart, clearCart } = useCartStore();
@@ -132,8 +134,8 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+      <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         <CartHeader selectedCount={selectedSummary.totalItems} totalCount={cart?.totalItems || 0} />
 
         {(!cart?.items || cart.items.length === 0) && <CartEmptyState />}

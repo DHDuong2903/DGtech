@@ -11,7 +11,7 @@ export const ReviewsList = ({ reviews }: ReviewsListProps) => {
   if (reviews.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-gray-600">Chưa có đánh giá nào cho sản phẩm này</p>
+        <p className="text-muted-foreground">No reviews for this product yet.</p>
       </Card>
     );
   }
@@ -30,25 +30,25 @@ export const ReviewsList = ({ reviews }: ReviewsListProps) => {
 
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-900">{review.user?.username || "Người dùng"}</span>
+                <span className="text-foreground font-semibold">{review.user?.username || "Customer"}</span>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
                       className={`h-4 w-4 ${
-                        star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                        star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/35"
                       }`}
                     />
                   ))}
                 </div>
                 {review.createdAt && (
-                  <span className="text-sm text-gray-500">
-                    • {new Date(review.createdAt).toLocaleDateString("vi-VN")}
+                  <span className="text-muted-foreground text-sm">
+                    • {new Date(review.createdAt).toLocaleDateString("en-US")}
                   </span>
                 )}
               </div>
 
-              <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+              <p className="text-foreground/90 leading-relaxed">{review.comment}</p>
             </div>
           </div>
         </Card>

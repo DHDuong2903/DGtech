@@ -29,7 +29,7 @@ export function CartItemList({ items, selectedItems, onToggleSelect, onClearCart
         onClick={onClearCart}
         disabled={loading}
       >
-        Xóa toàn bộ giỏ hàng
+        Clear cart
       </Button>
     </div>
   );

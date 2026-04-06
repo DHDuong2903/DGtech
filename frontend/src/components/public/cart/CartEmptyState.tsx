@@ -4,14 +4,14 @@ import Link from "next/link";
 
 export function CartEmptyState() {
   return (
-    <div className="text-center py-16 bg-white rounded-lg shadow-sm">
-      <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-      <h2 className="text-2xl font-semibold mb-2">Giỏ hàng trống</h2>
-      <p className="text-gray-600 mb-6">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm</p>
+    <div className="bg-card border-border rounded-lg border py-16 text-center shadow-sm">
+      <ShoppingBag className="text-muted-foreground mx-auto mb-4 h-16 w-16" />
+      <h2 className="text-foreground mb-2 text-2xl font-semibold">Your cart is empty</h2>
+      <p className="text-muted-foreground mb-6">Add products to your cart to keep shopping.</p>
       <Link href="/shop">
         <Button size="lg" className="gap-2">
           <ShoppingBag className="h-5 w-5" />
-          Khám phá sản phẩm
+          Browse products
         </Button>
       </Link>
     </div>

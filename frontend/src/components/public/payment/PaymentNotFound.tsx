@@ -7,11 +7,11 @@ interface PaymentNotFoundProps {
 
 export const PaymentNotFound = ({ orderId, onBackToOrder }: PaymentNotFoundProps) => {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
-        <p className="text-gray-600">Không tìm thấy thông tin thanh toán</p>
+        <p className="text-muted-foreground">Payment information not found</p>
         <Button onClick={onBackToOrder} className="mt-4">
-          Quay lại đơn hàng
+          Back to orders
         </Button>
       </div>
     </div>

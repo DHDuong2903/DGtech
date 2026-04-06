@@ -18,11 +18,11 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group cursor-pointer"
+      className="bg-card border-border group cursor-pointer overflow-hidden rounded-lg border shadow-sm transition-all duration-300 hover:shadow-md"
       onClick={handleClick}
     >
       {/* Image */}
-      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+      <div className="bg-muted relative aspect-square overflow-hidden">
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -32,15 +32,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <span className="text-gray-400 text-4xl">🖼️</span>
+            <span className="text-muted-foreground text-4xl">🖼️</span>
           </div>
         )}
 
         {/* Stock badge */}
         {product.stock === 0 && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <Badge variant="destructive" className="text-sm">
-              Hết hàng
+              Out of stock
             </Badge>
           </div>
         )}
@@ -48,16 +48,16 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
+        <h3 className="text-foreground mb-2 line-clamp-2 font-semibold transition-colors group-hover:text-orange-600">
           {product.name}
         </h3>
 
-        {product.category && <p className="text-sm text-gray-500 mb-2">{product.category.name}</p>}
+        {product.category && <p className="text-muted-foreground mb-2 text-sm">{product.category.name}</p>}
 
         <div className="flex items-center justify-between">
           <p className="text-orange-600 font-bold text-lg">{formatCurrency(product.price)}</p>
 
-          {product.stock > 0 && product.stock < 10 && <span className="text-xs text-orange-500">Sắp hết hàng</span>}
+          {product.stock > 0 && product.stock < 10 && <span className="text-xs text-orange-500">Low stock</span>}
         </div>
       </div>
     </div>

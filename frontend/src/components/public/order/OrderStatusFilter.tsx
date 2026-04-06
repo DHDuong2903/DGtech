@@ -18,7 +18,7 @@ export const OrderStatusFilter = ({ currentFilter, onFilterChange }: OrderStatus
           size="sm"
           onClick={() => onFilterChange(status)}
         >
-          {status === "ALL" ? "Tất cả" : getStatusLabel(status as Order["status"])}
+          {status === "ALL" ? "All" : getStatusLabel(status as Order["status"])}
         </Button>
       ))}
     </div>

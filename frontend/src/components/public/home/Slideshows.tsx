@@ -15,6 +15,7 @@ import Autoplay from "embla-carousel-autoplay";
 import { slideshowsApi } from "@/src/apis/slideshowsApi";
 import type { HeroSlide } from "@/src/types/slideshowsType";
 import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export const Slideshows = () => {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
@@ -80,7 +81,12 @@ export const Slideshows = () => {
 
                 <div className="absolute inset-0 z-10 bg-black/40" />
 
-                <div className="relative z-20 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+                <div
+                  className={cn(
+                    "relative z-20 mx-auto flex h-full max-w-7xl items-center",
+                    STOREFRONT_H_PADDING,
+                  )}
+                >
                   <div className="max-w-2xl text-white">
                     <h1
                       className={cn(
@@ -123,7 +129,7 @@ export const Slideshows = () => {
             type="button"
             onClick={() => api?.scrollTo(index)}
             className={`h-2 rounded-full transition-all duration-300 ${
-              index === current ? "w-8 bg-orange-600" : "w-2 bg-white/60 hover:bg-white"
+              index === current ? "w-8 bg-orange-600" : "w-2 bg-foreground/35 hover:bg-foreground/55"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />

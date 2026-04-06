@@ -12,15 +12,15 @@ export const PaymentSuccess = ({ orderId, transactionId, onViewOrderDetail }: Pa
   return (
     <Card className="p-8 text-center">
       <div className="mb-6">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <Check className="h-10 w-10 text-green-600" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
+          <Check className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
         </div>
       </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Thanh toán thành công!</h2>
-      <p className="text-gray-600 mb-2">Đơn hàng đang được giao đến bạn</p>
-      <p className="text-sm text-orange-600 mb-4">Đơn hàng sẽ tự động hoàn thành sau 10 giây</p>
-      {transactionId && <p className="text-sm text-gray-500 mb-6">Mã giao dịch: {transactionId}</p>}
-      <Button onClick={onViewOrderDetail}>Xem chi tiết đơn hàng</Button>
+      <h2 className="text-foreground mb-2 text-2xl font-bold">Payment successful</h2>
+      <p className="text-muted-foreground mb-2">Your order is on its way</p>
+      <p className="text-sm text-orange-600 mb-4">This page will complete in 10 seconds</p>
+      {transactionId && <p className="text-muted-foreground mb-6 text-sm">Transaction ID: {transactionId}</p>}
+      <Button onClick={onViewOrderDetail}>View order details</Button>
     </Card>
   );
 };

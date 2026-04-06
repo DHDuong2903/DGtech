@@ -17,7 +17,7 @@ export const ProductInfo = ({ name, categoryName, price, description, stock }: P
     <div className="flex flex-col space-y-6">
       {/* Title & Category */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">{name}</h1>
+        <h1 className="text-foreground mb-3 text-3xl font-bold">{name}</h1>
         {categoryName && (
           <Badge variant="outline" className="text-sm">
             {categoryName}
@@ -31,26 +31,26 @@ export const ProductInfo = ({ name, categoryName, price, description, stock }: P
       </div>
 
       {/* Stock Status */}
-      <div className="border-t pt-4">
+      <div className="border-border border-t pt-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Tình trạng</span>
+          <span className="text-foreground text-sm font-medium">Availability</span>
           {isOutOfStock ? (
-            <Badge variant="destructive">Hết hàng</Badge>
+            <Badge variant="destructive">Out of stock</Badge>
           ) : isLowStock ? (
             <Badge variant="outline" className="text-orange-600 border-orange-600">
-              Sắp hết - Còn {stock}
+              Low stock — {stock} left
             </Badge>
           ) : (
-            <Badge className="bg-green-600">Còn hàng</Badge>
+            <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 dark:bg-emerald-500">In stock</Badge>
           )}
         </div>
       </div>
 
       {/* Description */}
       {description && (
-        <div className="border-t pt-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Mô tả</h3>
-          <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+        <div className="border-border border-t pt-4">
+          <h3 className="text-foreground mb-2 text-sm font-semibold">Description</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
         </div>
       )}
     </div>

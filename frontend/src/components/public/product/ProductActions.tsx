@@ -22,7 +22,7 @@ export const ProductActions = ({
   return (
     <div className="border-t pt-6 space-y-4">
       <div>
-        <label className="text-sm font-medium text-gray-900 mb-3 block">Số lượng</label>
+        <label className="text-foreground mb-3 block text-sm font-medium">Quantity</label>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => onQuantityChange(-1)} disabled={quantity <= 1}>
             <Minus className="h-4 w-4" />
@@ -36,12 +36,12 @@ export const ProductActions = ({
 
       <Button className="w-full" size="lg" onClick={onAddToCart} disabled={isLoading}>
         <ShoppingCart className="h-5 w-5 mr-2" />
-        {isLoading ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+        {isLoading ? "Adding…" : "Add to cart"}
       </Button>
 
       <div className="text-center pt-2">
-        <span className="text-sm text-gray-600">Tổng: </span>
-        <span className="text-lg font-bold text-gray-900">{formatCurrency(price * quantity)}</span>
+        <span className="text-muted-foreground text-sm">Subtotal: </span>
+        <span className="text-foreground text-lg font-bold">{formatCurrency(price * quantity)}</span>
       </div>
     </div>
   );

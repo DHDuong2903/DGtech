@@ -19,9 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
+import { cn } from "@/src/lib/utils";
+import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
-  return method === "COD" ? "Thanh toán khi nhận hàng" : "Chuyển khoản ngân hàng";
+  return method === "COD" ? "Cash on delivery (COD)" : "Bank transfer";
 };
 
 export default function OrderDetailPage() {
@@ -52,10 +54,10 @@ export default function OrderDetailPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Đang tải chi tiết đơn hàng...</p>
+          <p className="mt-4 text-muted-foreground">Loading order details…</p>
         </div>
       </div>
     );
@@ -63,14 +65,14 @@ export default function OrderDetailPage() {
 
   if (!currentOrder) {
     return (
-      <div className="min-h-[calc(100vh-200px)] bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-md mx-auto text-center py-16 bg-white rounded-lg shadow-sm">
-            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Không tìm thấy đơn hàng</h2>
-            <p className="text-gray-600 mb-6">Đơn hàng không tồn tại hoặc đã bị xóa</p>
+      <div className="min-h-[calc(100vh-200px)] bg-background py-16">
+        <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
+          <div className="bg-card border-border mx-auto max-w-md rounded-lg border py-16 text-center shadow-sm">
+            <Package className="text-muted-foreground mx-auto mb-4 h-16 w-16" />
+            <h2 className="text-foreground text-2xl font-bold mb-2">Order not found</h2>
+            <p className="text-muted-foreground mb-6">This order does not exist or has been removed.</p>
             <Link href="/orders">
-              <Button>Về danh sách đơn hàng</Button>
+              <Button>Back to orders</Button>
             </Link>
           </div>
         </div>
@@ -79,8 +81,8 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+      <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/orders">
@@ -90,14 +92,14 @@ export default function OrderDetailPage() {
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Đơn hàng #{currentOrder.orderId.slice(0, 8)}</h1>
+              <h1 className="text-3xl font-bold text-foreground">Order #{currentOrder.orderId.slice(0, 8)}</h1>
               <Badge className={getStatusColor(currentOrder.status)}>{getStatusLabel(currentOrder.status)}</Badge>
             </div>
-            <p className="text-gray-600">Đặt ngày: {new Date(currentOrder.createdAt).toLocaleString("vi-VN")}</p>
+            <p className="text-muted-foreground">Placed on {new Date(currentOrder.createdAt).toLocaleString("en-US")}</p>
           </div>
           {(currentOrder.status === "PENDING" || currentOrder.status === "PROCESSING") && (
             <Button variant="destructive" onClick={() => setShowCancelModal(true)}>
-              Hủy đơn hàng
+              Cancel order
             </Button>
           )}
         </div>
@@ -106,11 +108,11 @@ export default function OrderDetailPage() {
           {/* Order Items */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Sản phẩm đã đặt</h2>
+              <h2 className="text-foreground mb-4 text-xl font-bold">Items</h2>
               <div className="space-y-4">
                 {currentOrder.items.map((item) => (
                   <div key={item.orderItemId} className="flex gap-4 pb-4 border-b last:border-0 last:pb-0">
-                    <div className="relative w-24 h-24 bg-gray-100 rounded shrink-0">
+                    <div className="bg-muted relative h-24 w-24 shrink-0 rounded">
                       <Image
                         src={item.product?.imageUrl || "/images/placeholder.png"}
                         alt={item.product?.name || "Product"}
@@ -119,8 +121,8 @@ export default function OrderDetailPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1">{item.product?.name || "Sản phẩm"}</h3>
-                      <p className="text-gray-600 mb-2">Số lượng: {item.quantity}</p>
+                      <h3 className="text-foreground mb-1 text-lg font-semibold">{item.product?.name || "Product"}</h3>
+                      <p className="text-muted-foreground mb-2">Qty: {item.quantity}</p>
                       <p className="text-orange-600 font-bold">{formatCurrency(item.price)}</p>
                     </div>
                     <div className="text-right">
@@ -132,35 +134,35 @@ export default function OrderDetailPage() {
             </Card>
 
             <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Thông tin đơn hàng</h2>
+              <h2 className="text-foreground mb-4 text-xl font-bold">Order details</h2>
               <div className="space-y-4">
                 <div className="flex gap-3">
-                  <MapPin className="h-5 w-5 text-gray-600 shrink-0 mt-0.5" />
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium mb-1">Địa chỉ giao hàng</p>
-                    <p className="text-gray-600">{currentOrder.shippingAddress}</p>
+                    <p className="font-medium mb-1">Shipping address</p>
+                    <p className="text-muted-foreground">{currentOrder.shippingAddress}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Phone className="h-5 w-5 text-gray-600 shrink-0 mt-0.5" />
+                  <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium mb-1">Số điện thoại</p>
-                    <p className="text-gray-600">{currentOrder.phone}</p>
+                    <p className="font-medium mb-1">Phone</p>
+                    <p className="text-muted-foreground">{currentOrder.phone}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <CreditCard className="h-5 w-5 text-gray-600 shrink-0 mt-0.5" />
+                  <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium mb-1">Phương thức thanh toán</p>
-                    <p className="text-gray-600">{getPaymentMethodLabel(currentOrder.paymentMethod)}</p>
+                    <p className="font-medium mb-1">Payment method</p>
+                    <p className="text-muted-foreground">{getPaymentMethodLabel(currentOrder.paymentMethod)}</p>
                   </div>
                 </div>
                 {currentOrder.notes && (
                   <div className="flex gap-3">
-                    <FileText className="h-5 w-5 text-gray-600 shrink-0 mt-0.5" />
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium mb-1">Ghi chú</p>
-                      <p className="text-gray-600">{currentOrder.notes}</p>
+                      <p className="font-medium mb-1">Notes</p>
+                      <p className="text-muted-foreground">{currentOrder.notes}</p>
                     </div>
                   </div>
                 )}
@@ -171,26 +173,28 @@ export default function OrderDetailPage() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-4">
-              <h2 className="text-xl font-bold mb-4">Tổng đơn hàng</h2>
+              <h2 className="text-foreground mb-4 text-xl font-bold">Summary</h2>
               <div className="space-y-3 mb-4 pb-4 border-b">
-                <div className="flex justify-between text-gray-700">
-                  <span>Tạm tính ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm):</span>
+                <div className="text-foreground flex justify-between">
+                  <span>
+                    Subtotal ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items):
+                  </span>
                   <span className="font-semibold">{formatCurrency(currentOrder.totalPrice)}</span>
                 </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>Phí vận chuyển:</span>
-                  <span className="font-semibold text-green-600">Miễn phí</span>
+                <div className="text-foreground flex justify-between">
+                  <span>Shipping:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
                 </div>
               </div>
               <div className="flex justify-between items-center mb-6">
-                <span className="text-lg font-bold">Tổng cộng:</span>
+                <span className="text-foreground text-lg font-bold">Total:</span>
                 <span className="text-2xl font-bold text-orange-600">{formatCurrency(currentOrder.totalPrice)}</span>
               </div>
 
-              {currentOrder.status === "DELIVERED" && <Button className="w-full mb-3">Mua lại</Button>}
+              {currentOrder.status === "DELIVERED" && <Button className="w-full mb-3">Buy again</Button>}
               <Link href="/orders">
                 <Button variant="outline" className="w-full">
-                  Về danh sách đơn hàng
+                  Back to orders
                 </Button>
               </Link>
             </Card>
@@ -201,19 +205,19 @@ export default function OrderDetailPage() {
         <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+              <DialogTitle>Cancel this order?</DialogTitle>
               <DialogDescription className="pt-2">
-                Bạn có chắc chắn muốn hủy đơn hàng{" "}
-                <span className="font-semibold">#{currentOrder.orderId.slice(0, 8)}</span>? Số lượng sản phẩm sẽ được
-                hoàn lại vào kho.
+                Are you sure you want to cancel order{" "}
+                <span className="font-semibold">#{currentOrder.orderId.slice(0, 8)}</span>? Item quantities will be
+                returned to inventory.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCancelModal(false)}>
-                Đóng
+                Close
               </Button>
               <Button type="button" variant="destructive" onClick={handleCancelOrder}>
-                Xác nhận hủy
+                Cancel order
               </Button>
             </DialogFooter>
           </DialogContent>

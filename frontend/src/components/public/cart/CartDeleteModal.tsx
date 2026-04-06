@@ -22,20 +22,19 @@ export function CartDeleteModal({ open, onOpenChange, onConfirm }: CartDeleteMod
         <DialogHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            <DialogTitle>Xóa toàn bộ giỏ hàng</DialogTitle>
+            <DialogTitle>Clear cart?</DialogTitle>
           </div>
           <DialogDescription className="pt-2">
-            Bạn có chắc là muốn xóa{" "}
-            <span className="font-semibold text-foreground">toàn bộ sản phẩm trong giỏ hàng</span>? Hành động này không
-            thể hoàn tác.
+            Remove{" "}
+            <span className="font-semibold text-foreground">all items from your cart</span>? This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Hủy
+            Cancel
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm}>
-            Xóa
+            Clear
           </Button>
         </DialogFooter>
       </DialogContent>

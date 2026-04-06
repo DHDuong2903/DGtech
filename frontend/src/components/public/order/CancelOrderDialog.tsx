@@ -20,17 +20,17 @@ export const CancelOrderDialog = ({ open, onOpenChange, onConfirm, isLoading = f
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+          <DialogTitle>Cancel order?</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+            Are you sure you want to cancel this order? This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-            Không
+            Keep order
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? "Đang hủy..." : "Hủy đơn hàng"}
+            {isLoading ? "Cancelling…" : "Cancel order"}
           </Button>
         </DialogFooter>
       </DialogContent>

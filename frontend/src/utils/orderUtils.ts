@@ -3,36 +3,36 @@ import { Order } from "../types";
 export const getStatusColor = (status: Order["status"]) => {
   switch (status) {
     case "PENDING":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      return "border-amber-500/30 bg-amber-500/15 text-amber-950 dark:text-amber-300";
     case "PROCESSING":
-      return "bg-blue-100 text-blue-800 border-blue-200";
+      return "border-sky-500/30 bg-sky-500/15 text-sky-950 dark:text-sky-300";
     case "SHIPPED":
-      return "bg-purple-100 text-purple-800 border-purple-200";
+      return "border-violet-500/30 bg-violet-500/15 text-violet-950 dark:text-violet-300";
     case "DELIVERED":
-      return "bg-green-100 text-green-800 border-green-200";
+      return "border-emerald-500/30 bg-emerald-500/15 text-emerald-950 dark:text-emerald-300";
     case "COMPLETED":
-      return "bg-teal-100 text-teal-800 border-teal-200";
+      return "border-teal-500/30 bg-teal-500/15 text-teal-950 dark:text-teal-300";
     case "CANCELLED":
-      return "bg-red-100 text-red-800 border-red-200";
+      return "border-red-500/30 bg-red-500/15 text-red-950 dark:text-red-300";
     default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 };
 
 export const getStatusLabel = (status: Order["status"]) => {
   switch (status) {
     case "PENDING":
-      return "Chờ thanh toán";
+      return "Pending payment";
     case "PROCESSING":
-      return "Đang chuẩn bị";
+      return "Processing";
     case "SHIPPED":
-      return "Đang giao hàng";
+      return "Shipped";
     case "DELIVERED":
-      return "Đã giao hàng";
+      return "Delivered";
     case "COMPLETED":
-      return "Hoàn thành";
+      return "Completed";
     case "CANCELLED":
-      return "Đã hủy";
+      return "Cancelled";
     default:
       return status;
   }

@@ -28,67 +28,67 @@ export const PaymentBankInfo = ({
 }: PaymentBankInfoProps) => {
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Hoặc chuyển khoản thủ công</h2>
+      <h2 className="text-xl font-semibold mb-4">Or transfer manually</h2>
 
       <div className="space-y-4">
         {/* Bank */}
         <div>
-          <label className="text-sm text-gray-600">Ngân hàng</label>
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg mt-1">
+          <label className="text-muted-foreground text-sm">Bank</label>
+          <div className="bg-muted mt-1 flex items-center justify-between rounded-lg p-3">
             <span className="font-medium">{bankCode}</span>
           </div>
         </div>
 
         {/* Account Number */}
         <div>
-          <label className="text-sm text-gray-600">Số tài khoản</label>
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg mt-1">
+          <label className="text-muted-foreground text-sm">Account number</label>
+          <div className="bg-muted mt-1 flex items-center justify-between rounded-lg p-3">
             <span className="font-medium">{accountNumber}</span>
             <button
-              onClick={() => onCopy(accountNumber!, "số tài khoản")}
+              onClick={() => onCopy(accountNumber!, "account number")}
               className="text-orange-600 hover:text-orange-700"
             >
-              {copied === "số tài khoản" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied === "account number" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
         {/* Account Name */}
         <div>
-          <label className="text-sm text-gray-600">Tên tài khoản</label>
-          <div className="bg-gray-50 p-3 rounded-lg mt-1">
+          <label className="text-muted-foreground text-sm">Account name</label>
+          <div className="bg-muted mt-1 rounded-lg p-3">
             <span className="font-medium">{accountName}</span>
           </div>
         </div>
 
         {/* Amount */}
         <div>
-          <label className="text-sm text-gray-600">Số tiền</label>
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg mt-1">
+          <label className="text-muted-foreground text-sm">Amount</label>
+          <div className="bg-muted mt-1 flex items-center justify-between rounded-lg p-3">
             <span className="font-medium text-orange-600 text-lg">{formatCurrency(amount)}</span>
             <button
-              onClick={() => onCopy(amount.toString(), "số tiền")}
+              onClick={() => onCopy(amount.toString(), "amount")}
               className="text-orange-600 hover:text-orange-700"
             >
-              {copied === "số tiền" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied === "amount" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
         {/* Content */}
         <div>
-          <label className="text-sm text-gray-600">Nội dung chuyển khoản</label>
+          <label className="text-muted-foreground text-sm">Transfer reference</label>
           <div className="flex items-center justify-between bg-orange-50 border border-orange-200 p-3 rounded-lg mt-1">
             <span className="font-medium text-orange-600">{transactionContent}</span>
             <button
-              onClick={() => onCopy(transactionContent!, "nội dung")}
+              onClick={() => onCopy(transactionContent!, "transfer reference")}
               className="text-orange-600 hover:text-orange-700"
             >
-              {copied === "nội dung" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied === "transfer reference" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
           <p className="text-xs text-orange-600 mt-2">
-            ⚠️ Vui lòng nhập chính xác nội dung để hệ thống tự động xác nhận
+            ⚠️ Enter the reference exactly so we can match your payment automatically
           </p>
         </div>
       </div>
@@ -98,17 +98,17 @@ export const PaymentBankInfo = ({
         {checking ? (
           <>
             <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            Đang kiểm tra...
+            Checking…
           </>
         ) : (
           <>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Kiểm tra thanh toán
+            Check payment status
           </>
         )}
       </Button>
 
-      <p className="text-xs text-gray-500 text-center mt-3">Hệ thống tự động kiểm tra mỗi 10 giây</p>
+      <p className="text-muted-foreground mt-3 text-center text-xs">We check automatically every 10 seconds</p>
     </Card>
   );
 };
