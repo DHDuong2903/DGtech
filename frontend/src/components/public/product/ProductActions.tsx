@@ -1,11 +1,10 @@
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { ShoppingCart, Minus, Plus } from "lucide-react";
-import { formatCurrency } from "@/src/utils";
 
 interface ProductActionsProps {
   quantity: number;
   maxStock: number;
-  price: number;
   isLoading: boolean;
   hasVariants: boolean;
   isVariantSelected: boolean;
@@ -16,7 +15,6 @@ interface ProductActionsProps {
 export const ProductActions = ({
   quantity,
   maxStock,
-  price,
   isLoading,
   hasVariants,
   isVariantSelected,
@@ -26,32 +24,59 @@ export const ProductActions = ({
   const isDisabled = isLoading || (hasVariants && !isVariantSelected) || maxStock === 0;
 
   return (
-    <div className="border-t pt-6 space-y-4">
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <label className="text-foreground block text-sm font-medium">Quantity</label>
-          <span className="text-muted-foreground text-xs">{maxStock} items available</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => onQuantityChange(-1)} disabled={quantity <= 1}>
-            <Minus className="h-4 w-4" />
+    <div className="space-y-3 pt-1">
+      <div className="flex w-full items-stretch gap-2">
+        <div className="flex w-[30%] min-w-0 shrink-0 items-center justify-center gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => onQuantityChange(-1)}
+            disabled={quantity <= 1 || isLoading}
+          >
+            <Minus className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-xl font-semibold w-16 text-center">{quantity}</span>
-          <Button variant="outline" size="icon" onClick={() => onQuantityChange(1)} disabled={quantity >= maxStock}>
-            <Plus className="h-4 w-4" />
+          <span className="text-foreground min-w-8 text-center text-sm font-semibold tabular-nums">
+            {quantity}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => onQuantityChange(1)}
+            disabled={quantity >= maxStock || isLoading}
+          >
+            <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
+        <Button
+          type="button"
+          size="sm"
+          className="h-9 min-w-0 flex-1 px-3"
+          onClick={onAddToCart}
+          disabled={isDisabled}
+        >
+          {isLoading ? (
+            <>
+              <Spinner data-icon="inline-start" />
+              Adding
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="mr-1.5 h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {hasVariants && !isVariantSelected ? "Select options" : "Add to cart"}
+              </span>
+            </>
+          )}
+        </Button>
       </div>
 
-      <Button className="w-full h-12 text-lg" size="lg" onClick={onAddToCart} disabled={isDisabled}>
-        <ShoppingCart className="h-5 w-5 mr-2" />
-        {isLoading ? "Adding…" : hasVariants && !isVariantSelected ? "Select Options" : "Add to cart"}
+      <Button type="button" variant="outline" size="sm" className="text-foreground h-9 w-full">
+        Check out
       </Button>
-
-      <div className="text-center pt-2">
-        <span className="text-muted-foreground text-sm">Subtotal: </span>
-        <span className="text-foreground text-lg font-bold">{formatCurrency(price * quantity)}</span>
-      </div>
     </div>
   );
 };

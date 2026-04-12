@@ -1,7 +1,7 @@
 "use client";
 
 import { ProductVariant } from "@/src/types/productType";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 
@@ -11,25 +11,20 @@ interface VariantSelectorProps {
   onSelect: (variant: ProductVariant | null) => void;
 }
 
-export const VariantSelector = ({ variants, selectedVariant, onSelect }: VariantSelectorProps) => {
-  // Extract all real variants (excluding default ones)
-  const realVariants = variants.filter((v) => !v.isDefault);
-  
-  if (realVariants.length === 0) return null;
+export const VariantSelector = (props: VariantSelectorProps) => {
+  const { variants, onSelect } = props;
 
-  // Extract attribute groups
-  const attributeNames = Array.from(
-    new Set(realVariants.flatMap((v) => Object.keys(v.attributes)))
+  const realVariants = variants.filter((v) => !v.isDefault);
+
+  const attributeNames = useMemo(
+    () => Array.from(new Set(realVariants.flatMap((v) => Object.keys(v.attributes)))),
+    [realVariants],
   );
 
-  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
-
-  // Initialize selectedAttrs from selectedVariant if available
-  useEffect(() => {
-    if (selectedVariant && !selectedVariant.isDefault) {
-      setSelectedAttrs(selectedVariant.attributes);
-    }
-  }, [selectedVariant]);
+  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>(() => {
+    const v = props.selectedVariant;
+    return v && !v.isDefault ? { ...v.attributes } : {};
+  });
 
   const handleAttrSelect = (name: string, value: string) => {
     const newAttrs = { ...selectedAttrs, [name]: value };
@@ -48,29 +43,35 @@ export const VariantSelector = ({ variants, selectedVariant, onSelect }: Variant
     }
   };
 
+  if (realVariants.length === 0) return null;
+
   return (
-    <div className="space-y-6 pt-2">
+    <div className="space-y-4">
       {attributeNames.map((name) => {
         const values = Array.from(new Set(realVariants.map((v) => v.attributes[name])));
 
         return (
-          <div key={name} className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground capitalize">{name}</h3>
+          <div key={name} className="space-y-2">
+            <h3 className="text-muted-foreground text-xs font-semibold capitalize tracking-wide">
+              {name}
+            </h3>
             <div className="flex flex-wrap gap-2">
               {values.map((val) => {
                 const isActive = selectedAttrs[name] === val;
-                
-                // Optional: check if this combination is even possible
-                const isPossible = realVariants.some(v => v.attributes[name] === val);
+
+                const isPossible = realVariants.some((v) => v.attributes[name] === val);
 
                 return (
                   <Button
                     key={val}
+                    type="button"
                     variant={isActive ? "default" : "outline"}
                     size="sm"
                     className={cn(
-                      "min-w-12 h-9 px-4 rounded-full transition-all",
-                      isActive && "shadow-md scale-105"
+                      "h-9 min-w-12 rounded-full px-4 transition-colors",
+                      !isActive &&
+                        "text-foreground border-border hover:border-primary/50 hover:bg-transparent hover:text-primary dark:hover:bg-transparent",
+                      isActive && "shadow-sm",
                     )}
                     onClick={() => handleAttrSelect(name, val)}
                     disabled={!isPossible}

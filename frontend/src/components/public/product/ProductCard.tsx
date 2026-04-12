@@ -43,8 +43,8 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
         <h3
           className={
             compact
-              ? "text-foreground mb-1 line-clamp-2 break-words text-sm font-medium transition-colors group-hover:text-orange-600"
-              : "text-foreground mb-2 line-clamp-2 break-words font-semibold transition-colors group-hover:text-orange-600"
+              ? "text-foreground/80 group-hover:text-primary mb-1 line-clamp-2 break-words text-sm font-medium leading-snug transition-colors"
+              : "text-foreground group-hover:text-primary mb-2 line-clamp-2 break-words text-base font-semibold leading-snug transition-colors"
           }
         >
           {product.name}
@@ -54,8 +54,8 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
           <p
             className={
               compact
-                ? "text-muted-foreground mb-1 break-words text-xs"
-                : "text-muted-foreground mb-2 break-words text-sm"
+                ? "text-muted-foreground mb-1 break-words text-sm leading-normal"
+                : "text-muted-foreground mb-2 break-words text-sm leading-normal"
             }
           >
             {product.category.name}
@@ -63,11 +63,21 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
         )}
 
         <div className="flex flex-wrap items-baseline gap-1.5 mt-auto">
-          <p className={compact ? "text-orange-600 text-sm font-semibold" : "text-orange-600 text-lg font-bold"}>
+          <p
+            className={
+              compact ? "text-primary text-sm font-semibold tabular-nums" : "text-primary text-lg font-bold tabular-nums"
+            }
+          >
             {formatCurrency(product.price)}
           </p>
           {product.compareAtPrice && product.compareAtPrice > product.price && (
-            <p className={compact ? "text-muted-foreground text-[10px] line-through" : "text-muted-foreground text-xs line-through"}>
+            <p
+              className={
+                compact
+                  ? "text-muted-foreground text-xs line-through tabular-nums"
+                  : "text-muted-foreground text-sm line-through tabular-nums"
+              }
+            >
               {formatCurrency(product.compareAtPrice)}
             </p>
           )}

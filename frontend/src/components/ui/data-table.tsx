@@ -66,6 +66,8 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
 
+  const columnFiltersKey = React.useMemo(() => JSON.stringify(columnFilters), [columnFilters]);
+
   const table = useReactTable({
     data,
     columns,
@@ -79,6 +81,8 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
     enableRowSelection,
+    /** Keep current page when `data` is updated in place (e.g. editing variant cells). */
+    autoResetPageIndex: false,
     initialState: {
       pagination: { pageSize },
     },
@@ -87,6 +91,13 @@ export function DataTable<TData, TValue>({
       rowSelection,
     },
   });
+
+  const tableRef = React.useRef(table);
+  tableRef.current = table;
+
+  React.useEffect(() => {
+    tableRef.current.setPageIndex(0);
+  }, [columnFiltersKey]);
 
   const filterColumn = filterColumnId ? table.getColumn(filterColumnId) : undefined;
 

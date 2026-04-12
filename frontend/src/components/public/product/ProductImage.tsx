@@ -1,4 +1,3 @@
-import { Card } from "@/src/components/ui/card";
 import { Package } from "lucide-react";
 
 interface ProductImageProps {
@@ -8,20 +7,20 @@ interface ProductImageProps {
 
 export const ProductImage = ({ imageUrl, name }: ProductImageProps) => {
   return (
-    <div className="flex justify-center">
-      <div className="w-full max-w-lg">
-        <Card className="overflow-hidden">
-          <div className="bg-card relative aspect-square">
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt={name} className="w-full h-full object-contain p-4" />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Package className="text-muted-foreground h-24 w-24" />
-              </div>
-            )}
+    <div className="mx-auto w-full min-w-0 max-w-[min(100%,22rem)] justify-self-center sm:max-w-[min(100%,26rem)] md:max-w-[min(100%,28rem)] lg:mx-0 lg:max-w-none lg:justify-self-stretch">
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted/40">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Package className="text-muted-foreground h-16 w-16" />
           </div>
-        </Card>
+        )}
       </div>
     </div>
   );

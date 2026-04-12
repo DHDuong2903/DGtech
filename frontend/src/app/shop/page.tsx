@@ -53,15 +53,30 @@ const ShopPageContent = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={cn("mx-auto max-w-7xl py-6", STOREFRONT_H_PADDING)}>
+      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
+        <header className="mb-4 sm:mb-5">
+          <h1 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">Shop</h1>
+          {(searchQuery || selectedCategory !== "all") && (
+            <p className="text-muted-foreground mt-1 text-sm leading-normal">
+              {searchQuery ? (
+                <>
+                  Results for <span className="text-foreground/90 font-medium">&ldquo;{searchQuery}&rdquo;</span>
+                </>
+              ) : (
+                <>Browsing by category</>
+              )}
+            </p>
+          )}
+        </header>
+
         {loading ? (
           <PageContentLoader
             className="w-full"
             minHeightClass="min-h-[min(50vh,calc(100dvh-14rem))]"
           />
         ) : products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-sm">No products found</p>
+          <div className="py-12 text-center">
+            <p className="text-foreground/80 text-sm">No products found</p>
             {(searchQuery || selectedCategory !== "all") && (
               <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push("/shop")}>
                 View all products
@@ -81,17 +96,19 @@ const ShopPageContent = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-sm"
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                 >
                   Previous
                 </Button>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-sm tabular-nums">
                   Page {currentPage} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-sm"
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
                 >

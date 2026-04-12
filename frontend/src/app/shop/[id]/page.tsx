@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/src/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
@@ -13,9 +12,7 @@ import {
   ProductImage,
   ProductInfo,
   ProductActions,
-  RatingSummary,
-  ReviewForm,
-  ReviewsList,
+  ProductDetailReviews,
   RelatedProducts,
   VariantSelector,
 } from "../../../components/public/product";
@@ -130,20 +127,22 @@ const ProductDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={cn("mx-auto max-w-7xl py-8", STOREFRONT_H_PADDING)}>
-        {/* Back Button */}
-        <Button variant="outline" onClick={() => router.back()} className="mb-6" size="sm">
-          <ArrowLeft className="h-4 w-4" />
+      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="text-muted-foreground hover:text-foreground mb-4 inline-flex cursor-pointer items-center gap-2 text-sm transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 shrink-0" />
           Back
-        </Button>
+        </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,min(48vw,30rem))_minmax(0,1fr)] lg:gap-5">
           <ProductImage imageUrl={product.imageUrl} name={product.name} />
 
-          <div className="flex min-w-0 flex-col space-y-6">
+          <div className="flex min-w-0 flex-col gap-5 py-1 lg:py-3">
             <ProductInfo
               name={product.name}
-              categoryName={product.category?.name}
               price={displayPrice}
               compareAtPrice={displayCompareAtPrice}
               description={product.description}
@@ -161,7 +160,6 @@ const ProductDetailPage = () => {
               <ProductActions
                 quantity={quantity}
                 maxStock={displayStock}
-                price={displayPrice}
                 isLoading={cartLoading}
                 hasVariants={hasRealVariants}
                 isVariantSelected={isVariantSelected}
@@ -178,15 +176,8 @@ const ProductDetailPage = () => {
           </div>
         </div>
 
-        {/* Reviews & Rating Section */}
-        <div className="mt-16 border-t pt-12">
-          <h2 className="text-foreground mb-6 text-2xl font-bold">Customer reviews</h2>
-
-          <RatingSummary reviews={reviews} />
-
-          <ReviewForm isLoggedIn={!!user} onSubmit={handleSubmitReviewWrapper} />
-
-          <ReviewsList reviews={reviews} />
+        <div className="mt-8">
+          <ProductDetailReviews reviews={reviews} isLoggedIn={!!user} onSubmit={handleSubmitReviewWrapper} />
         </div>
 
         <RelatedProducts

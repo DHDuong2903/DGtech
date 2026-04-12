@@ -15,7 +15,7 @@ export const RelatedProducts = ({ products, onViewMore, onProductClick }: Relate
   }
 
   return (
-    <div className="mt-16 border-t pt-12">
+    <div className="mt-12">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-foreground text-2xl font-bold">You may also like</h2>
         {onViewMore && (
@@ -50,7 +50,7 @@ export const RelatedProducts = ({ products, onViewMore, onProductClick }: Relate
 
             {/* Info */}
             <div className="min-w-0 p-4">
-              <h3 className="text-foreground mb-2 line-clamp-2 break-words font-semibold transition-colors group-hover:text-orange-600">
+              <h3 className="text-foreground group-hover:text-primary mb-2 line-clamp-2 break-words font-semibold transition-colors">
                 {product.name}
               </h3>
 
@@ -59,7 +59,7 @@ export const RelatedProducts = ({ products, onViewMore, onProductClick }: Relate
               )}
 
               <div className="flex items-center justify-between">
-                <p className="text-orange-600 font-bold text-lg">{formatCurrency(product.price)}</p>
+                <p className="text-primary font-bold text-lg">{formatCurrency(product.price)}</p>
               </div>
             </div>
           </div>
