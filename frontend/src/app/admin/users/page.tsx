@@ -108,7 +108,7 @@ const AdminUsersPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight">Users Management</h1>
@@ -131,6 +131,7 @@ const AdminUsersPage = () => {
             getRowId={(row) => row.clerkId}
             filterColumnId="email"
             filterPlaceholder="Search by email…"
+            noun="users"
             bulkSelectionActions={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;
               const actionable = actionableFromSelection(selectedData);

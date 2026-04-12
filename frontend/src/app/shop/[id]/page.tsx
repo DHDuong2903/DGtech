@@ -17,9 +17,11 @@ import {
   ReviewForm,
   ReviewsList,
   RelatedProducts,
+  VariantSelector,
 } from "../../../components/public/product";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { ProductVariant } from "@/src/types/productType";
 
 const ProductDetailPage = () => {
   const params = useParams();
@@ -38,6 +40,7 @@ const ProductDetailPage = () => {
   const { reviews, fetchReviewsByProductId, createReview } = useReviewStore();
 
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   useEffect(() => {
     if (productId) {
@@ -46,6 +49,16 @@ const ProductDetailPage = () => {
     }
   }, [productId, fetchProductById, fetchReviewsByProductId]);
 
+  // Set default variant if it's a simple product
+  useEffect(() => {
+    if (product?.variants) {
+      const defaultVar = product.variants.find(v => v.isDefault);
+      if (defaultVar) {
+        setSelectedVariant(defaultVar);
+      }
+    }
+  }, [product]);
+
   // Fetch related products based on category
   useEffect(() => {
     if (product?.categoryId) {
@@ -53,9 +66,16 @@ const ProductDetailPage = () => {
     }
   }, [product?.categoryId, productId, fetchRelatedProducts]);
 
+  const hasRealVariants = product?.variants?.some(v => !v.isDefault) ?? false;
+  const isVariantSelected = !!selectedVariant && (!hasRealVariants || !selectedVariant.isDefault);
+
+  const displayPrice = selectedVariant?.price ?? product?.price ?? 0;
+  const displayCompareAtPrice = selectedVariant?.compareAtPrice ?? product?.compareAtPrice ?? null;
+  const displayStock = selectedVariant?.stock ?? product?.stock ?? 0;
+
   const handleQuantityChange = (delta: number) => {
     const newQuantity = quantity + delta;
-    if (newQuantity >= 1 && product && newQuantity <= product.stock) {
+    if (newQuantity >= 1 && newQuantity <= displayStock) {
       setQuantity(newQuantity);
     }
   };
@@ -68,10 +88,14 @@ const ProductDetailPage = () => {
 
     if (!product) return;
 
+    if (hasRealVariants && (!selectedVariant || selectedVariant.isDefault)) {
+      toast.error("Please select a product variant");
+      return;
+    }
+
     try {
-      await addToCart(product.productId, quantity);
+      await addToCart(product.productId, quantity, selectedVariant?.variantId);
     } catch (error) {
-      // Error already handled in store with toast
       console.error("Add to cart error:", error);
     }
   };
@@ -102,7 +126,7 @@ const ProductDetailPage = () => {
     return <ProductNotFound onBackToShop={() => router.push("/shop")} />;
   }
 
-  const isOutOfStock = product.stock === 0;
+  const isOutOfStock = displayStock === 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,24 +140,40 @@ const ProductDetailPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <ProductImage imageUrl={product.imageUrl} name={product.name} />
 
-          <div className="flex flex-col space-y-6">
+          <div className="flex min-w-0 flex-col space-y-6">
             <ProductInfo
               name={product.name}
               categoryName={product.category?.name}
-              price={product.price}
+              price={displayPrice}
+              compareAtPrice={displayCompareAtPrice}
               description={product.description}
-              stock={product.stock}
             />
+
+            {hasRealVariants && (
+              <VariantSelector 
+                variants={product.variants || []} 
+                selectedVariant={selectedVariant}
+                onSelect={setSelectedVariant}
+              />
+            )}
 
             {!isOutOfStock && (
               <ProductActions
                 quantity={quantity}
-                maxStock={product.stock}
-                price={product.price}
+                maxStock={displayStock}
+                price={displayPrice}
                 isLoading={cartLoading}
+                hasVariants={hasRealVariants}
+                isVariantSelected={isVariantSelected}
                 onQuantityChange={handleQuantityChange}
                 onAddToCart={handleAddToCart}
               />
+            )}
+
+            {isOutOfStock && (
+              <div className="p-4 bg-destructive/10 text-destructive rounded-lg font-semibold text-center mt-4">
+                Out of Stock
+              </div>
             )}
           </div>
         </div>

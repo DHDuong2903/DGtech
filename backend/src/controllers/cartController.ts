@@ -1,7 +1,5 @@
 // @ts-nocheck
-import { Cart } from "../models/cartModel.js";
-import { CartItem } from "../models/cartItemModel.js";
-import { Product } from "../models/productModel.js";
+import { Cart, CartItem, Product, ProductVariant } from "../models/associationsModel.js";
 import { updateCartTotals, getCartWithDetails } from "../helpers/cartHelper.js";
 
 // Lay gio hang cua user hien tai
@@ -27,7 +25,7 @@ export const getCart = async (req: any, res: any) => {
 export const addToCart = async (req: any, res: any) => {
   try {
     const { userId: clerkId } = req.auth;
-    const { productId, quantity = 1 } = req.body;
+    const { productId, variantId, quantity = 1 } = req.body;
 
     if (!productId) {
       return res.status(400).json({ error: "Product ID là bắt buộc" });
@@ -42,7 +40,20 @@ export const addToCart = async (req: any, res: any) => {
       return res.status(400).json({ error: "Sản phẩm không khả dụng" });
     }
 
-    if (product.stock < quantity) {
+    // Tim variant tuong ung (hoac default variant neu khong co variantId)
+    let selectedVariant;
+    if (variantId) {
+      selectedVariant = await ProductVariant.findOne({ where: { variantId, productId } });
+      if (!selectedVariant) return res.status(404).json({ error: "Không tìm thấy biến thể sản phẩm" });
+    } else {
+      selectedVariant = await ProductVariant.findOne({ where: { productId, isDefault: true } });
+      if (!selectedVariant) {
+        // Neu khong co variantId va cung khong co default variant, chung ta dang o trang thai loi data
+        return res.status(400).json({ error: "Vui lòng chọn phân loại sản phẩm" });
+      }
+    }
+
+    if (selectedVariant.stock < quantity) {
       return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
 
@@ -51,14 +62,19 @@ export const addToCart = async (req: any, res: any) => {
       cart = await Cart.create({ clerkId });
     }
 
+    // Tim item trong gio hang dua tren ca productId va variantId
     let cartItem = await CartItem.findOne({
-      where: { cartId: cart.cartId, productId },
+      where: { 
+        cartId: cart.cartId, 
+        productId,
+        variantId: selectedVariant.variantId 
+      },
     });
 
     let message: string;
     if (cartItem) {
       const newQuantity = cartItem.quantity + quantity;
-      if (product.stock < newQuantity) {
+      if (selectedVariant.stock < newQuantity) {
         return res.status(400).json({ error: "Không đủ hàng trong kho" });
       }
       cartItem.quantity = newQuantity;
@@ -68,6 +84,7 @@ export const addToCart = async (req: any, res: any) => {
       cartItem = await CartItem.create({
         cartId: cart.cartId,
         productId,
+        variantId: selectedVariant.variantId,
         quantity,
       });
       message = "Sản phẩm đã được thêm vào giỏ hàng";
@@ -102,7 +119,10 @@ export const updateCartItem = async (req: any, res: any) => {
 
     const cartItem = await CartItem.findOne({
       where: { cartItemId, cartId: cart.cartId },
-      include: [{ model: Product, as: "product" }],
+      include: [
+        { model: Product, as: "product" },
+        { model: ProductVariant, as: "variant" }
+      ],
     });
 
     if (!cartItem) {
@@ -113,7 +133,9 @@ export const updateCartItem = async (req: any, res: any) => {
       return res.status(400).json({ error: "Sản phẩm không khả dụng" });
     }
 
-    if (cartItem.product.stock < quantity) {
+    // Kiem tra ton kho cua variant
+    const stockToCheck = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
+    if (stockToCheck < quantity) {
       return res.status(400).json({ error: "Không đủ hàng trong kho" });
     }
 

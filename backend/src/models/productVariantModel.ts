@@ -2,22 +2,22 @@
 import { sequelize } from "../libs/db.js";
 import { DataTypes } from "sequelize";
 
-export const Product = sequelize.define(
-  "Product",
+export const ProductVariant = sequelize.define(
+  "ProductVariant",
   {
-    productId: {
+    variantId: {
       primaryKey: true,
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       unique: true,
     },
-    name: {
-      type: DataTypes.STRING,
+    productId: {
+      type: DataTypes.UUID,
       allowNull: false,
-      unique: true,
     },
-    description: {
-      type: DataTypes.TEXT,
+    sku: {
+      type: DataTypes.STRING,
+      unique: true,
     },
     price: {
       type: DataTypes.DECIMAL(10, 2),
@@ -26,29 +26,23 @@ export const Product = sequelize.define(
     compareAtPrice: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      defaultValue: null,
-    },
-    imageUrl: {
-      type: DataTypes.TEXT,
-      allowNull: true,
     },
     stock: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
-    categoryId: {
-      type: DataTypes.INTEGER,
+    isDefault: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
+      defaultValue: false,
     },
-    status: {
-      type: DataTypes.ENUM("ACTIVE", "DRAFT"),
-      allowNull: false,
-      defaultValue: "ACTIVE",
+    attributes: {
+      type: DataTypes.JSONB,
+      defaultValue: {},
     },
   },
   {
     timestamps: true,
-    tableName: "products",
+    tableName: "product_variants",
   }
 );
-

@@ -121,7 +121,7 @@ export default function AdminSlideshowsPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight">Slideshows management</h1>
@@ -160,6 +160,7 @@ export default function AdminSlideshowsPage() {
             getRowId={(row) => String(row.slideshowId)}
             filterColumnId="name"
             filterPlaceholder="Search by name…"
+            noun="slideshows"
             bulkSelectionActions={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;
               const n = selectedData.length;

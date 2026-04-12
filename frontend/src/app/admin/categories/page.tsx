@@ -116,7 +116,7 @@ const CategoriesPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight">Categories Management</h1>
@@ -153,6 +153,7 @@ const CategoriesPage = () => {
             getRowId={(row) => String(row.categoryId)}
             filterColumnId="name"
             filterPlaceholder="Search by name…"
+            noun="categories"
             bulkSelectionActions={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;
               const n = selectedData.length;

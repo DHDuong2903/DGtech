@@ -1,9 +1,21 @@
 // Zustand store for Products
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { isAxiosError } from "axios";
 import { Product, ApiError } from "../types";
 import { productsApi } from "../apis";
 import { toast } from "sonner";
+
+function messageFromApiErr(err: unknown, fallback: string): string {
+  if (isAxiosError(err)) {
+    const d = err.response?.data as { error?: string; details?: string } | undefined;
+    if (d && typeof d.error === "string" && d.error.length > 0) return d.error;
+    if (d && typeof d.details === "string" && d.details.length > 0) return d.details;
+    if (err.message) return err.message;
+  }
+  const e = err as ApiError;
+  return e.message || fallback;
+}
 
 interface ProductState {
   // State
@@ -125,10 +137,9 @@ export const useProductStore = create<ProductState>()(
           return { success: true, data: newProduct };
         } catch (err) {
           console.error("Error creating product:", err);
-          const error = err as ApiError;
-          const errorMessage = error.message || "Failed to create product";
+          const errorMessage = messageFromApiErr(err, "Failed to create product");
           set({ error: errorMessage });
-          toast.error("Could not create product");
+          toast.error(errorMessage);
           return { success: false, error: errorMessage };
         }
       },
@@ -145,10 +156,9 @@ export const useProductStore = create<ProductState>()(
           return { success: true, data: updatedProduct };
         } catch (err) {
           console.error("Error updating product:", err);
-          const error = err as ApiError;
-          const errorMessage = error.message || "Failed to update product";
+          const errorMessage = messageFromApiErr(err, "Failed to update product");
           set({ error: errorMessage });
-          toast.error("Could not update product");
+          toast.error(errorMessage);
           return { success: false, error: errorMessage };
         }
       },

@@ -59,13 +59,39 @@ app.use("/api/orders", orderRoute);
 app.use("/api/payments", paymentRoute);
 app.use("/api/slideshows", slideshowsRoute);
 
+// JSON errors for /api (multer/Cloudinary used to call next(err) → HTML `<pre>[object Object]</pre>`)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  if (!req.originalUrl?.startsWith("/api")) {
+    return next(err);
+  }
+  console.error("API error:", err?.message || err);
+  const status = Number(err.statusCode || err.status) || 500;
+  const message =
+    typeof err.message === "string" && err.message.length > 0
+      ? err.message
+      : "Request failed";
+  res.status(status).json({
+    error: message,
+    ...(err.code && { code: err.code }),
+    ...(process.env.NODE_ENV !== "production" && err.stack && { stack: err.stack }),
+  });
+});
+
 const startServer = async () => {
   await connectDB();
   await syncModels();
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
+
+  // Long uploads (multipart → Cloudinary) — avoid premature socket close / ECONNRESET
+  server.requestTimeout = 120_000;
+  server.headersTimeout = 125_000;
+  server.keepAliveTimeout = 65_000;
 };
 
 startServer();

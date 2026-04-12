@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Eye, Power, PowerOff, Trash2 } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
@@ -15,9 +15,9 @@ import {
 import type { Product } from "@/src/types";
 import { formatCurrency } from "@/src/utils";
 import { ProductImage } from "./ProductImage";
+import Link from "next/link";
 
 export function createAdminProductColumns(handlers: {
-  onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   onSetActive: (product: Product) => void;
   onSetDraft: (product: Product) => void;
@@ -120,9 +120,11 @@ export function createAdminProductColumns(handlers: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handlers.onEdit(product)}>
-                  <Pencil className="h-4 w-4" />
-                  Edit
+                <DropdownMenuItem asChild>
+                  <Link href={`/admin/products/${product.productId}`}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Detail
+                  </Link>
                 </DropdownMenuItem>
                 {product.status !== "ACTIVE" ? (
                   <DropdownMenuItem onClick={() => handlers.onSetActive(product)}>

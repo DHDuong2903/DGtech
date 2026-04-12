@@ -26,7 +26,11 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
     await removeFromCart(item.cartItemId);
   };
 
-  const subtotal = item.product.price * item.quantity;
+  const subtotal = (item.variant ? item.variant.price : item.product.price) * item.quantity;
+  const itemPrice = item.variant ? item.variant.price : item.product.price;
+  const maxStock = item.variant ? item.variant.stock : item.product.stock;
+
+  const hasRealVariant = item.variant && Object.keys(item.variant.attributes).length > 0;
 
   return (
     <div className="bg-card border-border flex gap-4 rounded-lg border p-4 shadow-sm transition-shadow hover:shadow-md md:p-6">
@@ -54,7 +58,18 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
         <div className="flex justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-foreground mb-1 truncate text-base font-semibold md:text-lg">{item.product.name}</h3>
-            <p className="text-orange-600 font-bold text-lg md:text-xl">{formatCurrency(item.product.price)}</p>
+            
+            {hasRealVariant && (
+              <p className="text-muted-foreground text-sm mb-2 flex flex-wrap gap-x-2">
+                {Object.entries(item.variant!.attributes).map(([key, value]) => (
+                  <span key={key} className="bg-accent px-2 py-0.5 rounded text-xs capitalize">
+                    {key}: {value}
+                  </span>
+                ))}
+              </p>
+            )}
+
+            <p className="text-orange-600 font-bold text-lg md:text-xl">{formatCurrency(itemPrice)}</p>
           </div>
 
           {/* Remove Button (Desktop) */}
@@ -89,7 +104,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
                 variant="ghost"
                 className="hover:bg-accent h-9 w-9"
                 onClick={() => handleUpdateQuantity(item.quantity + 1)}
-                disabled={item.quantity >= item.product.stock || loading}
+                disabled={item.quantity >= maxStock || loading}
               >
                 <Plus className="h-4 w-4" />
               </Button>

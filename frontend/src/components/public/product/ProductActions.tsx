@@ -7,6 +7,8 @@ interface ProductActionsProps {
   maxStock: number;
   price: number;
   isLoading: boolean;
+  hasVariants: boolean;
+  isVariantSelected: boolean;
   onQuantityChange: (delta: number) => void;
   onAddToCart: () => void;
 }
@@ -16,13 +18,20 @@ export const ProductActions = ({
   maxStock,
   price,
   isLoading,
+  hasVariants,
+  isVariantSelected,
   onQuantityChange,
   onAddToCart,
 }: ProductActionsProps) => {
+  const isDisabled = isLoading || (hasVariants && !isVariantSelected) || maxStock === 0;
+
   return (
     <div className="border-t pt-6 space-y-4">
       <div>
-        <label className="text-foreground mb-3 block text-sm font-medium">Quantity</label>
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-foreground block text-sm font-medium">Quantity</label>
+          <span className="text-muted-foreground text-xs">{maxStock} items available</span>
+        </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => onQuantityChange(-1)} disabled={quantity <= 1}>
             <Minus className="h-4 w-4" />
@@ -34,9 +43,9 @@ export const ProductActions = ({
         </div>
       </div>
 
-      <Button className="w-full" size="lg" onClick={onAddToCart} disabled={isLoading}>
+      <Button className="w-full h-12 text-lg" size="lg" onClick={onAddToCart} disabled={isDisabled}>
         <ShoppingCart className="h-5 w-5 mr-2" />
-        {isLoading ? "Adding…" : "Add to cart"}
+        {isLoading ? "Adding…" : hasVariants && !isVariantSelected ? "Select Options" : "Add to cart"}
       </Button>
 
       <div className="text-center pt-2">

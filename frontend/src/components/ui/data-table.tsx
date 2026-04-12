@@ -45,6 +45,8 @@ export interface DataTableProps<TData, TValue> {
   bulkSelectionActions?: (ctx: DataTableBulkContext<TData>) => React.ReactNode;
   /** Rendered to the right of the search input in the toolbar (e.g. filter popover). */
   toolbarEnd?: React.ReactNode;
+  /** Label for the total count (e.g. 'products', 'variants'). Defaults to 'row(s)'. */
+  noun?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -59,6 +61,7 @@ export function DataTable<TData, TValue>({
   enableRowSelection = true,
   bulkSelectionActions,
   toolbarEnd,
+  noun = "row(s)",
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -168,17 +171,18 @@ export function DataTable<TData, TValue>({
           <span>
             Page {currentPage} of {totalPages}
           </span>
-          {enableRowSelection && showFooterSelectionSummary ? (
-            <span>
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
-            </span>
-          ) : !enableRowSelection ? (
-            <span>{table.getFilteredRowModel().rows.length} row(s).</span>
-          ) : null}
+          <span className="flex items-center gap-1">
+            <span>{table.getFilteredRowModel().rows.length}</span> {noun}
+            {enableRowSelection && table.getFilteredSelectedRowModel().rows.length > 0 && (
+              <span className="ml-1 opacity-70">
+                ({table.getFilteredSelectedRowModel().rows.length} selected)
+              </span>
+            )}
+          </span>
         </div>
         <div className="flex items-center gap-2 sm:justify-end">
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
@@ -187,6 +191,7 @@ export function DataTable<TData, TValue>({
             Previous
           </Button>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => table.nextPage()}

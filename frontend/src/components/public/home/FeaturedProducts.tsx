@@ -9,6 +9,7 @@ import { productsApi } from "@/src/apis";
 import { ProductCard } from "../product";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
 export const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -34,9 +35,7 @@ export const FeaturedProducts = () => {
     return (
       <section className="bg-muted/40 py-16">
         <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-          <div className="text-center py-12">
-            <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-          </div>
+          <PageContentLoader minHeightClass="min-h-[240px]" />
         </div>
       </section>
     );
@@ -63,7 +62,7 @@ export const FeaturedProducts = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 [&>*]:min-w-0">
           {products.map((product) => (
             <ProductCard key={product.productId} product={product} />
           ))}

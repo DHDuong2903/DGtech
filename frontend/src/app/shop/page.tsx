@@ -1,67 +1,31 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Category } from "../../types";
-import { categoriesApi } from "../../apis";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "../../components/public/product/ProductCard";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Filter, Search, X, ChevronUp } from "lucide-react";
 import { useProductStore } from "../../stores";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
 const ShopPageContent = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { products, loading, totalItems, totalPages, currentPage: storePage, fetchProducts } = useProductStore();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { products, loading, totalPages, fetchProducts } = useProductStore();
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Filter states
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [minPrice, setMinPrice] = useState<string>("");
-  const [maxPrice, setMaxPrice] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [sortBy, setSortBy] = useState<string>("createdAt");
-  const [order, setOrder] = useState<"ASC" | "DESC">("DESC");
-
-  // UI states
-  const [showFilters, setShowFilters] = useState(true);
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const qFromUrl = searchParams.get("q") ?? "";
   const categoryFromUrl = searchParams.get("category");
 
+  const searchQuery = qFromUrl;
+  const selectedCategory =
+    categoryFromUrl && /^\d+$/.test(categoryFromUrl) ? categoryFromUrl : "all";
+
   useEffect(() => {
-    setSearchQuery(qFromUrl);
     setCurrentPage(1);
-  }, [qFromUrl]);
+  }, [qFromUrl, categoryFromUrl]);
 
-  useEffect(() => {
-    if (categoryFromUrl && /^\d+$/.test(categoryFromUrl)) {
-      setSelectedCategory(categoryFromUrl);
-      setCurrentPage(1);
-    }
-  }, [categoryFromUrl]);
-
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await categoriesApi.getAll();
-        setCategories(data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  // Fetch products with filters
   useEffect(() => {
     const params: {
       page: number;
@@ -70,350 +34,74 @@ const ShopPageContent = () => {
       order: "ASC" | "DESC";
       categoryId?: number;
       search?: string;
-      minPrice?: number;
-      maxPrice?: number;
     } = {
       page: currentPage,
-      limit: 12,
-      sortBy,
-      order,
+      limit: 20,
+      sortBy: "createdAt",
+      order: "DESC",
     };
 
     if (selectedCategory !== "all") {
-      params.categoryId = parseInt(selectedCategory);
+      params.categoryId = parseInt(selectedCategory, 10);
     }
     if (searchQuery) {
       params.search = searchQuery;
     }
-    if (minPrice) {
-      params.minPrice = parseFloat(minPrice);
-    }
-    if (maxPrice) {
-      params.maxPrice = parseFloat(maxPrice);
-    }
 
     fetchProducts(params);
-  }, [currentPage, selectedCategory, minPrice, maxPrice, searchQuery, sortBy, order, fetchProducts]);
-
-  // Reset filters
-  const handleResetFilters = () => {
-    setSelectedCategory("all");
-    setMinPrice("");
-    setMaxPrice("");
-    setSearchQuery("");
-    setSortBy("createdAt");
-    setOrder("DESC");
-    setCurrentPage(1);
-  };
-
-  // Apply filters (for mobile)
-  const handleApplyFilters = () => {
-    setIsMobileFilterOpen(false);
-    setCurrentPage(1);
-  };
+  }, [currentPage, selectedCategory, searchQuery, fetchProducts]);
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={cn("mx-auto max-w-7xl py-8", STOREFRONT_H_PADDING)}>
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Shop</h1>
-          <p className="text-muted-foreground">
-            Showing {products.length} / {totalItems} products
-          </p>
-        </div>
-
-        <div className="flex gap-6">
-          {/* Toggle Filter Button - Desktop (when hidden) */}
-          {!showFilters && (
-            <div className="hidden lg:block">
-              <Button variant="outline" size="icon" onClick={() => setShowFilters(true)} className="sticky top-4">
-                <Filter className="h-4 w-4" />
+      <div className={cn("mx-auto max-w-7xl py-6", STOREFRONT_H_PADDING)}>
+        {loading ? (
+          <PageContentLoader
+            className="w-full"
+            minHeightClass="min-h-[min(50vh,calc(100dvh-14rem))]"
+          />
+        ) : products.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-sm">No products found</p>
+            {(searchQuery || selectedCategory !== "all") && (
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push("/shop")}>
+                View all products
               </Button>
-            </div>
-          )}
-
-          {/* Sidebar Filters - Desktop */}
-          {showFilters && (
-            <aside className="hidden lg:block w-64 shrink-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <Filter className="h-5 w-5" />
-                      Filters
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={() => setShowFilters(false)}>
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Search */}
-                  <div>
-                    <Label className="mb-2">Search</Label>
-                    <div className="relative">
-                      <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                      <Input
-                        placeholder="Product name…"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Category Filter */}
-                  <div>
-                    <Label className="mb-2">Category</Label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All categories</SelectItem>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.categoryId} value={cat.categoryId.toString()}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Price Range */}
-                  <div>
-                    <Label className="mb-2">Price range</Label>
-                    <div className="space-y-2">
-                      <Input
-                        type="number"
-                        placeholder="Min price"
-                        value={minPrice}
-                        onChange={(e) => setMinPrice(e.target.value)}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Max price"
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Sort */}
-                  <div>
-                    <Label className="mb-2">Sort by</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="createdAt">Newest</SelectItem>
-                        <SelectItem value="price">Price</SelectItem>
-                        <SelectItem value="name">Name</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        variant={order === "ASC" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setOrder("ASC")}
-                        className="flex-1"
-                      >
-                        Ascending
-                      </Button>
-                      <Button
-                        variant={order === "DESC" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setOrder("DESC")}
-                        className="flex-1"
-                      >
-                        Descending
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Reset Button */}
-                  <Button variant="outline" className="w-full" onClick={handleResetFilters}>
-                    <X className="h-4 w-4 mr-2" />
-                    Clear filters
-                  </Button>
-                </CardContent>
-              </Card>
-            </aside>
-          )}
-
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Mobile Filter Button */}
-            <div className="lg:hidden mb-4">
-              <Button onClick={() => setIsMobileFilterOpen(true)} className="w-full">
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-            </div>
-
-            {/* Products Grid */}
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-                <p className="text-muted-foreground mt-4">Loading products…</p>
-              </div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground text-lg">No products found</p>
-                <Button onClick={handleResetFilters} className="mt-4">
-                  Clear filters
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products.map((product) => (
-                    <ProductCard key={product.productId} product={product} />
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-8">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-muted-foreground text-sm">
-                      Page {currentPage} / {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                )}
-              </>
             )}
           </div>
-        </div>
-      </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5 [&>*]:min-w-0">
+              {products.map((product) => (
+                <ProductCard key={product.productId} product={product} compact />
+              ))}
+            </div>
 
-      {/* Mobile Filter Modal */}
-      {isMobileFilterOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 lg:hidden">
-          <div className="bg-card border-border fixed inset-y-0 left-0 w-80 overflow-y-auto border-r shadow-xl">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-foreground">Filters</h2>
-                <Button variant="ghost" size="icon" onClick={() => setIsMobileFilterOpen(false)}>
-                  <X className="h-5 w-5" />
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-muted-foreground text-xs">
+                  Page {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
                 </Button>
               </div>
-
-              <div className="space-y-6">
-                {/* Search */}
-                <div>
-                  <Label className="mb-2">Search</Label>
-                  <div className="relative">
-                    <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                    <Input
-                      placeholder="Product name…"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Category */}
-                <div>
-                  <Label className="mb-2">Category</Label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All categories</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.categoryId} value={cat.categoryId.toString()}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <Label className="mb-2">Price range</Label>
-                  <div className="space-y-2">
-                    <Input
-                      type="number"
-                      placeholder="Min price"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value)}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Max price"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Sort */}
-                <div>
-                  <Label className="mb-2">Sort by</Label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="createdAt">Newest</SelectItem>
-                      <SelectItem value="price">Price</SelectItem>
-                      <SelectItem value="name">Name</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      variant={order === "ASC" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setOrder("ASC")}
-                      className="flex-1"
-                    >
-                      Ascending
-                    </Button>
-                    <Button
-                      variant={order === "DESC" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setOrder("DESC")}
-                      className="flex-1"
-                    >
-                      Descending
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Buttons */}
-                <div className="space-y-2">
-                  <Button className="w-full" onClick={handleApplyFilters}>
-                    Apply
-                  </Button>
-                  <Button variant="outline" className="w-full" onClick={handleResetFilters}>
-                    <X className="h-4 w-4 mr-2" />
-                    Clear filters
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
@@ -422,9 +110,7 @@ export default function ShopPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-background flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
-          Loading shop…
-        </div>
+        <PageContentLoader className="bg-background" minHeightClass="min-h-[50vh]" />
       }
     >
       <ShopPageContent />

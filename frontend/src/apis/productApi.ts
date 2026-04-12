@@ -55,7 +55,9 @@ export const productsApi = {
 
   create: async (productData: FormData): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.post<ApiResponse<Product>>(API_ROUTE.PRODUCTS, productData);
+      const { data } = await axiosInstance.post<ApiResponse<Product>>(API_ROUTE.PRODUCTS, productData, {
+        timeout: 120_000,
+      });
       return data.newProduct!;
     } catch (error) {
       console.error("Error creating product:", error);
@@ -65,7 +67,11 @@ export const productsApi = {
 
   update: async (id: string, productData: FormData): Promise<Product> => {
     try {
-      const { data } = await axiosInstance.put<ApiResponse<Product>>(`${API_ROUTE.PRODUCTS}/${id}`, productData);
+      const { data } = await axiosInstance.put<ApiResponse<Product>>(
+        `${API_ROUTE.PRODUCTS}/${id}`,
+        productData,
+        { timeout: 120_000 },
+      );
       return data.product!;
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);

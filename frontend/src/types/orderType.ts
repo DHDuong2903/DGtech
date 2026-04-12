@@ -4,9 +4,11 @@ export interface OrderItem {
   orderItemId: string;
   orderId: string;
   productId: string;
+  variantId: string | null;
   quantity: number;
   price: number;
   product: Product;
+  variant: any; // ProductVariant
   createdAt: string;
   updatedAt: string;
 }

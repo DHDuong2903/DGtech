@@ -13,7 +13,7 @@ interface CartState {
 
   // Actions
   fetchCart: () => Promise<void>;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, variantId?: string) => Promise<void>;
   updateCartItem: (cartItemId: string, quantity: number) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -53,10 +53,10 @@ export const useCartStore = create<CartState>()(
         },
 
         // Add item to cart
-        addToCart: async (productId: string, quantity = 1) => {
+        addToCart: async (productId: string, quantity = 1, variantId?: string) => {
           set({ loading: true, error: null });
           try {
-            const response = await cartApi.addToCart({ productId, quantity });
+            const response = await cartApi.addToCart({ productId, quantity, variantId });
             set({ cart: response.cart, loading: false });
             toast.success(response.message || "Sản phẩm đã được thêm vào giỏ hàng");
           } catch (err: any) {

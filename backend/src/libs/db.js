@@ -3,21 +3,30 @@ import dotenv from "dotenv";
 
 dotenv.config({ silent: true });
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || "";
+
+const useSsl =
+  process.env.NODE_ENV === "production" ||
+  /neon\.tech|sslmode=require|amazonaws\.com/i.test(databaseUrl);
 
 export const sequelize = new Sequelize(databaseUrl, {
   dialect: "postgres",
   protocol: "postgres",
   dialectOptions: {
-    ssl:
-      process.env.NODE_ENV === "production"
-        ? {
-            require: true,
-            rejectUnauthorized: false,
-          }
-        : false,
+    ssl: useSsl
+      ? {
+          require: true,
+          rejectUnauthorized: false,
+        }
+      : false,
   },
   logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 60000,
+    idle: 10000,
+  },
 });
 
 export const connectDB = async () => {

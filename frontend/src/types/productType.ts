@@ -1,11 +1,23 @@
 // Product Types
 export type ProductStatus = "ACTIVE" | "DRAFT";
 
+export interface ProductVariant {
+  variantId?: string;
+  productId?: string;
+  sku: string;
+  price: number;
+  compareAtPrice?: number | null;
+  stock: number;
+  attributes: Record<string, string>;
+  isDefault: boolean;
+}
+
 export interface Product {
   productId: string;
   name: string;
   description: string;
   price: number;
+  compareAtPrice?: number | null;
   stock: number;
   imageUrl?: string;
   categoryId: number;
@@ -14,6 +26,7 @@ export interface Product {
     categoryId: number;
     name: string;
   };
+  variants?: ProductVariant[];
   createdAt?: string;
   updatedAt?: string;
 }

@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -47,7 +48,10 @@ function CheckoutContent() {
 
   // Calculate total
   const totalPrice = useMemo(() => {
-    return checkoutItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    return checkoutItems.reduce((sum, item) => {
+      const price = item.variant?.price ?? item.product.price;
+      return sum + price * item.quantity;
+    }, 0);
   }, [checkoutItems]);
 
   const totalItems = useMemo(() => {
@@ -98,14 +102,7 @@ function CheckoutContent() {
   };
 
   if (!isLoaded || cartLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-4 text-muted-foreground">Loading…</p>
-        </div>
-      </div>
-    );
+    return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
   }
 
   if (checkoutItems.length === 0) {
@@ -250,9 +247,14 @@ function CheckoutContent() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.product.name}</p>
+                      {item.variant && !item.variant.isDefault && item.variant.attributes && (
+                        <p className="text-[10px] text-muted-foreground uppercase">
+                          {Object.entries(item.variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                        </p>
+                      )}
                       <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       <p className="text-sm font-semibold text-orange-600">
-                        {formatCurrency(item.product.price * item.quantity)}
+                        {formatCurrency((item.variant?.price ?? item.product.price) * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -286,14 +288,7 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-4 text-muted-foreground">Loading…</p>
-          </div>
-        </div>
-      }
+      fallback={<PageContentLoader className="bg-background" minHeightClass="min-h-screen" />}
     >
       <CheckoutContent />
     </Suspense>

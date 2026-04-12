@@ -2,6 +2,7 @@ import { Button } from "@/src/components/ui/button";
 import { ShoppingBag } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
 interface CartLoadingStateProps {
   type: "loading" | "auth-loading" | "not-signed-in";
@@ -11,12 +12,9 @@ interface CartLoadingStateProps {
 export function CartLoadingState({ type, onGoHome }: CartLoadingStateProps) {
   if (type === "loading" || type === "auth-loading") {
     return (
-      <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+      <div className="bg-background py-8">
         <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-          <div className="text-center py-12">
-            <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-4 text-muted-foreground">{type === "auth-loading" ? "Loading…" : "Loading cart…"}</p>
-          </div>
+          <PageContentLoader minHeightClass="min-h-[calc(100vh-200px)]" />
         </div>
       </div>
     );

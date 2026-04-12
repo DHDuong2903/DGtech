@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
+import Link from "next/link";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import {
   AdminProductFilters,
@@ -11,7 +12,6 @@ import {
 } from "../../../components/admin/AdminProductFilters";
 import { createAdminProductColumns } from "../../../components/admin/AdminProductTable";
 import { ADMIN_LIST_DATA_TABLE_PROPS } from "@/src/constant";
-import { ProductModal } from "../../../components/admin/ProductModal";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
 import { useProductStore, useCategoryStore } from "../../../stores";
 import type { Product } from "../../../types";
@@ -35,18 +35,14 @@ const ProductsPage = () => {
     loading,
     error,
     fetchProducts,
-    createProduct,
-    updateProduct,
     deleteProduct,
     deleteProducts,
     updateProductStatus,
   } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Product[] | null>(null);
   const [bulkWorking, setBulkWorking] = useState(false);
   const [deleteWorking, setDeleteWorking] = useState(false);
@@ -68,17 +64,7 @@ const ProductsPage = () => {
 
   const activeFilterCount = countAppliedAdminProductFilters(appliedFilters);
 
-  const handleCreateProduct = async (productData: FormData) => {
-    const result = await createProduct(productData);
-    return result.success;
-  };
 
-  const handleUpdateProduct = async (productData: FormData) => {
-    if (!selectedProduct) return false;
-    const result = await updateProduct(selectedProduct.productId, productData);
-    if (result.success) setSelectedProduct(null);
-    return result.success;
-  };
 
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
@@ -108,17 +94,7 @@ const ProductsPage = () => {
     }
   };
 
-  const openCreateModal = () => {
-    setModalMode("create");
-    setSelectedProduct(null);
-    setIsModalOpen(true);
-  };
 
-  const handleEditClick = useCallback((product: Product) => {
-    setModalMode("edit");
-    setSelectedProduct(product);
-    setIsModalOpen(true);
-  }, []);
 
   const handleDeleteClick = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -142,24 +118,25 @@ const ProductsPage = () => {
   const columns = useMemo(
     () =>
       createAdminProductColumns({
-        onEdit: handleEditClick,
         onDelete: handleDeleteClick,
         onSetActive: handleSetActive,
         onSetDraft: handleSetDraft,
       }),
-    [handleEditClick, handleDeleteClick, handleSetActive, handleSetDraft],
+    [handleDeleteClick, handleSetActive, handleSetDraft],
   );
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight">Products Management</h1>
           </div>
-          <Button onClick={openCreateModal} size="sm">
-            <Plus className="h-4 w-4" />
-            Add product
+          <Button asChild size="sm">
+            <Link href="/admin/products/create">
+              <Plus className="h-4 w-4" />
+              Create product
+            </Link>
           </Button>
         </div>
 
@@ -192,9 +169,11 @@ const ProductsPage = () => {
               <>
                 <h3 className="mt-4 text-lg font-semibold">No products yet</h3>
                 <p className="text-muted-foreground mt-2">Create your first product to get started.</p>
-                <Button onClick={openCreateModal} className="mt-4">
-                  <Plus className="h-4 w-4" />
-                  Add product
+                <Button asChild className="mt-4">
+                  <Link href="/admin/products/create">
+                    <Plus className="h-4 w-4" />
+                    Create product
+                  </Link>
                 </Button>
               </>
             )}
@@ -207,6 +186,7 @@ const ProductsPage = () => {
             getRowId={(row) => row.productId}
             filterColumnId="name"
             filterPlaceholder="Search by name…"
+            noun="products"
             toolbarEnd={
               <AdminProductFilters categories={categories} applied={appliedFilters} onApply={setAppliedFilters} />
             }
@@ -232,18 +212,7 @@ const ProductsPage = () => {
         )}
       </div>
 
-      <ProductModal
-        key={selectedProduct?.productId ?? "new"}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedProduct(null);
-        }}
-        onSave={modalMode === "create" ? handleCreateProduct : handleUpdateProduct}
-        product={selectedProduct}
-        categories={categories}
-        mode={modalMode}
-      />
+
 
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}

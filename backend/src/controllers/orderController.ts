@@ -1,11 +1,8 @@
 // @ts-nocheck
-import { Order } from "../models/orderModel.js";
-import { OrderItem } from "../models/orderItemModel.js";
-import { Product } from "../models/productModel.js";
-import { CartItem } from "../models/cartItemModel.js";
-import { Payment } from "../models/paymentModel.js";
+import { Order, OrderItem, Product, ProductVariant, CartItem, Payment } from "../models/associationsModel.js";
 import { sequelize } from "../libs/db.js";
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
+import { Op } from "sequelize";
 
 // Tao order moi tu cac san pham duoc chon trong cart
 export const createOrder = async (req: any, res: any) => {
@@ -26,7 +23,7 @@ export const createOrder = async (req: any, res: any) => {
       return res.status(400).json({ error: "Vui lòng cung cấp đầy đủ thông tin giao hàng" });
     }
 
-    // Get products from cart items
+    // Get products from cart items including variants
     const cartItems = await CartItem.findAll({
       where: { cartItemId: selectedItems },
       include: [
@@ -35,6 +32,11 @@ export const createOrder = async (req: any, res: any) => {
           as: "product",
           attributes: ["productId", "name", "price", "stock", "status"],
         },
+        {
+          model: ProductVariant,
+          as: "variant",
+          attributes: ["variantId", "price", "stock"],
+        }
       ],
       transaction,
     });
@@ -53,12 +55,13 @@ export const createOrder = async (req: any, res: any) => {
       }
     }
 
-    // Check stock
+    // Check stock (prefer variant stock)
     for (const cartItem of cartItems) {
-      if (cartItem.product.stock < cartItem.quantity) {
+      const stockAvailable = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
+      if (stockAvailable < cartItem.quantity) {
         await transaction.rollback();
         return res.status(400).json({
-          error: `Sản phẩm "${cartItem.product.name}" không đủ số lượng trong kho`,
+          error: `Sản phẩm "${cartItem.product.name}"${cartItem.variant ? " (phân loại đã chọn)" : ""} không đủ số lượng trong kho`,
         });
       }
     }
@@ -68,13 +71,15 @@ export const createOrder = async (req: any, res: any) => {
     const orderItemsData = [];
 
     for (const cartItem of cartItems) {
-      const itemTotal = cartItem.product.price * cartItem.quantity;
+      const itemPrice = cartItem.variant ? cartItem.variant.price : cartItem.product.price;
+      const itemTotal = itemPrice * cartItem.quantity;
       totalPrice += itemTotal;
 
       orderItemsData.push({
         productId: cartItem.productId,
+        variantId: cartItem.variantId,
         quantity: cartItem.quantity,
-        price: cartItem.product.price,
+        price: itemPrice,
       });
     }
 
@@ -97,7 +102,7 @@ export const createOrder = async (req: any, res: any) => {
       orderItemsData.map((item) =>
         OrderItem.create(
           {
-            orderId: order.orderId,
+            orderId: (order as any).orderId,
             ...item,
           },
           { transaction }
@@ -108,6 +113,16 @@ export const createOrder = async (req: any, res: any) => {
     // Decrement stock unless BANK_TRANSFER
     if (paymentMethod !== "BANK_TRANSFER") {
       for (const cartItem of cartItems) {
+        // Decrement variant stock if exists
+        if (cartItem.variantId) {
+          await ProductVariant.decrement("stock", {
+            by: cartItem.quantity,
+            where: { variantId: cartItem.variantId },
+            transaction,
+          });
+        }
+        
+        // Decrement product cache stock
         await Product.decrement("stock", {
           by: cartItem.quantity,
           where: { productId: cartItem.productId },
@@ -125,11 +140,11 @@ export const createOrder = async (req: any, res: any) => {
     // Create payment record if BANK_TRANSFER
     let payment = null;
     if (paymentMethod === "BANK_TRANSFER") {
-      const transactionContent = generateTransactionContent(order.orderId);
+      const transactionContent = generateTransactionContent((order as any).orderId);
 
       payment = await Payment.create(
         {
-          orderId: order.orderId,
+          orderId: (order as any).orderId,
           amount: totalPrice,
           paymentMethod: "BANK_TRANSFER",
           status: "PENDING",

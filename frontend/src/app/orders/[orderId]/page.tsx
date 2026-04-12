@@ -21,6 +21,7 @@ import {
 } from "@/src/components/ui/dialog";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
 const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
   return method === "COD" ? "Cash on delivery (COD)" : "Bank transfer";
@@ -53,14 +54,7 @@ export default function OrderDetailPage() {
   };
 
   if (!isLoaded || loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-4 text-muted-foreground">Loading order details…</p>
-        </div>
-      </div>
-    );
+    return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
   }
 
   if (!currentOrder) {
@@ -122,6 +116,18 @@ export default function OrderDetailPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-foreground mb-1 text-lg font-semibold">{item.product?.name || "Product"}</h3>
+                      
+                      {/* Variant Info */}
+                      {item.variant && !item.variant.isDefault && item.variant.attributes && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {Object.entries(item.variant.attributes).map(([key, value]) => (
+                            <Badge key={key} variant="secondary" className="px-2 py-0.5 text-[10px] font-normal uppercase">
+                              {key}: {String(value)}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
                       <p className="text-muted-foreground mb-2">Qty: {item.quantity}</p>
                       <p className="text-orange-600 font-bold">{formatCurrency(item.price)}</p>
                     </div>

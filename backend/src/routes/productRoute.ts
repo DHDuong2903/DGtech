@@ -12,7 +12,7 @@ import {
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireAdmin } from "../middlewares/requireAdmin.js";
 import { optionalAuth } from "../middlewares/optionalAuth.js";
-import { upload } from "../middlewares/upload.js";
+import { handleUploadSingle } from "../middlewares/upload.js";
 
 const router = express.Router();
 
@@ -24,8 +24,8 @@ router.get("/", getAllProducts);
 
 // Protected routes
 router.use(requireAuth);
-router.post("/", upload.single("image"), createProduct);
-router.put("/:productId", upload.single("image"), updateProduct);
+router.post("/", handleUploadSingle("image"), createProduct);
+router.put("/:productId", handleUploadSingle("image"), updateProduct);
 router.delete("/:productId", deleteProduct);
 
 export default router;

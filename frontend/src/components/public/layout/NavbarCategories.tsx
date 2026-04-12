@@ -5,6 +5,7 @@ import { ChevronDown, Tag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCategoryStore } from "@/src/stores";
 import { cn } from "@/src/lib/utils";
+import { PageContentSpinner } from "@/src/components/ui/page-content-loader";
 
 const navUnderline =
   "group relative inline-flex items-center gap-1.5 pb-1 text-sm text-foreground/80 transition-colors hover:text-foreground " +
@@ -59,7 +60,9 @@ export const NavbarCategories = () => {
         <div className="absolute left-0 top-full z-50 pt-1" role="menu" aria-label="Product categories">
           <div className="min-w-40 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
             {loading ? (
-              <div className="text-muted-foreground px-2 py-2 text-sm">Loading…</div>
+              <div className="flex justify-center px-2 py-6">
+                <PageContentSpinner />
+              </div>
             ) : categories.length === 0 ? (
               <div className="text-muted-foreground px-2 py-2 text-sm">No categories</div>
             ) : (

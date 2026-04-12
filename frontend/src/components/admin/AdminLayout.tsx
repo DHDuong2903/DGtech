@@ -43,7 +43,9 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       <SidebarProvider defaultOpen className={`flex w-full flex-1 flex-row items-stretch ${ADMIN_BELOW_NAV_HEIGHT}`}>
         <AdminSidebar />
         <SidebarInset className={`min-w-0 overflow-y-auto bg-background ${ADMIN_BELOW_NAV_HEIGHT}`}>
-          <div className="text-foreground flex flex-col gap-4 p-4 text-sm leading-normal">{children}</div>
+          <div className="text-foreground flex min-w-0 flex-col gap-4 break-words p-4 text-sm leading-normal">
+            {children}
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </div>

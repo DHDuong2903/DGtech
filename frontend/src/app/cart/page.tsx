@@ -66,7 +66,10 @@ export default function CartPage() {
     if (!cart?.items) return { totalPrice: 0, totalItems: 0 };
 
     const selectedCartItems = cart.items.filter((item) => selectedItems.has(item.cartItemId));
-    const totalPrice = selectedCartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const totalPrice = selectedCartItems.reduce((sum, item) => {
+      const price = item.variant ? item.variant.price : item.product.price;
+      return sum + price * item.quantity;
+    }, 0);
     const totalItems = selectedCartItems.reduce((sum, item) => sum + item.quantity, 0);
 
     return { totalPrice, totalItems };

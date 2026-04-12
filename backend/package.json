@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
+    "build:with-migrate": "npm run build && npm run db:migrate",
     "start": "node dist/server.js",
     "db:migrate": "sequelize-cli db:migrate --config sequelize.config.cjs",
     "db:migrate:development": "node migrate-development.cjs",
@@ -27,6 +28,7 @@
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.5",
     "svix": "^1.81.0"
   },
   "devDependencies": {
@@ -35,7 +37,6 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.5.0",
     "nodemon": "^3.1.10",
-    "sequelize-cli": "^6.6.5",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }

@@ -1,11 +1,13 @@
-import { Product } from "./productType";
+import { Product, ProductVariant } from "./productType";
 
 export interface CartItem {
   cartItemId: string;
   cartId: string;
   productId: string;
+  variantId?: string;
   quantity: number;
   product: Product;
+  variant?: ProductVariant;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +24,7 @@ export interface Cart {
 
 export interface AddToCartRequest {
   productId: string;
+  variantId?: string;
   quantity?: number;
 }
 
