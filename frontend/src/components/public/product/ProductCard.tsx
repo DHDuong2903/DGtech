@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Product } from "@/src/types";
 import { formatCurrency } from "@/src/utils";
+import { ProductImageFallback } from "./ProductImageFallback";
 
 interface ProductCardProps {
   product: Product;
@@ -32,9 +33,7 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <span className="text-muted-foreground text-4xl">🖼️</span>
-          </div>
+          <ProductImageFallback className="h-full w-full" iconClassName="h-12 w-12 sm:h-14 sm:w-14" />
         )}
       </div>
 

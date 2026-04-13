@@ -117,9 +117,9 @@ export const useProductStore = create<ProductState>()(
       // Fetch related products by category
       fetchRelatedProducts: async (categoryId: number, excludeId: string) => {
         try {
-          const response = await productsApi.getAll({ categoryId, limit: 4 });
+          const response = await productsApi.getAll({ categoryId, limit: 8 });
           const filtered = (response.data || []).filter((p) => p.productId !== excludeId);
-          set({ relatedProducts: filtered.slice(0, 4) });
+          set({ relatedProducts: filtered.slice(0, 5) });
         } catch (err) {
           console.error("Error fetching related products:", err);
         }
@@ -133,7 +133,6 @@ export const useProductStore = create<ProductState>()(
             products: [...state.products, newProduct],
             error: null,
           }));
-          toast.success("Product created");
           return { success: true, data: newProduct };
         } catch (err) {
           console.error("Error creating product:", err);

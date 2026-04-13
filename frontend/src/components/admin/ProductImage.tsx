@@ -1,6 +1,6 @@
 "use client";
 
-import { Package } from "lucide-react";
+import { Sofa } from "lucide-react";
 import { useState } from "react";
 
 interface ProductImageProps {
@@ -15,7 +15,7 @@ export const ProductImage = ({ imageUrl, alt, className = "h-12 w-12" }: Product
   if (!imageUrl || imageError) {
     return (
       <div className={`${className} rounded-md bg-muted flex items-center justify-center border`}>
-        <Package className="h-6 w-6 text-muted-foreground" />
+        <Sofa className="h-6 w-6 text-muted-foreground" />
       </div>
     );
   }

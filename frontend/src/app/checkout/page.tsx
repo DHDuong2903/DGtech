@@ -16,6 +16,7 @@ import { useUser } from "@clerk/nextjs";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
+import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -237,13 +238,17 @@ function CheckoutContent() {
               <div className="space-y-4 mb-6">
                 {checkoutItems.map((item) => (
                   <div key={item.cartItemId} className="flex gap-3">
-                    <div className="bg-muted relative h-16 w-16 shrink-0 rounded">
-                      <Image
-                        src={item.product.imageUrl || "/images/placeholder.png"}
-                        alt={item.product.name}
-                        fill
-                        className="object-contain p-1"
-                      />
+                    <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded">
+                      {item.product.imageUrl ? (
+                        <Image
+                          src={item.product.imageUrl}
+                          alt={item.product.name}
+                          fill
+                          className="object-contain p-1"
+                        />
+                      ) : (
+                        <ProductImageFallback className="absolute inset-0" iconClassName="h-8 w-8" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.product.name}</p>

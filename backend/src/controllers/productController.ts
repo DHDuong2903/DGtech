@@ -1,7 +1,11 @@
 import { Category, Product, ProductVariant } from "../models/associationsModel.js";
 import { User } from "../models/userModel.js";
 import { Op } from "sequelize";
-import { getProductWithCategory, productIncludeOptions } from "../helpers/productHelper.js";
+import {
+  clearCompareAtPriceForMultiVariantProduct,
+  getProductWithCategory,
+  productIncludeOptions,
+} from "../helpers/productHelper.js";
 import { uploadProductImageBuffer } from "../helpers/uploadProductImage.js";
 
 function normalizeProductStatus(value: unknown): "ACTIVE" | "DRAFT" | null {
@@ -127,6 +131,7 @@ export const createProduct = async (req: any, res: any) => {
     });
 
     const productWithCategory = await getProductWithCategory(Product, productId);
+    clearCompareAtPriceForMultiVariantProduct(productWithCategory);
 
     return res.status(201).json({
       message: "Them san pham moi thanh cong",
@@ -225,11 +230,10 @@ export const updateProduct = async (req: any, res: any) => {
           const vStock = parseInt(v.stock) || 0;
           
           let vComparePrice: number | null = null;
-          
-          // Tự động tính comparePrice cho variant
-          const existingV = existingVariants.find(ev => ev.variantId === v.variantId);
-          if (existingV) {
-            vComparePrice = calculateAutoCompareAtPrice(vPrice, existingV.price, existingV.compareAtPrice);
+          const rawVc = v.compareAtPrice;
+          if (rawVc !== undefined && rawVc !== null && String(rawVc).trim() !== "") {
+            const parsed = parseFloat(String(rawVc));
+            if (!Number.isNaN(parsed)) vComparePrice = parsed;
           }
           
           sumStock += vStock;
@@ -340,6 +344,7 @@ export const updateProduct = async (req: any, res: any) => {
     });
 
     const productWithCategory = await getProductWithCategory(Product, product.productId);
+    clearCompareAtPriceForMultiVariantProduct(productWithCategory);
 
     return res.status(200).json({
       message: "Cap nhat san pham thanh cong",
@@ -394,6 +399,8 @@ export const getProductById = async (req: any, res: any) => {
       return res.status(404).json({ error: "San pham khong ton tai" });
     }
 
+    clearCompareAtPriceForMultiVariantProduct(product);
+
     return res.status(200).json({ message: "Lay san pham thanh cong", product });
   } catch (error: any) {
     console.log("Loi khi goi getProductById", error);
@@ -446,24 +453,31 @@ export const getAllProducts = async (req: any, res: any) => {
       order = "DESC",
     } = req.query;
 
-    const offset = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
+    const offset = (pageNum - 1) * limitNum;
 
     const where = buildProductListWhere(req);
     where.status = "ACTIVE";
 
+    // distinct: variants join would otherwise inflate count (one row per variant)
     const products = await Product.findAndCountAll({
       where,
       include: productIncludeOptions,
       order: [[sortBy, order]],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: limitNum,
+      offset,
+      distinct: true,
+      col: "productId",
     });
+
+    products.rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
 
     return res.status(200).json({
       message: "Lay danh sach san pham thanh cong",
       totalItems: products.count,
-      totalPages: Math.ceil(products.count / limit),
-      currentPage: parseInt(page),
+      totalPages: Math.max(1, Math.ceil(products.count / limitNum)),
+      currentPage: pageNum,
       data: products.rows,
     });
   } catch (error: any) {
@@ -482,7 +496,9 @@ export const getAdminInventory = async (req: any, res: any) => {
       order = "DESC",
     } = req.query;
 
-    const offset = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
+    const offset = (pageNum - 1) * limitNum;
 
     const where = buildProductListWhere(req);
     const statusFilter = normalizeProductStatus(req.query.status);
@@ -494,15 +510,19 @@ export const getAdminInventory = async (req: any, res: any) => {
       where,
       include: productIncludeOptions,
       order: [[sortBy, order]],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: limitNum,
+      offset,
+      distinct: true,
+      col: "productId",
     });
+
+    products.rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
 
     return res.status(200).json({
       message: "Lay danh sach san pham thanh cong",
       totalItems: products.count,
-      totalPages: Math.ceil(products.count / limit),
-      currentPage: parseInt(page),
+      totalPages: Math.max(1, Math.ceil(products.count / limitNum)),
+      currentPage: pageNum,
       data: products.rows,
     });
   } catch (error: any) {
@@ -521,6 +541,8 @@ export const getFeaturedProducts = async (req: any, res: any) => {
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
     });
+
+    products.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
 
     return res.status(200).json({
       message: "Lay danh sach san pham noi bat thanh cong",

@@ -49,7 +49,7 @@ const ProductDetailPage = () => {
   // Set default variant if it's a simple product
   useEffect(() => {
     if (product?.variants) {
-      const defaultVar = product.variants.find(v => v.isDefault);
+      const defaultVar = product.variants.find((v) => v.isDefault);
       if (defaultVar) {
         setSelectedVariant(defaultVar);
       }
@@ -63,7 +63,7 @@ const ProductDetailPage = () => {
     }
   }, [product?.categoryId, productId, fetchRelatedProducts]);
 
-  const hasRealVariants = product?.variants?.some(v => !v.isDefault) ?? false;
+  const hasRealVariants = product?.variants?.some((v) => !v.isDefault) ?? false;
   const isVariantSelected = !!selectedVariant && (!hasRealVariants || !selectedVariant.isDefault);
 
   const displayPrice = selectedVariant?.price ?? product?.price ?? 0;
@@ -149,8 +149,8 @@ const ProductDetailPage = () => {
             />
 
             {hasRealVariants && (
-              <VariantSelector 
-                variants={product.variants || []} 
+              <VariantSelector
+                variants={product.variants || []}
                 selectedVariant={selectedVariant}
                 onSelect={setSelectedVariant}
               />
@@ -176,15 +176,16 @@ const ProductDetailPage = () => {
           </div>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-4 sm:mt-5">
           <ProductDetailReviews reviews={reviews} isLoggedIn={!!user} onSubmit={handleSubmitReviewWrapper} />
         </div>
 
-        <RelatedProducts
-          products={relatedProducts}
-          onViewMore={product?.category ? () => router.push(`/shop?category=${product.categoryId}`) : undefined}
-          onProductClick={(productId) => router.push(`/shop/${productId}`)}
-        />
+        <div className="mt-4 sm:mt-4">
+          <RelatedProducts
+            products={relatedProducts}
+            onViewMore={product?.category ? () => router.push(`/shop?category=${product.categoryId}`) : undefined}
+          />
+        </div>
       </div>
     </div>
   );

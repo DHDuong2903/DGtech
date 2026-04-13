@@ -1,3 +1,4 @@
+export { ProductImageFallback } from "./ProductImageFallback";
 export { ProductCard } from "./ProductCard";
 export { ProductLoadingState } from "./ProductLoadingState";
 export { ProductNotFound } from "./ProductNotFound";

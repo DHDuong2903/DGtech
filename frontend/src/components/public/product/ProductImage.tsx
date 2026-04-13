@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+import { ProductImageFallback } from "./ProductImageFallback";
 
 interface ProductImageProps {
   imageUrl?: string;
@@ -17,9 +17,7 @@ export const ProductImage = ({ imageUrl, name }: ProductImageProps) => {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <Package className="text-muted-foreground h-16 w-16" />
-          </div>
+          <ProductImageFallback className="h-full w-full" iconClassName="h-16 w-16" />
         )}
       </div>
     </div>

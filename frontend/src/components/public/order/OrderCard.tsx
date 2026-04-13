@@ -2,6 +2,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import Image from "next/image";
+import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { formatCurrency, getStatusColor, getStatusLabel } from "@/src/utils";
 import { Order } from "@/src/types";
 
@@ -34,13 +35,17 @@ export const OrderCard = ({ order, onViewDetail }: OrderCardProps) => {
         <div className="flex gap-3 overflow-x-auto">
           {order.items.slice(0, 3).map((item) => (
             <div key={item.orderItemId} className="shrink-0">
-              <div className="bg-muted relative h-20 w-20 rounded">
-                <Image
-                  src={item.product?.imageUrl || "/images/placeholder.png"}
-                  alt={item.product?.name || "Product"}
-                  fill
-                  className="object-contain p-1"
-                />
+              <div className="bg-muted relative h-20 w-20 overflow-hidden rounded">
+                {item.product?.imageUrl ? (
+                  <Image
+                    src={item.product.imageUrl}
+                    alt={item.product?.name || "Product"}
+                    fill
+                    className="object-contain p-1"
+                  />
+                ) : (
+                  <ProductImageFallback className="absolute inset-0" iconClassName="h-9 w-9" />
+                )}
               </div>
               <p className="text-muted-foreground mt-1 text-center text-xs">x{item.quantity}</p>
             </div>

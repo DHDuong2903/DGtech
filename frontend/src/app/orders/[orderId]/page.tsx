@@ -22,6 +22,7 @@ import {
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
+import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 
 const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
   return method === "COD" ? "Cash on delivery (COD)" : "Bank transfer";
@@ -106,13 +107,17 @@ export default function OrderDetailPage() {
               <div className="space-y-4">
                 {currentOrder.items.map((item) => (
                   <div key={item.orderItemId} className="flex gap-4 pb-4 border-b last:border-0 last:pb-0">
-                    <div className="bg-muted relative h-24 w-24 shrink-0 rounded">
-                      <Image
-                        src={item.product?.imageUrl || "/images/placeholder.png"}
-                        alt={item.product?.name || "Product"}
-                        fill
-                        className="object-contain p-2"
-                      />
+                    <div className="bg-muted relative h-24 w-24 shrink-0 overflow-hidden rounded">
+                      {item.product?.imageUrl ? (
+                        <Image
+                          src={item.product.imageUrl}
+                          alt={item.product?.name || "Product"}
+                          fill
+                          className="object-contain p-2"
+                        />
+                      ) : (
+                        <ProductImageFallback className="absolute inset-0" iconClassName="h-10 w-10" />
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="text-foreground mb-1 text-lg font-semibold">{item.product?.name || "Product"}</h3>

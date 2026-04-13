@@ -10,6 +10,7 @@ import type { AdminVariantGridRow } from "@/src/components/admin/product-editor/
 import { useProductStore, useCategoryStore } from "@/src/stores";
 import { Button } from "@/src/components/ui/button";
 import { ArrowLeft, Save, X, Upload, Plus } from "lucide-react";
+import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { isValidImage } from "@/src/utils";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
@@ -159,9 +160,8 @@ export default function CreateProductPage() {
               {imagePreview ? (
                 <img src={imagePreview} alt="Preview" className="w-full rounded-md border aspect-square object-cover" />
               ) : (
-                <div className="w-full rounded-md border aspect-square bg-muted flex flex-col items-center justify-center text-muted-foreground">
-                  <Upload className="h-8 w-8 mb-2 opacity-20" />
-                  <span className="text-xs">No image uploaded</span>
+                <div className="aspect-square w-full overflow-hidden rounded-md border">
+                  <ProductImageFallback className="h-full w-full" iconClassName="h-14 w-14" />
                 </div>
               )}
               <div className="mt-4 flex justify-center">

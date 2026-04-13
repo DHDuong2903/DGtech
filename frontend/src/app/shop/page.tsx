@@ -9,6 +9,8 @@ import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
+const PAGE_LIMIT = 20;
+
 const ShopPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,7 +38,7 @@ const ShopPageContent = () => {
       search?: string;
     } = {
       page: currentPage,
-      limit: 20,
+      limit: PAGE_LIMIT,
       sortBy: "createdAt",
       order: "DESC",
     };
@@ -54,20 +56,13 @@ const ShopPageContent = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
-        <header className="mb-4 sm:mb-5">
-          <h1 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">Shop</h1>
-          {(searchQuery || selectedCategory !== "all") && (
-            <p className="text-muted-foreground mt-1 text-sm leading-normal">
-              {searchQuery ? (
-                <>
-                  Results for <span className="text-foreground/90 font-medium">&ldquo;{searchQuery}&rdquo;</span>
-                </>
-              ) : (
-                <>Browsing by category</>
-              )}
+        {searchQuery ? (
+          <div className="mb-4 sm:mb-5">
+            <p className="text-muted-foreground text-sm leading-normal">
+              Results for <span className="text-foreground/90 font-medium">&ldquo;{searchQuery}&rdquo;</span>
             </p>
-          )}
-        </header>
+          </div>
+        ) : null}
 
         {loading ? (
           <PageContentLoader
@@ -92,7 +87,7 @@ const ShopPageContent = () => {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
+              <div className="mt-4 flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -110,7 +105,7 @@ const ShopPageContent = () => {
                   size="sm"
                   className="text-sm"
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage >= totalPages || products.length < PAGE_LIMIT}
                 >
                   Next
                 </Button>

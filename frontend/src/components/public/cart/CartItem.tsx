@@ -3,6 +3,7 @@
 import { Button } from "@/src/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { CartItem as CartItemType } from "@/src/types";
 import { useCartStore } from "@/src/stores";
@@ -45,12 +46,16 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
 
       {/* Product Image */}
       <div className="bg-muted relative h-28 w-28 shrink-0 overflow-hidden rounded-lg md:h-36 md:w-36">
-        <Image
-          src={item.product.imageUrl || "/images/placeholder.png"}
-          alt={item.product.name}
-          fill
-          className="object-contain p-2"
-        />
+        {item.product.imageUrl ? (
+          <Image
+            src={item.product.imageUrl}
+            alt={item.product.name}
+            fill
+            className="object-contain p-2"
+          />
+        ) : (
+          <ProductImageFallback className="absolute inset-0" iconClassName="h-11 w-11 md:h-14 md:w-14" />
+        )}
       </div>
 
       {/* Product Details */}

@@ -17,6 +17,7 @@ import {
 import { useProductStore, useCategoryStore } from "@/src/stores";
 import { Button } from "@/src/components/ui/button";
 import { ArrowLeft, Edit2, Save, X, Upload, Plus } from "lucide-react";
+import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import type { Product } from "@/src/types";
 import { formatCurrency, isValidImage } from "@/src/utils";
 import { Badge } from "@/src/components/ui/badge";
@@ -251,8 +252,8 @@ export default function ProductDetailPage() {
                     className="w-full rounded-md border aspect-square object-cover"
                   />
                 ) : (
-                  <div className="w-full rounded-md border aspect-square bg-muted flex items-center justify-center text-muted-foreground">
-                    No image
+                  <div className="aspect-square w-full overflow-hidden rounded-md border">
+                    <ProductImageFallback className="h-full w-full" iconClassName="h-14 w-14" />
                   </div>
                 )}
               </div>
@@ -339,8 +340,8 @@ export default function ProductDetailPage() {
                     className="w-full rounded-md border aspect-square object-cover"
                   />
                 ) : (
-                  <div className="w-full rounded-md border aspect-square bg-muted flex items-center justify-center text-muted-foreground">
-                    No image
+                  <div className="aspect-square w-full overflow-hidden rounded-md border">
+                    <ProductImageFallback className="h-full w-full" iconClassName="h-14 w-14" />
                   </div>
                 )}
                 <div className="mt-4 flex justify-center">
