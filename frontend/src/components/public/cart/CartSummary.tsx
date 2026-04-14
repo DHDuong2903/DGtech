@@ -30,30 +30,15 @@ export function CartSummary({ totalItems, totalPrice, onCheckout }: CartSummaryP
           </div>
 
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-foreground font-bold">Total:</span>
+            <span className="text-foreground font-bold">Estimated total</span>
             <span className="text-xl font-bold text-orange-600">{formatCurrency(totalPrice)}</span>
           </div>
         </>
       )}
 
-      <Button className="mb-3 w-full" size="lg" disabled={totalItems === 0} onClick={onCheckout}>
+      <Button className="w-full" disabled={totalItems === 0} onClick={onCheckout}>
         {totalItems === 0 ? "Select items to checkout" : "Checkout"}
       </Button>
-
-      <div className="bg-muted text-muted-foreground space-y-2 rounded-lg p-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-          <span>Free shipping</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-          <span>7-day returns</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-          <span>Manufacturer warranty</span>
-        </div>
-      </div>
     </div>
   );
 }
