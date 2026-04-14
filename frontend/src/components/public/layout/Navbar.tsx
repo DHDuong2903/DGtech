@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Home, LayoutDashboard, Package, Search, ShoppingCart, Store } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, Package, Search, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -10,6 +10,7 @@ import { Input } from "@/src/components/ui/input";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { useAuth } from "@/src/hooks";
 import { useCartStore } from "@/src/stores";
+import type { Cart } from "@/src/types";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { ThemeToggle } from "@/src/components/ThemeToggle";
@@ -29,12 +30,18 @@ function NavLink({ href, children, className }: { href: string; children: ReactN
   );
 }
 
+function cartQuantityTotal(cart: Cart) {
+  if (!cart.items?.length) return 0;
+  return cart.items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
 export const Navbar = () => {
   const router = useRouter();
   const { isAdmin, isLoading } = useAuth();
   const { cart, fetchCart } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
   const [navSearch, setNavSearch] = useState("");
+  const cartQty = cart ? cartQuantityTotal(cart) : 0;
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -120,9 +127,9 @@ export const Navbar = () => {
           <NavLink href="/cart">
             <div className="relative">
               <ShoppingCart className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
-              {isSignedIn && cart?.items && cart.items.length > 0 && (
-                <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-0.5 text-[10px] font-medium text-white">
-                  {cart.items.length}
+              {isSignedIn && cartQty > 0 && (
+                <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-medium text-white tabular-nums">
+                  {cartQty}
                 </span>
               )}
             </div>
@@ -134,6 +141,7 @@ export const Navbar = () => {
           <SignedOut>
             <SignInButton mode="modal">
               <Button type="button" size="sm" className="cursor-pointer">
+                <LogIn />
                 Sign in
               </Button>
             </SignInButton>

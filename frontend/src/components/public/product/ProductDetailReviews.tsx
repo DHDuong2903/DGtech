@@ -64,7 +64,7 @@ export const ProductDetailReviews = ({ reviews, isLoggedIn, onSubmit }: ProductD
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-          {isLoggedIn ? (
+          {isLoggedIn && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-1">
                 {[1, 2, 3, 4, 5].map((s) => (
@@ -105,8 +105,6 @@ export const ProductDetailReviews = ({ reviews, isLoggedIn, onSubmit }: ProductD
                 )}
               </Button>
             </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">Sign in to write a review.</p>
           )}
 
           <div className="bg-muted/30 max-h-[min(20rem,42vh)] min-h-30 overflow-y-auto overscroll-y-contain rounded-lg border border-border/80 p-3 sm:p-4">

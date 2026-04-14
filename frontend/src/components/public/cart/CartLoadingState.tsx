@@ -1,3 +1,8 @@
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/src/components/ui/button";
 import { ShoppingBag } from "lucide-react";
 import { cn } from "@/src/lib/utils";
@@ -6,30 +11,36 @@ import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 
 interface CartLoadingStateProps {
   type: "loading" | "auth-loading" | "not-signed-in";
-  onGoHome?: () => void;
 }
 
-export function CartLoadingState({ type, onGoHome }: CartLoadingStateProps) {
+export function CartLoadingState({ type }: CartLoadingStateProps) {
+  const shell = (children: ReactNode) => (
+    <div className="min-h-screen bg-background">
+      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>{children}</div>
+    </div>
+  );
+
   if (type === "loading" || type === "auth-loading") {
-    return (
-      <div className="bg-background py-8">
-        <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-          <PageContentLoader minHeightClass="min-h-[calc(100vh-200px)]" />
-        </div>
-      </div>
-    );
+    return shell(<PageContentLoader minHeightClass="min-h-[min(50vh,calc(100dvh-14rem))]" />);
   }
 
   if (type === "not-signed-in") {
-    return (
-      <div className="min-h-[calc(100vh-200px)] bg-background py-16">
-        <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-          <div className="bg-card border-border mx-auto max-w-md rounded-lg border py-16 text-center shadow-sm">
-            <ShoppingBag className="text-muted-foreground mx-auto mb-4 h-16 w-16" />
-            <h2 className="text-foreground mb-2 text-2xl font-bold">Sign in required</h2>
-            <p className="text-muted-foreground mb-6">Sign in to view your cart.</p>
-            <Button onClick={onGoHome}>Go home</Button>
-          </div>
+    return shell(
+      <div className="py-12 text-center sm:py-16">
+        <ShoppingBag className="text-muted-foreground mx-auto mb-4 h-14 w-14 sm:h-16 sm:w-16" />
+        <h2 className="text-foreground mb-2 text-2xl font-semibold">Sign in to view your cart</h2>
+        <p className="text-muted-foreground mx-auto mb-8 max-w-md px-4 text-sm leading-relaxed sm:text-base">
+          Saved items and checkout are available after you sign in. You can keep browsing the shop anytime.
+        </p>
+        <div className="flex flex-col items-stretch justify-center gap-3 px-4 sm:flex-row sm:items-center sm:px-0">
+          <SignInButton mode="modal">
+            <Button type="button" className="w-full min-w-40 sm:w-auto">
+              Sign in
+            </Button>
+          </SignInButton>
+          <Button variant="outline" className="w-full min-w-40 sm:w-auto" asChild>
+            <Link href="/shop">Browse products</Link>
+          </Button>
         </div>
       </div>
     );

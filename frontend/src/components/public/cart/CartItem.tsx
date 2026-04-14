@@ -5,6 +5,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { Checkbox } from "@/src/components/ui/checkbox";
+import { TableCell, TableRow } from "@/src/components/ui/table";
 import { CartItem as CartItemType } from "@/src/types";
 import { useCartStore } from "@/src/stores";
 import { formatCurrency } from "@/src/utils";
@@ -27,114 +28,90 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
     await removeFromCart(item.cartItemId);
   };
 
-  const subtotal = (item.variant ? item.variant.price : item.product.price) * item.quantity;
   const itemPrice = item.variant ? item.variant.price : item.product.price;
   const maxStock = item.variant ? item.variant.stock : item.product.stock;
 
   const hasRealVariant = item.variant && Object.keys(item.variant.attributes).length > 0;
 
   return (
-    <div className="bg-card border-border flex gap-4 rounded-lg border p-4 shadow-sm transition-shadow hover:shadow-md md:p-6">
-      {/* Checkbox */}
-      <div className="flex items-start pt-2">
+    <TableRow>
+      <TableCell className="w-10 px-2">
         <Checkbox
           id={`select-${item.cartItemId}`}
           checked={selected}
           onCheckedChange={() => onToggleSelect(item.cartItemId)}
+          aria-label={`Select ${item.product.name}`}
         />
-      </div>
-
-      {/* Product Image */}
-      <div className="bg-muted relative h-28 w-28 shrink-0 overflow-hidden rounded-lg md:h-36 md:w-36">
-        {item.product.imageUrl ? (
-          <Image
-            src={item.product.imageUrl}
-            alt={item.product.name}
-            fill
-            className="object-contain p-2"
-          />
-        ) : (
-          <ProductImageFallback className="absolute inset-0" iconClassName="h-11 w-11 md:h-14 md:w-14" />
-        )}
-      </div>
-
-      {/* Product Details */}
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-foreground mb-1 truncate text-base font-semibold md:text-lg">{item.product.name}</h3>
-            
+      </TableCell>
+      <TableCell className="min-w-[200px] max-w-[min(100vw-12rem,28rem)]">
+        <div className="flex items-center gap-3">
+          <div className="bg-muted relative h-12 w-12 shrink-0 overflow-hidden rounded-md md:h-14 md:w-14">
+            {item.product.imageUrl ? (
+              <Image
+                src={item.product.imageUrl}
+                alt=""
+                fill
+                className="object-contain p-1"
+              />
+            ) : (
+              <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6 md:h-7 md:w-7" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground truncate font-medium leading-tight">{item.product.name}</p>
             {hasRealVariant && (
-              <p className="text-muted-foreground text-sm mb-2 flex flex-wrap gap-x-2">
+              <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
                 {Object.entries(item.variant!.attributes).map(([key, value]) => (
-                  <span key={key} className="bg-accent px-2 py-0.5 rounded text-xs capitalize">
+                  <span key={key} className="bg-accent rounded px-1.5 py-0 capitalize">
                     {key}: {value}
                   </span>
                 ))}
-              </p>
+              </div>
             )}
-
-            <p className="text-orange-600 font-bold text-lg md:text-xl">{formatCurrency(itemPrice)}</p>
+            <p className="text-orange-600 mt-1 text-sm font-semibold sm:hidden">{formatCurrency(itemPrice)}</p>
           </div>
-
-          {/* Remove Button (Desktop) */}
+        </div>
+      </TableCell>
+      <TableCell className="hidden whitespace-nowrap sm:table-cell">
+        <span className="text-orange-600 font-semibold">{formatCurrency(itemPrice)}</span>
+      </TableCell>
+      <TableCell className="whitespace-nowrap">
+        <div className="inline-flex items-center gap-0.5">
           <Button
             size="icon"
-            variant="ghost"
-            className="hidden md:flex h-10 w-10 hover:bg-red-50"
-            onClick={handleRemoveItem}
-            disabled={loading}
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => handleUpdateQuantity(item.quantity - 1)}
+            disabled={item.quantity <= 1 || loading}
+            aria-label="Decrease quantity"
           >
-            <Trash2 className="h-5 w-5 text-red-500" />
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
+          <span className="w-8 text-center text-sm font-medium tabular-nums">{item.quantity}</span>
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            onClick={() => handleUpdateQuantity(item.quantity + 1)}
+            disabled={item.quantity >= maxStock || loading}
+            aria-label="Increase quantity"
+          >
+            <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
-
-        {/* Quantity Controls & Subtotal */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-muted-foreground text-sm font-medium">Quantity:</span>
-            <div className="bg-muted border-border flex items-center gap-1 rounded-lg border">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="hover:bg-accent h-9 w-9"
-                onClick={() => handleUpdateQuantity(item.quantity - 1)}
-                disabled={item.quantity <= 1 || loading}
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="font-semibold w-10 text-center">{item.quantity}</span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="hover:bg-accent h-9 w-9"
-                onClick={() => handleUpdateQuantity(item.quantity + 1)}
-                disabled={item.quantity >= maxStock || loading}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Subtotal */}
-          <div className="text-left sm:text-right">
-            <p className="text-muted-foreground text-xs sm:text-sm">Line total</p>
-            <p className="font-bold text-lg sm:text-xl text-orange-600">{formatCurrency(subtotal)}</p>
-          </div>
-        </div>
-
-        {/* Remove Button (Mobile) */}
+      </TableCell>
+      <TableCell className="w-12 px-2 text-right">
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
-          className="md:hidden mt-3 text-red-500 hover:bg-red-50 hover:text-red-600"
+          className="h-8 w-8 hover:bg-red-50"
           onClick={handleRemoveItem}
           disabled={loading}
+          aria-label="Remove item"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Remove item
+          <Trash2 className="h-4 w-4 text-red-500" />
         </Button>
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
   );
 };
