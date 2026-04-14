@@ -9,40 +9,38 @@ interface CartSummaryProps {
 
 export function CartSummary({ totalItems, totalPrice, onCheckout }: CartSummaryProps) {
   return (
-    <div className="bg-card border-border sticky top-4 rounded-lg border p-6 shadow-sm">
-      <h2 className="text-foreground mb-4 text-xl font-bold">Order summary</h2>
-
+    <div className="bg-card border-border sticky top-4 rounded-lg border p-4 shadow-sm">
       {totalItems === 0 ? (
-        <div className="text-center py-8">
+        <div className="py-6 text-center">
           <p className="text-muted-foreground text-sm">Select items to checkout</p>
         </div>
       ) : (
         <>
-          <div className="space-y-3 mb-6 pb-4 border-b">
-            <div className="text-foreground flex justify-between">
+          <div className="mb-4 space-y-2 border-b pb-3">
+            <div className="text-foreground flex justify-between text-sm">
               <span>
-                Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"}):
+                Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"})
               </span>
               <span className="font-semibold">{formatCurrency(totalPrice)}</span>
             </div>
-            <div className="text-foreground flex justify-between">
-              <span>Shipping:</span>
+            <div className="text-foreground flex justify-between text-sm">
+              <span>Shipping</span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
             </div>
           </div>
 
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-foreground text-lg font-bold">Total:</span>
-            <span className="text-2xl font-bold text-orange-600">{formatCurrency(totalPrice)}</span>
+          <div className="mb-4 flex items-center justify-between">
+            <span className="text-foreground font-bold">Total:</span>
+            <span className="text-xl font-bold text-orange-600">{formatCurrency(totalPrice)}</span>
           </div>
         </>
       )}
 
-      <Button className="w-full mb-4" size="lg" disabled={totalItems === 0} onClick={onCheckout}>
-        {totalItems === 0 ? "Select items to checkout" : "Proceed to checkout"}
+      <Button className="mb-3 w-full" size="lg" disabled={totalItems === 0} onClick={onCheckout}>
+        {totalItems === 0 ? "Select items to checkout" : "Checkout"}
       </Button>
 
-      <div className="bg-muted text-muted-foreground space-y-2 rounded-lg p-4 text-sm">
+      <div className="bg-muted text-muted-foreground space-y-2 rounded-lg p-3 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-emerald-600 dark:text-emerald-400">✓</span>
           <span>Free shipping</span>

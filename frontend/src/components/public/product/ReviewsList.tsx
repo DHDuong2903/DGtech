@@ -9,7 +9,7 @@ interface ReviewsListProps {
 export const ReviewsList = ({ reviews }: ReviewsListProps) => {
   if (reviews.length === 0) {
     return (
-      <p className="text-muted-foreground text-center text-sm">No reviews for this product yet.</p>
+      <p className="text-muted-foreground text-center text-sm">No reviews for this product yet</p>
     );
   }
 

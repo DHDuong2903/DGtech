@@ -90,7 +90,9 @@ export default function OrderDetailPage() {
               <h1 className="text-3xl font-bold text-foreground">Order #{currentOrder.orderId.slice(0, 8)}</h1>
               <Badge className={getStatusColor(currentOrder.status)}>{getStatusLabel(currentOrder.status)}</Badge>
             </div>
-            <p className="text-muted-foreground">Placed on {new Date(currentOrder.createdAt).toLocaleString("en-US")}</p>
+            <p className="text-muted-foreground">
+              Placed on {new Date(currentOrder.createdAt).toLocaleString("en-US")}
+            </p>
           </div>
           {(currentOrder.status === "PENDING" || currentOrder.status === "PROCESSING") && (
             <Button variant="destructive" onClick={() => setShowCancelModal(true)}>
@@ -121,12 +123,16 @@ export default function OrderDetailPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-foreground mb-1 text-lg font-semibold">{item.product?.name || "Product"}</h3>
-                      
+
                       {/* Variant Info */}
                       {item.variant && !item.variant.isDefault && item.variant.attributes && (
                         <div className="flex flex-wrap gap-2 mb-2">
                           {Object.entries(item.variant.attributes).map(([key, value]) => (
-                            <Badge key={key} variant="secondary" className="px-2 py-0.5 text-[10px] font-normal uppercase">
+                            <Badge
+                              key={key}
+                              variant="secondary"
+                              className="px-2 py-0.5 text-[10px] font-normal uppercase"
+                            >
                               {key}: {String(value)}
                             </Badge>
                           ))}
@@ -187,13 +193,11 @@ export default function OrderDetailPage() {
               <h2 className="text-foreground mb-4 text-xl font-bold">Summary</h2>
               <div className="space-y-3 mb-4 pb-4 border-b">
                 <div className="text-foreground flex justify-between">
-                  <span>
-                    Subtotal ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items):
-                  </span>
+                  <span>Subtotal ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
                   <span className="font-semibold">{formatCurrency(currentOrder.totalPrice)}</span>
                 </div>
                 <div className="text-foreground flex justify-between">
-                  <span>Shipping:</span>
+                  <span>Shipping</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
                 </div>
               </div>

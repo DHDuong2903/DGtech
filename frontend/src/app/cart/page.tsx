@@ -4,23 +4,14 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useCartStore } from "../../stores";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import {
-  CartHeader,
-  CartEmptyState,
-  CartSelectAll,
-  CartItemList,
-  CartSummary,
-  CartDeleteModal,
-  CartLoadingState,
-} from "../../components/public/cart";
+import { CartEmptyState, CartItemList, CartSummary, CartLoadingState } from "../../components/public/cart";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export default function CartPage() {
-  const { cart, loading, fetchCart, clearCart } = useCartStore();
+  const { cart, loading, fetchCart } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
   const router = useRouter();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const lastCartIdRef = useRef<string | null>(null);
 
@@ -29,18 +20,6 @@ export default function CartPage() {
     if (isLoaded && isSignedIn) {
       fetchCart();
     }
-  }, [fetchCart, isLoaded, isSignedIn]);
-
-  // Thêm listener để refresh cart khi focus vào window (quay lại từ trang khác)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (isLoaded && isSignedIn) {
-        fetchCart();
-      }
-    };
-
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
   }, [fetchCart, isLoaded, isSignedIn]);
 
   // Đồng bộ selectedItems với cart items khi cart thay đổi
@@ -88,31 +67,14 @@ export default function CartPage() {
     });
   };
 
-  // Toggle chọn/bỏ chọn tất cả
   const toggleSelectAll = () => {
-    if (!cart?.items) return;
-
-    // Kiểm tra xem tất cả items có được chọn không
+    if (!cart?.items?.length) return;
     const allSelected = cart.items.every((item) => selectedItems.has(item.cartItemId));
-
     if (allSelected) {
-      // Bỏ chọn tất cả
       setSelectedItems(new Set());
     } else {
-      // Chọn tất cả
       setSelectedItems(new Set(cart.items.map((item) => item.cartItemId)));
     }
-  };
-
-  // Kiểm tra xem tất cả items có được chọn không
-  const isAllSelected = useMemo(() => {
-    if (!cart?.items || cart.items.length === 0) return false;
-    return cart.items.every((item) => selectedItems.has(item.cartItemId));
-  }, [cart, selectedItems]);
-
-  const handleClearCart = async () => {
-    await clearCart();
-    setShowDeleteModal(false);
   };
 
   // Loading state khi đang check authentication
@@ -122,10 +84,11 @@ export default function CartPage() {
 
   // Redirect to login if not signed in
   if (!isSignedIn) {
-    return <CartLoadingState type="not-signed-in" onGoHome={() => router.push("/")} />;
+    return <CartLoadingState type="not-signed-in" />;
   }
 
-  if (loading) {
+  // Chỉ full-page load lần đầu (chưa có cart); mutate qty/remove không được che cả trang
+  if (loading && !cart) {
     return <CartLoadingState type="loading" />;
   }
 
@@ -137,28 +100,18 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
-      <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-        <CartHeader selectedCount={selectedSummary.totalItems} totalCount={cart?.totalItems || 0} />
-
+    <div className="min-h-screen bg-background">
+      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
         {(!cart?.items || cart.items.length === 0) && <CartEmptyState />}
 
         {cart?.items && cart.items.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              <CartSelectAll
-                isAllSelected={isAllSelected}
-                onToggleSelectAll={toggleSelectAll}
-                totalItems={cart.items.length}
-                selectedCount={selectedItems.size}
-              />
-
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+            <div className="lg:col-span-2">
               <CartItemList
                 items={cart.items}
                 selectedItems={selectedItems}
                 onToggleSelect={toggleSelectItem}
-                onClearCart={() => setShowDeleteModal(true)}
-                loading={loading}
+                onToggleSelectAll={toggleSelectAll}
               />
             </div>
 
@@ -171,8 +124,6 @@ export default function CartPage() {
             </div>
           </div>
         )}
-
-        <CartDeleteModal open={showDeleteModal} onOpenChange={setShowDeleteModal} onConfirm={handleClearCart} />
       </div>
     </div>
   );
