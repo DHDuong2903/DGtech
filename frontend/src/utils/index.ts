@@ -2,3 +2,4 @@
 export * from "./formatUtil";
 export * from "./validationUtil";
 export * from "./orderUtils";
+export * from "./cartUtils";

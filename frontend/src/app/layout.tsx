@@ -9,6 +9,7 @@ import { AxiosInterceptorSetup } from "../providers/AxiosInterceptorSetup";
 import { Toaster } from "@/src/components/ui/sonner";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { Navbar } from "../components/public";
+import { CartDrawer } from "@/src/components/public/cart/CartDrawer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,12 +39,15 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased flex min-h-screen flex-col`}>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased flex min-h-screen flex-col`}
+        >
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <AuthProvider>
               <AxiosInterceptorSetup>
                 <StoreInitializer>
                   <Navbar />
+                  <CartDrawer />
                   <main className="flex min-h-0 flex-1 flex-col">{children}</main>
                   <ConditionalFooter />
                   <Toaster />

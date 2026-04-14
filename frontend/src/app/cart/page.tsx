@@ -9,7 +9,7 @@ import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export default function CartPage() {
-  const { cart, loading, fetchCart } = useCartStore();
+  const { cart, loading, fetchCart, removeManyFromCart } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
   const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -39,6 +39,19 @@ export default function CartPage() {
       });
     }
   }, [cart?.cartId, cart?.items]);
+
+  // Bỏ checkbox đã xóa khỏi cart (bulk / xóa từng dòng)
+  useEffect(() => {
+    if (!cart?.items) return;
+    const valid = new Set(cart.items.map((item) => item.cartItemId));
+    queueMicrotask(() => {
+      setSelectedItems((prev) => {
+        const next = new Set([...prev].filter((id) => valid.has(id)));
+        if (next.size === prev.size && [...prev].every((id) => next.has(id))) return prev;
+        return next;
+      });
+    });
+  }, [cart?.items]);
 
   // Tính toán tổng tiền và số lượng của các sản phẩm được chọn
   const selectedSummary = useMemo(() => {
@@ -77,6 +90,12 @@ export default function CartPage() {
     }
   };
 
+  const handleRemoveSelected = async () => {
+    const ids = Array.from(selectedItems);
+    if (ids.length === 0) return;
+    await removeManyFromCart(ids);
+  };
+
   // Loading state khi đang check authentication
   if (!isLoaded) {
     return <CartLoadingState type="auth-loading" />;
@@ -100,7 +119,7 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
         {(!cart?.items || cart.items.length === 0) && <CartEmptyState />}
 
@@ -112,6 +131,8 @@ export default function CartPage() {
                 selectedItems={selectedItems}
                 onToggleSelect={toggleSelectItem}
                 onToggleSelectAll={toggleSelectAll}
+                onRemoveSelected={handleRemoveSelected}
+                removeSelectedDisabled={loading}
               />
             </div>
 

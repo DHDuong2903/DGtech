@@ -1,46 +1,65 @@
 "use client";
 
+import { useMemo } from "react";
 import { CartItem as CartItemComponent } from "./CartItem";
+import { CartBulkSelectionBar } from "./CartBulkSelectionBar";
 import { CartItem as CartItemType } from "@/src/types";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { Checkbox } from "@/src/components/ui/checkbox";
+import { sortCartItemsForDisplay } from "@/src/utils/cartUtils";
 
 interface CartItemListProps {
   items: CartItemType[];
   selectedItems: Set<string>;
   onToggleSelect: (cartItemId: string) => void;
   onToggleSelectAll: () => void;
+  onRemoveSelected: () => void | Promise<void>;
+  removeSelectedDisabled?: boolean;
 }
 
-export function CartItemList({ items, selectedItems, onToggleSelect, onToggleSelectAll }: CartItemListProps) {
+export function CartItemList({
+  items,
+  selectedItems,
+  onToggleSelect,
+  onToggleSelectAll,
+  onRemoveSelected,
+  removeSelectedDisabled,
+}: CartItemListProps) {
+  const sortedItems = useMemo(() => sortCartItemsForDisplay(items), [items]);
   const selectedCount = items.filter((item) => selectedItems.has(item.cartItemId)).length;
   const isAllSelected = items.length > 0 && selectedCount === items.length;
   const isSomeSelected = selectedCount > 0 && selectedCount < items.length;
 
   return (
-    <div className="bg-card rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="w-10 px-2">
-              <Checkbox
-                id="select-all-cart"
-                checked={isSomeSelected ? "indeterminate" : isAllSelected}
-                onCheckedChange={() => onToggleSelectAll()}
-                disabled={items.length === 0}
-                aria-label="Select all items in cart"
-              />
-            </TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead className="hidden sm:table-cell">Price</TableHead>
-            <TableHead>Qty</TableHead>
-            <TableHead className="w-12 px-2 text-right">
-              <span className="sr-only">Actions</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => (
+    <div className="bg-card overflow-hidden rounded-lg border">
+      <CartBulkSelectionBar
+        selectedCount={selectedCount}
+        onDeleteSelected={onRemoveSelected}
+        disabled={removeSelectedDisabled}
+      />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-card border-b">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-10 px-2">
+                <Checkbox
+                  id="select-all-cart"
+                  checked={isSomeSelected ? "indeterminate" : isAllSelected}
+                  onCheckedChange={() => onToggleSelectAll()}
+                  disabled={items.length === 0}
+                  aria-label="Select all items in cart"
+                />
+              </TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead className="hidden sm:table-cell">Price</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead className="w-12 px-2 text-right">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+          {sortedItems.map((item) => (
             <CartItemComponent
               key={item.cartItemId}
               item={item}
@@ -48,8 +67,9 @@ export function CartItemList({ items, selectedItems, onToggleSelect, onToggleSel
               onToggleSelect={onToggleSelect}
             />
           ))}
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

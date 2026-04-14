@@ -10,15 +10,19 @@ interface CartState {
   cart: Cart | null;
   loading: boolean;
   error: string | null;
+  /** Mini cart sheet after add-to-cart (not persisted). */
+  cartSheetOpen: boolean;
 
   // Actions
   fetchCart: () => Promise<void>;
   addToCart: (productId: string, quantity?: number, variantId?: string) => Promise<void>;
   updateCartItem: (cartItemId: string, quantity: number) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
+  removeManyFromCart: (cartItemIds: string[]) => Promise<void>;
   clearCart: () => Promise<void>;
   setError: (error: string | null) => void;
   clearError: () => void;
+  setCartSheetOpen: (open: boolean) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -29,6 +33,9 @@ export const useCartStore = create<CartState>()(
         cart: null,
         loading: false,
         error: null,
+        cartSheetOpen: false,
+
+        setCartSheetOpen: (open) => set({ cartSheetOpen: open }),
 
         // Fetch cart
         fetchCart: async () => {
@@ -58,10 +65,16 @@ export const useCartStore = create<CartState>()(
           try {
             const response = await cartApi.addToCart({ productId, quantity, variantId });
             set({ cart: response.cart, loading: false });
+            requestAnimationFrame(() => {
+              set({ cartSheetOpen: true });
+            });
             toast.success(response.message || "Sản phẩm đã được thêm vào giỏ hàng");
-          } catch (err: any) {
+          } catch (err: unknown) {
             console.error("Error adding to cart:", err);
-            const errorMessage = err?.response?.data?.error || err?.message || "Không thể thêm sản phẩm vào giỏ hàng";
+            const errorMessage =
+              (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error ||
+              (err as { message?: string })?.message ||
+              "Không thể thêm sản phẩm vào giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }
@@ -98,6 +111,35 @@ export const useCartStore = create<CartState>()(
             const errorMessage = error.message || "Không thể xóa sản phẩm khỏi giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
+          }
+        },
+
+        removeManyFromCart: async (cartItemIds: string[]) => {
+          const unique = [...new Set(cartItemIds)].filter(Boolean);
+          if (unique.length === 0) return;
+          set({ loading: true, error: null });
+          try {
+            let lastCart: Cart | null = null;
+            for (const id of unique) {
+              const response = await cartApi.removeFromCart(id);
+              lastCart = response.cart;
+            }
+            set({ cart: lastCart, loading: false });
+            toast.success(
+              unique.length === 1 ? "Item removed from cart" : `${unique.length} items removed from cart`
+            );
+          } catch (err) {
+            console.error("Error removing cart items:", err);
+            const error = err as ApiError;
+            const errorMessage = error.message || "Could not remove selected items";
+            set({ error: errorMessage, loading: false });
+            toast.error(errorMessage);
+            try {
+              const response = await cartApi.getCart();
+              set({ cart: response.cart });
+            } catch {
+              /* ignore resync failure */
+            }
           }
         },
 
