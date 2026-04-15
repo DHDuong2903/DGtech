@@ -20,11 +20,9 @@ export const User = sequelize.define(
     imageUrl: {
       type: DataTypes.STRING,
     },
+    /** Optional; may be set from Clerk `phone_numbers` on user.created. Delivery phone per address is on `user_addresses`. */
     phone: {
       type: DataTypes.STRING,
-    },
-    address: {
-      type: DataTypes.TEXT,
       allowNull: true,
     },
     tier: {

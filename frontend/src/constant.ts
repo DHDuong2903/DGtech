@@ -43,6 +43,7 @@ export const API_ROUTE = {
   PRODUCTS: "/products",
   REVIEWS: "/reviews",
   SLIDESHOWS: "/slideshows",
+  ADDRESSES: "/addresses",
 } as const;
 
 // ---------------------------------------------------------------------------
