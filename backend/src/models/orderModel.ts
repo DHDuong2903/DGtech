@@ -21,14 +21,7 @@ export const Order = sequelize.define(
       defaultValue: 0,
     },
     status: {
-      type: DataTypes.ENUM(
-        "PENDING",
-        "PROCESSING",
-        "SHIPPED",
-        "DELIVERED",
-        "COMPLETED",
-        "CANCELLED"
-      ),
+      type: DataTypes.ENUM("PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"),
       defaultValue: "PENDING",
       allowNull: false,
       comment:
@@ -51,10 +44,13 @@ export const Order = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    userAddressId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
   },
   {
     timestamps: true,
     tableName: "orders",
-  }
+  },
 );
-

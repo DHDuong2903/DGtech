@@ -9,6 +9,7 @@ import { CartItem } from "./cartItemModel.js";
 import { Order } from "./orderModel.js";
 import { OrderItem } from "./orderItemModel.js";
 import { Payment } from "./paymentModel.js";
+import { UserAddress } from "./userAddressModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -46,6 +47,13 @@ CartItem.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
 User.hasMany(Order, { foreignKey: "clerkId", as: "orders" });
 Order.belongsTo(User, { foreignKey: "clerkId", as: "user" });
 
+// User saved addresses (VN structured; not Clerk)
+User.hasMany(UserAddress, { foreignKey: "clerkId", as: "addresses", onDelete: "CASCADE" });
+UserAddress.belongsTo(User, { foreignKey: "clerkId", as: "user" });
+
+Order.belongsTo(UserAddress, { foreignKey: "userAddressId", as: "userAddress" });
+UserAddress.hasMany(Order, { foreignKey: "userAddressId", as: "orders" });
+
 // Quan he giua Order va OrderItem
 Order.hasMany(OrderItem, { foreignKey: "orderId", as: "items", onDelete: "CASCADE" });
 OrderItem.belongsTo(Order, { foreignKey: "orderId", as: "order" });
@@ -62,5 +70,4 @@ OrderItem.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
 Order.hasOne(Payment, { foreignKey: "orderId", as: "payment" });
 Payment.belongsTo(Order, { foreignKey: "orderId", as: "order" });
 
-export { Category, Product, ProductVariant, User, Review, Cart, CartItem, Order, OrderItem, Payment };
-
+export { Category, Product, ProductVariant, User, Review, Cart, CartItem, Order, OrderItem, Payment, UserAddress };

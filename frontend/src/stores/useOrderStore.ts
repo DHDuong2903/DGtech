@@ -23,8 +23,9 @@ interface OrderState {
   fetchOrderById: (orderId: string) => Promise<void>;
   createOrder: (data: {
     selectedItems: string[];
-    shippingAddress: string;
-    phone: string;
+    shippingAddress?: string;
+    phone?: string;
+    userAddressId?: string;
     paymentMethod: "COD" | "BANK_TRANSFER";
     notes?: string;
   }) => Promise<Order | null>;

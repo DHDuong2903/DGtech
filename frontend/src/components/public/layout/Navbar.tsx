@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Home, LayoutDashboard, LogIn, Package, Search, ShoppingCart, Store } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -17,8 +17,8 @@ import { ThemeToggle } from "@/src/components/ThemeToggle";
 import { NavbarCategories } from "@/src/components/public/layout/NavbarCategories";
 
 const navUnderline =
-  "group relative inline-flex items-center gap-1.5 pb-1 text-sm text-foreground/80 transition-colors hover:text-foreground " +
-  "after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 " +
+  "group relative inline-flex items-center gap-1.5 text-sm text-foreground/80 transition-colors hover:text-foreground " +
+  "after:pointer-events-none after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 " +
   "after:rounded-full after:bg-orange-500 after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] " +
   "hover:after:scale-x-100";
 
@@ -147,7 +147,17 @@ export const Navbar = () => {
             </SignInButton>
           </SignedOut>
           <SignedIn>
-            <UserButton />
+            <UserButton>
+              <UserButton.MenuItems>
+                <UserButton.Action label="manageAccount" />
+                <UserButton.Link
+                  label="Manage addresses"
+                  href="/addresses"
+                  labelIcon={<MapPin className="h-4 w-4" aria-hidden />}
+                />
+                <UserButton.Action label="signOut" />
+              </UserButton.MenuItems>
+            </UserButton>
           </SignedIn>
         </div>
       </div>

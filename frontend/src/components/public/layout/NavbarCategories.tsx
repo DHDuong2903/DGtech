@@ -8,8 +8,8 @@ import { cn } from "@/src/lib/utils";
 import { PageContentSpinner } from "@/src/components/ui/page-content-loader";
 
 const navUnderline =
-  "group relative inline-flex items-center gap-1.5 pb-1 text-sm text-foreground/80 transition-colors hover:text-foreground " +
-  "after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 " +
+  "group relative inline-flex items-center gap-1.5 text-sm text-foreground/80 transition-colors hover:text-foreground " +
+  "after:pointer-events-none after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 " +
   "after:rounded-full after:bg-orange-500 after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] " +
   "hover:after:scale-x-100";
 

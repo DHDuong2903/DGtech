@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Award, MoreHorizontal, Pencil, Shield, Trash2, UserCheck } from "lucide-react";
+import { Award, MoreHorizontal, Shield, Trash2, UserCheck } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -10,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import type { User } from "@/src/types";
@@ -33,7 +34,8 @@ function TierBadge({ tier }: { tier: User["tier"] }) {
 }
 
 export function createAdminUserColumns(handlers: {
-  onRole: (user: User) => void;
+  currentUserClerkId?: string;
+  onSetRole: (user: User, role: "user" | "admin") => void | Promise<void>;
   onDelete: (user: User) => void;
 }): ColumnDef<User>[] {
   return [
@@ -95,16 +97,20 @@ export function createAdminUserColumns(handlers: {
     {
       accessorKey: "phone",
       header: "Phone",
-      cell: ({ row }) => row.original.phone || "—",
+      cell: ({ row }) => {
+        const { phone, defaultAddressPhone } = row.original;
+        return phone || defaultAddressPhone || "—";
+      },
     },
     {
-      accessorKey: "address",
+      id: "addressSummary",
       header: "Address",
       cell: ({ row }) => {
-        const addr = row.original.address?.trim();
+        const a = row.original.addressSummary;
+        if (!a) return "—";
         return (
-          <span className="block max-w-[200px] truncate" title={addr || undefined}>
-            {addr || "—"}
+          <span className="block max-w-[min(280px,30vw)] truncate text-sm" title={a}>
+            {a}
           </span>
         );
       },
@@ -139,10 +145,24 @@ export function createAdminUserColumns(handlers: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handlers.onRole(user)}>
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
+                {(user.role !== "admin" ||
+                  (user.role === "admin" && user.clerkId !== handlers.currentUserClerkId)) && (
+                  <>
+                    {user.role !== "admin" && (
+                      <DropdownMenuItem onClick={() => void handlers.onSetRole(user, "admin")}>
+                        <Shield className="h-4 w-4" />
+                        Set as Admin
+                      </DropdownMenuItem>
+                    )}
+                    {user.role === "admin" && user.clerkId !== handlers.currentUserClerkId && (
+                      <DropdownMenuItem onClick={() => void handlers.onSetRole(user, "user")}>
+                        <UserCheck className="h-4 w-4" />
+                        Set as User
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem variant="destructive" onClick={() => handlers.onDelete(user)}>
                   <Trash2 className="h-4 w-4" />
                   Delete

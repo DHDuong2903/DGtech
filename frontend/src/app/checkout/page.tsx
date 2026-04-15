@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { useCartStore, useOrderStore } from "../../stores";
+import { useAuth } from "@/src/hooks";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Card } from "@/src/components/ui/card";
@@ -12,25 +13,47 @@ import { ArrowLeft, Package } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "../../utils";
 import Image from "next/image";
-import { useUser } from "@clerk/nextjs";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
+import { addressApi } from "@/src/apis/addressApi";
+import { VN_PROVINCES, vnWardsForProvince } from "@/src/constants/vnAdministrative";
+import { VnAddressFormFields, type VnAddressDraft } from "@/src/components/public/address/VnAddressFormFields";
+import type { UserAddress, VnProvince, VnWard } from "@/src/types";
+import { formatCheckoutShippingSnapshot } from "@/src/types/userAddressType";
+
+type ShipMode = "saved" | "new";
+
+const emptyDraft = (): VnAddressDraft => ({
+  phone: "",
+  provinceCode: "",
+  provinceName: "",
+  wardCode: "",
+  wardName: "",
+  addressLine: "",
+});
 
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user: clerkUser } = useUser();
+  const { user: appUser } = useAuth();
   const { cart, loading: cartLoading, fetchCart } = useCartStore();
   const { createOrder, loading: orderLoading } = useOrderStore();
 
-  const [shippingAddress, setShippingAddress] = useState("");
-  const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("COD");
   const [notes, setNotes] = useState("");
 
-  // Get selected items from URL params
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [addrLoading, setAddrLoading] = useState(true);
+  const [shipMode, setShipMode] = useState<ShipMode>("new");
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+
+  const [provinces, setProvinces] = useState<VnProvince[]>([]);
+  const [wards, setWards] = useState<VnWard[]>([]);
+  const [draft, setDraft] = useState<VnAddressDraft>(emptyDraft());
+
   const selectedItemsParam = searchParams.get("items");
   const selectedItems = useMemo(() => {
     if (!selectedItemsParam) return [];
@@ -41,13 +64,11 @@ function CheckoutContent() {
     }
   }, [selectedItemsParam]);
 
-  // Filter cart items based on selection
   const checkoutItems = useMemo(() => {
     if (!cart?.items || selectedItems.length === 0) return [];
     return cart.items.filter((item) => selectedItems.includes(item.cartItemId));
   }, [cart, selectedItems]);
 
-  // Calculate total
   const totalPrice = useMemo(() => {
     return checkoutItems.reduce((sum, item) => {
       const price = item.variant?.price ?? item.product.price;
@@ -58,6 +79,14 @@ function CheckoutContent() {
   const totalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => sum + item.quantity, 0);
   }, [checkoutItems]);
+
+  const orderDisplayName = useMemo(() => {
+    const u = appUser?.username?.trim();
+    if (u) return u;
+    const c = clerkUser?.username?.trim() || clerkUser?.firstName?.trim();
+    if (c) return c;
+    return "Khách hàng";
+  }, [appUser?.username, clerkUser?.username, clerkUser?.firstName]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -71,23 +100,98 @@ function CheckoutContent() {
     }
   }, [selectedItems, router]);
 
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setAddrLoading(true);
+        const { addresses: list } = await addressApi.list();
+        if (cancelled) return;
+        setProvinces(VN_PROVINCES);
+        setAddresses(list);
+        if (list.length > 0) {
+          const def = list.find((a) => a.isDefault) ?? list[0];
+          setSelectedAddressId(def.addressId);
+          setShipMode("saved");
+        } else {
+          setShipMode("new");
+        }
+      } catch (e) {
+        console.error(e);
+        setAddresses([]);
+        setShipMode("new");
+      } finally {
+        if (!cancelled) setAddrLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    const phoneHint = appUser?.phone?.trim() || clerkUser?.primaryPhoneNumber?.phoneNumber?.trim() || "";
+    if (phoneHint && !draft.phone) {
+      setDraft((d) => ({ ...d, phone: phoneHint }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once when hints appear
+  }, [appUser?.phone, clerkUser?.primaryPhoneNumber?.phoneNumber]);
+
+  useEffect(() => {
+    if (!draft.provinceCode) {
+      setWards([]);
+      return;
+    }
+    setWards(vnWardsForProvince(draft.provinceCode));
+  }, [draft.provinceCode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!shippingAddress.trim() || !phone.trim()) {
+    if (shipMode === "saved" && selectedAddressId) {
+      const order = await createOrder({
+        selectedItems,
+        userAddressId: selectedAddressId,
+        paymentMethod,
+        notes: notes.trim() || undefined,
+      });
+      if (order) {
+        try {
+          await fetchCart();
+        } catch (error) {
+          console.error("Error refreshing cart:", error);
+        }
+        if (paymentMethod === "BANK_TRANSFER" && order.payment) {
+          router.push(`/payment/${order.orderId}`);
+        } else {
+          router.push(`/orders/${order.orderId}`);
+        }
+      }
       return;
     }
 
+    if (!draft.phone.trim() || !draft.provinceCode || !draft.wardCode || !draft.addressLine.trim()) {
+      return;
+    }
+
+    const snapshot = formatCheckoutShippingSnapshot({
+      displayName: orderDisplayName,
+      phone: draft.phone.trim(),
+      addressLine: draft.addressLine.trim(),
+      wardName: draft.wardName,
+      provinceName: draft.provinceName,
+    });
+
     const order = await createOrder({
       selectedItems,
-      shippingAddress: shippingAddress.trim(),
-      phone: phone.trim(),
+      shippingAddress: snapshot,
+      phone: draft.phone.trim(),
       paymentMethod,
       notes: notes.trim() || undefined,
     });
 
     if (order) {
-      // Refresh cart to update after order created (wait for completion)
       try {
         await fetchCart();
       } catch (error) {
@@ -102,7 +206,15 @@ function CheckoutContent() {
     }
   };
 
-  if (!isLoaded || cartLoading) {
+  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId;
+  const canSubmitNew =
+    shipMode === "new" &&
+    !!draft.phone.trim() &&
+    !!draft.provinceCode &&
+    !!draft.wardCode &&
+    !!draft.addressLine.trim();
+
+  if (!isLoaded || cartLoading || addrLoading) {
     return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
   }
 
@@ -126,7 +238,6 @@ function CheckoutContent() {
   return (
     <div className="min-h-[calc(100vh-200px)] bg-background py-8">
       <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/cart">
             <Button variant="outline" size="icon">
@@ -142,40 +253,96 @@ function CheckoutContent() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Checkout Form */}
           <div className="lg:col-span-2">
             <Card className="p-6">
               <h2 className="text-xl font-bold mb-6">Shipping details</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <Label htmlFor="shippingAddress">
-                    Shipping address <span className="text-red-500">*</span>
-                  </Label>
-                  <Textarea
-                    id="shippingAddress"
-                    value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
-                    placeholder="Full address (street, city, state/province, postal code)"
-                    rows={3}
-                    required
-                    className="mt-2"
-                  />
-                </div>
+                {addresses.length > 0 && (
+                  <div className="space-y-3">
+                    <Label className="text-base">Deliver to</Label>
+                    <div className="space-y-2">
+                      <label className="border-border flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                        <input
+                          type="radio"
+                          name="shipMode"
+                          className="mt-1"
+                          checked={shipMode === "saved"}
+                          onChange={() => setShipMode("saved")}
+                        />
+                        <span className="text-sm">
+                          <span className="text-foreground font-medium">Saved address</span>
+                          <span className="text-muted-foreground block text-xs">Choose from your address book</span>
+                        </span>
+                      </label>
+                      <label className="border-border flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                        <input
+                          type="radio"
+                          name="shipMode"
+                          className="mt-1"
+                          checked={shipMode === "new"}
+                          onChange={() => setShipMode("new")}
+                        />
+                        <span className="text-sm">
+                          <span className="text-foreground font-medium">New address</span>
+                          <span className="text-muted-foreground block text-xs">
+                            Province → ward → street (Vietnam)
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
-                <div>
-                  <Label htmlFor="phone">
-                    Phone number <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Your phone number"
-                    required
-                    className="mt-2"
+                {shipMode === "saved" && addresses.length > 0 && (
+                  <div className="space-y-2">
+                    {addresses.map((a) => (
+                      <label
+                        key={a.addressId}
+                        className={cn(
+                          "flex cursor-pointer gap-3 rounded-md border p-3 text-sm",
+                          selectedAddressId === a.addressId ? "border-orange-500 bg-orange-500/5" : "border-border",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="savedAddress"
+                          className="mt-1"
+                          checked={selectedAddressId === a.addressId}
+                          onChange={() => setSelectedAddressId(a.addressId)}
+                        />
+                        <span>
+                          <span className="text-foreground font-medium">
+                            {orderDisplayName} · {a.phone}
+                            {a.isDefault ? (
+                              <span className="text-orange-600 ml-2 text-xs font-normal">Default</span>
+                            ) : null}
+                          </span>
+                          <span className="text-muted-foreground mt-0.5 block text-xs">
+                            {a.addressLine}, {a.wardName}, {a.provinceName}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                    <p className="text-muted-foreground text-xs">
+                      Manage addresses in{" "}
+                      <Link href="/addresses" className="text-orange-600 underline-offset-2 hover:underline">
+                        Manage addresses
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                )}
+
+                {(shipMode === "new" || addresses.length === 0) && (
+                  <VnAddressFormFields
+                    provinces={provinces}
+                    wards={wards}
+                    wardsLoading={false}
+                    value={draft}
+                    onChange={setDraft}
+                    idPrefix="co"
                   />
-                </div>
+                )}
 
                 <div>
                   <Label>Payment method</Label>
@@ -223,14 +390,18 @@ function CheckoutContent() {
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full" disabled={orderLoading}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)}
+                >
                   {orderLoading ? "Placing order…" : "Place order"}
                 </Button>
               </form>
             </Card>
           </div>
 
-          {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-4">
               <h2 className="text-xl font-bold mb-4">Your order</h2>
@@ -254,7 +425,9 @@ function CheckoutContent() {
                       <p className="text-sm font-medium truncate">{item.product.name}</p>
                       {item.variant && !item.variant.isDefault && item.variant.attributes && (
                         <p className="text-[10px] text-muted-foreground uppercase">
-                          {Object.entries(item.variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                          {Object.entries(item.variant.attributes)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join(", ")}
                         </p>
                       )}
                       <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
@@ -292,9 +465,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense
-      fallback={<PageContentLoader className="bg-background" minHeightClass="min-h-screen" />}
-    >
+    <Suspense fallback={<PageContentLoader className="bg-background" minHeightClass="min-h-screen" />}>
       <CheckoutContent />
     </Suspense>
   );

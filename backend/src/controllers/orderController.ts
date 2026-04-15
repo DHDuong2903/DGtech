@@ -1,5 +1,15 @@
 // @ts-nocheck
-import { Order, OrderItem, Product, ProductVariant, CartItem, Payment } from "../models/associationsModel.js";
+import {
+  Order,
+  OrderItem,
+  Product,
+  ProductVariant,
+  CartItem,
+  Payment,
+  UserAddress,
+  User,
+} from "../models/associationsModel.js";
+import { formatShippingSnapshot } from "../helpers/vnAddressHelper.js";
 import { sequelize } from "../libs/db.js";
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
 import { Op } from "sequelize";
@@ -10,7 +20,7 @@ export const createOrder = async (req: any, res: any) => {
 
   try {
     const { userId: clerkId } = req.auth;
-    const { selectedItems, shippingAddress, phone, paymentMethod, notes } = req.body;
+    const { selectedItems, shippingAddress, phone, paymentMethod, notes, userAddressId } = req.body;
 
     // Validate
     if (!selectedItems || !Array.isArray(selectedItems) || selectedItems.length === 0) {
@@ -18,7 +28,33 @@ export const createOrder = async (req: any, res: any) => {
       return res.status(400).json({ error: "Vui lòng chọn ít nhất một sản phẩm" });
     }
 
-    if (!shippingAddress || !phone) {
+    let resolvedShipping = typeof shippingAddress === "string" ? shippingAddress.trim() : "";
+    let resolvedPhone = typeof phone === "string" ? phone.trim() : "";
+    let resolvedUserAddressId = userAddressId || null;
+
+    if (resolvedUserAddressId) {
+      const saved = await UserAddress.findOne({
+        where: { addressId: resolvedUserAddressId, clerkId },
+        transaction,
+      });
+      if (!saved) {
+        await transaction.rollback();
+        return res.status(404).json({ error: "Không tìm thấy địa chỉ đã lưu" });
+      }
+      const userRow = await User.findByPk(clerkId, {
+        attributes: ["username"],
+        transaction,
+      });
+      const displayName = (userRow?.username && String(userRow.username).trim()) || "Khách hàng";
+      resolvedShipping = formatShippingSnapshot({
+        displayName,
+        phone: saved.phone,
+        addressLine: saved.addressLine,
+        wardName: saved.wardName,
+        provinceName: saved.provinceName,
+      });
+      resolvedPhone = saved.phone;
+    } else if (!resolvedShipping || !resolvedPhone) {
       await transaction.rollback();
       return res.status(400).json({ error: "Vui lòng cung cấp đầy đủ thông tin giao hàng" });
     }
@@ -36,7 +72,7 @@ export const createOrder = async (req: any, res: any) => {
           model: ProductVariant,
           as: "variant",
           attributes: ["variantId", "price", "stock"],
-        }
+        },
       ],
       transaction,
     });
@@ -88,13 +124,14 @@ export const createOrder = async (req: any, res: any) => {
       {
         clerkId,
         totalPrice,
-        shippingAddress,
-        phone,
+        shippingAddress: resolvedShipping,
+        phone: resolvedPhone,
+        userAddressId: resolvedUserAddressId,
         paymentMethod: paymentMethod || "COD",
         notes: notes || null,
         status: paymentMethod === "BANK_TRANSFER" ? "PENDING" : "PROCESSING",
       },
-      { transaction }
+      { transaction },
     );
 
     // Create order items
@@ -105,9 +142,9 @@ export const createOrder = async (req: any, res: any) => {
             orderId: (order as any).orderId,
             ...item,
           },
-          { transaction }
-        )
-      )
+          { transaction },
+        ),
+      ),
     );
 
     // Decrement stock unless BANK_TRANSFER
@@ -121,7 +158,7 @@ export const createOrder = async (req: any, res: any) => {
             transaction,
           });
         }
-        
+
         // Decrement product cache stock
         await Product.decrement("stock", {
           by: cartItem.quantity,
@@ -152,7 +189,7 @@ export const createOrder = async (req: any, res: any) => {
           bankCode: process.env.SEPAY_BANK_CODE,
           accountNumber: process.env.SEPAY_ACCOUNT_NUMBER,
         },
-        { transaction }
+        { transaction },
       );
     }
 
@@ -408,14 +445,7 @@ export const updateOrderStatus = async (req: any, res: any) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    const validStatuses = [
-      "PENDING",
-      "PROCESSING",
-      "SHIPPED",
-      "DELIVERED",
-      "COMPLETED",
-      "CANCELLED",
-    ];
+    const validStatuses = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Trạng thái không hợp lệ" });
     }
@@ -453,4 +483,3 @@ export const updateOrderStatus = async (req: any, res: any) => {
     res.status(500).json({ error: "Lỗi khi cập nhật trạng thái đơn hàng" });
   }
 };
-

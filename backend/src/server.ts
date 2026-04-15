@@ -16,6 +16,7 @@ import cartRoute from "./routes/cartRoute.js";
 import orderRoute from "./routes/orderRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import slideshowsRoute from "./routes/slideshowsRoute.js";
+import addressRoute from "./routes/addressRoute.js";
 
 dotenv.config();
 const app = express();
@@ -24,10 +25,7 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://dgtech-frontend.onrender.com",
-];
+const allowedOrigins = ["http://localhost:3000", "https://dgtech-frontend.onrender.com"];
 
 app.use(
   cors({
@@ -44,7 +42,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 
 app.use("/api/webhooks", webhookRoute);
@@ -58,6 +56,7 @@ app.use("/api/cart", cartRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/payments", paymentRoute);
 app.use("/api/slideshows", slideshowsRoute);
+app.use("/api/addresses", addressRoute);
 
 // JSON errors for /api (multer/Cloudinary used to call next(err) → HTML `<pre>[object Object]</pre>`)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -69,10 +68,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   }
   console.error("API error:", err?.message || err);
   const status = Number(err.statusCode || err.status) || 500;
-  const message =
-    typeof err.message === "string" && err.message.length > 0
-      ? err.message
-      : "Request failed";
+  const message = typeof err.message === "string" && err.message.length > 0 ? err.message : "Request failed";
   res.status(status).json({
     error: message,
     ...(err.code && { code: err.code }),
@@ -95,4 +91,3 @@ const startServer = async () => {
 };
 
 startServer();
-

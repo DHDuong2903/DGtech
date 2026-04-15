@@ -22,16 +22,19 @@ export interface Order {
   phone: string;
   paymentMethod: "COD" | "BANK_TRANSFER";
   notes?: string;
+  userAddressId?: string | null;
   items: OrderItem[];
   payment?: any; // Payment info if exists
   createdAt: string;
   updatedAt: string;
 }
 
+/** Either `userAddressId` (server builds snapshot) or `shippingAddress` + `phone` for one-off delivery. */
 export interface CreateOrderRequest {
   selectedItems: string[]; // Array of cartItemId
-  shippingAddress: string;
-  phone: string;
+  shippingAddress?: string;
+  phone?: string;
+  userAddressId?: string;
   paymentMethod: "COD" | "BANK_TRANSFER";
   notes?: string;
 }

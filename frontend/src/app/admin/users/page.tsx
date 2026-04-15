@@ -17,17 +17,14 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { DataTable } from "@/src/components/ui/data-table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Users, Shield, UserCheck } from "lucide-react";
+import { Users } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "../../../types";
 
 const AdminUsersPage = () => {
   const { users, user: currentUser, loading, fetchAllUsers, updateUserRole, deleteUser, deleteUsers } = useUserStore();
-  const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [newRole, setNewRole] = useState<"user" | "admin">("user");
   const [updating, setUpdating] = useState(false);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<User[] | null>(null);
   const [bulkWorking, setBulkWorking] = useState(false);
@@ -37,11 +34,17 @@ const AdminUsersPage = () => {
     fetchAllUsers();
   }, [fetchAllUsers]);
 
-  const handleRoleClick = useCallback((user: User) => {
-    setSelectedUser(user);
-    setNewRole(user.role);
-    setRoleModalOpen(true);
-  }, []);
+  const handleSetRole = useCallback(
+    async (user: User, role: "user" | "admin") => {
+      if (user.role === role) return;
+      try {
+        await updateUserRole(user.clerkId, role);
+      } catch {
+        /* toast in store */
+      }
+    },
+    [updateUserRole],
+  );
 
   const handleDeleteClick = useCallback((user: User) => {
     setSelectedUser(user);
@@ -51,31 +54,17 @@ const AdminUsersPage = () => {
   const columns = useMemo(
     () =>
       createAdminUserColumns({
-        onRole: handleRoleClick,
+        currentUserClerkId: currentUser?.clerkId,
+        onSetRole: handleSetRole,
         onDelete: handleDeleteClick,
       }),
-    [handleRoleClick, handleDeleteClick],
+    [currentUser?.clerkId, handleSetRole, handleDeleteClick],
   );
 
   const actionableFromSelection = useCallback(
     (selected: User[]) => selected.filter((u) => u.clerkId !== currentUser?.clerkId),
     [currentUser?.clerkId],
   );
-
-  const handleRoleUpdate = async () => {
-    if (!selectedUser || !newRole) return;
-
-    setUpdating(true);
-    try {
-      await updateUserRole(selectedUser.clerkId, newRole);
-      setRoleModalOpen(false);
-      setSelectedUser(null);
-    } catch (error) {
-      console.error("Error updating role:", error);
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
@@ -166,54 +155,6 @@ const AdminUsersPage = () => {
         )}
       </div>
 
-      <Dialog open={roleModalOpen} onOpenChange={setRoleModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update user role</DialogTitle>
-            <DialogDescription>{selectedUser?.username || selectedUser?.email}</DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <label className="mb-2 block text-sm font-medium">New role</label>
-            <Select value={newRole} onValueChange={(value: "user" | "admin") => setNewRole(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4" />
-                    <span>User</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="admin">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    <span>Admin</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRoleModalOpen(false)} disabled={updating}>
-              Cancel
-            </Button>
-            <Button onClick={handleRoleUpdate} disabled={updating}>
-              {updating ? (
-                <>
-                  <Spinner data-icon="inline-start" />
-                  Saving…
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -232,7 +173,7 @@ const AdminUsersPage = () => {
               {updating ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Deleting…
+                  Deleting
                 </>
               ) : (
                 "Delete user"
@@ -258,7 +199,7 @@ const AdminUsersPage = () => {
               {bulkWorking ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Deleting…
+                  Deleting
                 </>
               ) : (
                 "Delete all"
