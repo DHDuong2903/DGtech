@@ -18,7 +18,7 @@ import { Card } from "@/src/components/ui/card";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/src/components/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
 
@@ -226,7 +226,7 @@ export default function AdminShippingPage() {
             >
               {saving ? (
                 <>
-                  <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
+                  <Spinner className="size-3.5" data-icon="inline-start" />
                   Saving
                 </>
               ) : (

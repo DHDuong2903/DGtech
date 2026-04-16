@@ -144,8 +144,17 @@ export default function CreateProductPage() {
               Cancel
             </Button>
             <Button onClick={handleSave} size="sm" disabled={saving} className="gap-2">
-              {saving ? <Spinner /> : <Save className="h-4 w-4" />}
-              Save Product
+              {saving ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Saving product
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save product
+                </>
+              )}
             </Button>
           </div>
         </div>

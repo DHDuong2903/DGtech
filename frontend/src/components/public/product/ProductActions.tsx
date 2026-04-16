@@ -6,22 +6,29 @@ interface ProductActionsProps {
   quantity: number;
   maxStock: number;
   isLoading: boolean;
+  /** Sync line in cart then open cart with only this line selected */
+  isBuyNowLoading?: boolean;
   hasVariants: boolean;
   isVariantSelected: boolean;
   onQuantityChange: (delta: number) => void;
   onAddToCart: () => void;
+  onBuyNow: () => void | Promise<void>;
 }
 
 export const ProductActions = ({
   quantity,
   maxStock,
   isLoading,
+  isBuyNowLoading = false,
   hasVariants,
   isVariantSelected,
   onQuantityChange,
   onAddToCart,
+  onBuyNow,
 }: ProductActionsProps) => {
-  const isDisabled = isLoading || (hasVariants && !isVariantSelected) || maxStock === 0;
+  const isDisabled = isLoading || isBuyNowLoading || (hasVariants && !isVariantSelected) || maxStock === 0;
+  const buyNowDisabled =
+    isBuyNowLoading || isLoading || (hasVariants && !isVariantSelected) || maxStock === 0;
 
   return (
     <div className="space-y-3 pt-1">
@@ -61,7 +68,7 @@ export const ProductActions = ({
           {isLoading ? (
             <>
               <Spinner data-icon="inline-start" />
-              Adding
+              Adding to cart
             </>
           ) : (
             <>
@@ -74,8 +81,22 @@ export const ProductActions = ({
         </Button>
       </div>
 
-      <Button type="button" variant="outline" size="sm" className="text-foreground h-9 w-full">
-        Check out
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="text-foreground h-9 w-full"
+        onClick={() => void onBuyNow()}
+        disabled={buyNowDisabled}
+      >
+        {isBuyNowLoading ? (
+          <>
+            <Spinner data-icon="inline-start" />
+            Going to cart
+          </>
+        ) : (
+          "Buy now"
+        )}
       </Button>
     </div>
   );

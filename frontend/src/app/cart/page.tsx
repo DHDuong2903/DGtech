@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
 import { useCartStore } from "../../stores";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CartEmptyState, CartItemList, CartSummary, CartLoadingState } from "../../components/public/cart";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 
-export default function CartPage() {
-  const { cart, freeShippingMotivation, loading, fetchCart, removeManyFromCart } = useCartStore();
+function CartPageContent() {
+  const searchParams = useSearchParams();
+  const selectOnlyId = searchParams.get("selectOnly");
+  const { cart, loading, fetchCart, removeManyFromCart } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
   const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -22,34 +24,42 @@ export default function CartPage() {
     }
   }, [fetchCart, isLoaded, isSignedIn]);
 
-  // Đồng bộ selectedItems với cart items khi cart thay đổi
+  // Giỏ mới (cartId đổi): chọn tất cả, hoặc chỉ dòng ?selectOnly= nếu còn trong giỏ
   useEffect(() => {
     if (!cart?.cartId) return;
-
-    // Nếu cartId thay đổi (cart mới), auto-select all items
-    if (lastCartIdRef.current !== cart.cartId) {
-      lastCartIdRef.current = cart.cartId;
-      // Use queueMicrotask to defer setState and avoid cascading renders warning
-      queueMicrotask(() => {
-        if (cart.items && cart.items.length > 0) {
-          setSelectedItems(new Set(cart.items.map((item) => item.cartItemId)));
-        } else {
-          setSelectedItems(new Set());
-        }
-      });
+    if (lastCartIdRef.current === cart.cartId) return;
+    lastCartIdRef.current = cart.cartId;
+    if (!cart.items?.length) {
+      setSelectedItems(new Set());
+      return;
     }
-  }, [cart?.cartId, cart?.items]);
+    const only = selectOnlyId?.trim();
+    if (only && cart.items.some((item) => item.cartItemId === only)) {
+      setSelectedItems(new Set([only]));
+      router.replace("/cart", { scroll: false });
+    } else {
+      setSelectedItems(new Set(cart.items.map((item) => item.cartItemId)));
+    }
+  }, [cart?.cartId, cart?.items, selectOnlyId, router]);
+
+  // Cùng cartId: mở /cart?selectOnly= từ PDP (buy now)
+  useEffect(() => {
+    if (!cart?.cartId || lastCartIdRef.current !== cart.cartId) return;
+    const only = selectOnlyId?.trim();
+    if (!only || !cart.items?.length) return;
+    if (!cart.items.some((item) => item.cartItemId === only)) return;
+    setSelectedItems(new Set([only]));
+    router.replace("/cart", { scroll: false });
+  }, [selectOnlyId, cart?.items, cart?.cartId, router]);
 
   // Bỏ checkbox đã xóa khỏi cart (bulk / xóa từng dòng)
   useEffect(() => {
     if (!cart?.items) return;
     const valid = new Set(cart.items.map((item) => item.cartItemId));
-    queueMicrotask(() => {
-      setSelectedItems((prev) => {
-        const next = new Set([...prev].filter((id) => valid.has(id)));
-        if (next.size === prev.size && [...prev].every((id) => next.has(id))) return prev;
-        return next;
-      });
+    setSelectedItems((prev) => {
+      const next = new Set([...prev].filter((id) => valid.has(id)));
+      if (next.size === prev.size && [...prev].every((id) => next.has(id))) return prev;
+      return next;
     });
   }, [cart?.items]);
 
@@ -140,8 +150,6 @@ export default function CartPage() {
               <CartSummary
                 totalItems={selectedSummary.totalItems}
                 totalPrice={selectedSummary.totalPrice}
-                cartTotalForShippingBar={Number(cart.totalPrice) || 0}
-                freeShippingMotivation={freeShippingMotivation}
                 onCheckout={handleCheckout}
               />
             </div>
@@ -149,5 +157,13 @@ export default function CartPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <Suspense fallback={<CartLoadingState type="loading" />}>
+      <CartPageContent />
+    </Suspense>
   );
 }

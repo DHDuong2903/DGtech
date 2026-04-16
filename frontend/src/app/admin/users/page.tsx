@@ -173,7 +173,7 @@ const AdminUsersPage = () => {
               {updating ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Deleting
+                  Deleting user
                 </>
               ) : (
                 "Delete user"

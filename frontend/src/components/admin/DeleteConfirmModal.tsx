@@ -23,6 +23,8 @@ interface DeleteConfirmModalProps {
   description?: ReactNode;
   cancelLabel?: string;
   confirmLabel?: string;
+  /** Shown on the confirm button while `confirmLoading` (e.g. "Deleting"). */
+  confirmBusyLabel?: string;
   confirmLoading?: boolean;
 }
 
@@ -36,6 +38,7 @@ export const DeleteConfirmModal = ({
   description,
   cancelLabel = "Hủy",
   confirmLabel = "Xóa",
+  confirmBusyLabel,
   confirmLoading = false,
 }: DeleteConfirmModalProps) => {
   const capitalizedType = itemType.charAt(0).toUpperCase() + itemType.slice(1);
@@ -66,7 +69,12 @@ export const DeleteConfirmModal = ({
             {confirmLoading ? (
               <>
                 <Spinner data-icon="inline-start" />
-                {confirmLabel}
+                {confirmBusyLabel ??
+                  (confirmLabel === "Delete"
+                    ? "Deleting"
+                    : confirmLabel === "Xóa"
+                      ? "Đang xóa"
+                      : confirmLabel)}
               </>
             ) : (
               confirmLabel

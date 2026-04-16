@@ -9,6 +9,9 @@ import {
 
 const trim = (s: unknown) => (typeof s === "string" ? s.trim() : "");
 
+/** Max saved delivery addresses per account (enforced in API and storefront). */
+const MAX_USER_ADDRESSES = 3;
+
 export const listAddresses = async (req: any, res: any) => {
   try {
     const clerkId = req.auth.userId;
@@ -51,6 +54,11 @@ export const createAddress = async (req: any, res: any) => {
     const wardName = getWardName(provinceCode, wardCode);
 
     const count = await UserAddress.count({ where: { clerkId }, transaction: t });
+    if (count >= MAX_USER_ADDRESSES) {
+      await t.rollback();
+      return res.status(400).json({ error: `Bạn chỉ có thể lưu tối đa ${MAX_USER_ADDRESSES} địa chỉ` });
+    }
+
     const shouldDefault = count === 0 || wantsDefault;
 
     if (shouldDefault) {

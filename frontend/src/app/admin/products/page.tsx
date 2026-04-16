@@ -249,7 +249,7 @@ const ProductsPage = () => {
               {bulkWorking ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Deleting…
+                  Deleting
                 </>
               ) : (
                 "Delete all"
