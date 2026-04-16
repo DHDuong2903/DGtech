@@ -1,34 +1,86 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "../../components/public/product/ProductCard";
 import { Button } from "@/src/components/ui/button";
-import { useProductStore } from "../../stores";
+import { Input } from "@/src/components/ui/input";
+import { useProductStore, useCategoryStore } from "../../stores";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
+import {
+  ShopProductFilters,
+  countAppliedShopProductFilters,
+  type ShopProductFilterValues,
+} from "@/src/components/public/shop/ShopProductFilters";
+import {
+  ShopProductSort,
+  countAppliedShopSort,
+  parseShopSortMode,
+  type ShopSortMode,
+} from "@/src/components/public/shop/ShopProductSort";
 
 const PAGE_LIMIT = 20;
+
+function filtersFromSearchParams(searchParams: URLSearchParams): ShopProductFilterValues {
+  const cat = searchParams.get("category");
+  const categoryId = cat && /^\d+$/.test(cat) ? cat : "all";
+  return {
+    categoryId,
+    minPrice: searchParams.get("minPrice")?.trim() ?? "",
+    maxPrice: searchParams.get("maxPrice")?.trim() ?? "",
+  };
+}
+
+function buildShopHref(parts: {
+  q: string;
+  filters: ShopProductFilterValues;
+  sort: ShopSortMode;
+}): string {
+  const sp = new URLSearchParams();
+  const q = parts.q.trim();
+  if (q) sp.set("q", q);
+  if (parts.filters.categoryId !== "all") sp.set("category", parts.filters.categoryId);
+  const min = parts.filters.minPrice.trim();
+  const max = parts.filters.maxPrice.trim();
+  if (min) sp.set("minPrice", min);
+  if (max) sp.set("maxPrice", max);
+  if (parts.sort !== "newest") sp.set("sort", parts.sort);
+  const qs = sp.toString();
+  return qs ? `/shop?${qs}` : "/shop";
+}
 
 const ShopPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { products, loading, totalPages, fetchProducts } = useProductStore();
+  const { categories, fetchCategories } = useCategoryStore();
   const [currentPage, setCurrentPage] = useState(1);
 
   const qFromUrl = searchParams.get("q") ?? "";
-  const categoryFromUrl = searchParams.get("category");
+  const appliedFilters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
+  const sortMode = useMemo(() => parseShopSortMode(searchParams.get("sort")), [searchParams]);
 
-  const searchQuery = qFromUrl;
-  const selectedCategory =
-    categoryFromUrl && /^\d+$/.test(categoryFromUrl) ? categoryFromUrl : "all";
+  const [searchDraft, setSearchDraft] = useState(qFromUrl);
+
+  useEffect(() => {
+    setSearchDraft(qFromUrl);
+  }, [qFromUrl]);
+
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [qFromUrl, categoryFromUrl]);
+  }, [qFromUrl, appliedFilters.categoryId, appliedFilters.minPrice, appliedFilters.maxPrice, sortMode]);
 
   useEffect(() => {
+    const sortBy = sortMode === "newest" ? "createdAt" : "price";
+    const order: "ASC" | "DESC" =
+      sortMode === "price-asc" ? "ASC" : sortMode === "price-desc" ? "DESC" : "DESC";
+
     const params: {
       page: number;
       limit: number;
@@ -36,30 +88,95 @@ const ShopPageContent = () => {
       order: "ASC" | "DESC";
       categoryId?: number;
       search?: string;
+      minPrice?: number;
+      maxPrice?: number;
     } = {
       page: currentPage,
       limit: PAGE_LIMIT,
-      sortBy: "createdAt",
-      order: "DESC",
+      sortBy,
+      order,
     };
 
-    if (selectedCategory !== "all") {
-      params.categoryId = parseInt(selectedCategory, 10);
+    if (appliedFilters.categoryId !== "all") {
+      params.categoryId = parseInt(appliedFilters.categoryId, 10);
     }
-    if (searchQuery) {
-      params.search = searchQuery;
+    if (qFromUrl.trim()) {
+      params.search = qFromUrl.trim();
+    }
+    const minStr = appliedFilters.minPrice.trim();
+    const maxStr = appliedFilters.maxPrice.trim();
+    if (minStr !== "") {
+      const v = parseFloat(minStr);
+      if (!Number.isNaN(v)) params.minPrice = v;
+    }
+    if (maxStr !== "") {
+      const v = parseFloat(maxStr);
+      if (!Number.isNaN(v)) params.maxPrice = v;
     }
 
     fetchProducts(params);
-  }, [currentPage, selectedCategory, searchQuery, fetchProducts]);
+  }, [currentPage, appliedFilters, qFromUrl, sortMode, fetchProducts]);
+
+  const navigateShop = useCallback(
+    (next: { q?: string; filters?: ShopProductFilterValues; sort?: ShopSortMode }) => {
+      const href = buildShopHref({
+        q: next.q ?? qFromUrl,
+        filters: next.filters ?? appliedFilters,
+        sort: next.sort ?? sortMode,
+      });
+      router.push(href);
+    },
+    [router, qFromUrl, appliedFilters, sortMode],
+  );
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigateShop({ q: searchDraft });
+  };
+
+  const handleFiltersApply = (next: ShopProductFilterValues) => {
+    navigateShop({ filters: next });
+  };
+
+  const handleSortApply = (next: ShopSortMode) => {
+    navigateShop({ sort: next });
+  };
+
+  const hasActiveQuery =
+    qFromUrl.trim() !== "" ||
+    countAppliedShopProductFilters(appliedFilters) > 0 ||
+    countAppliedShopSort(sortMode) > 0;
 
   return (
     <div className="min-h-screen bg-background">
       <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
-        {searchQuery ? (
+        <div className="mb-4 flex flex-col gap-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex flex-1 flex-wrap items-center gap-2"
+            role="search"
+            aria-label="Search shop"
+          >
+            <Input
+              placeholder="Search by name…"
+              className="max-w-sm"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              aria-label="Search products by name"
+            />
+            <ShopProductFilters
+              categories={categories}
+              applied={appliedFilters}
+              onApply={handleFiltersApply}
+            />
+            <ShopProductSort applied={sortMode} onApply={handleSortApply} />
+          </form>
+        </div>
+
+        {qFromUrl ? (
           <div className="mb-4 sm:mb-5">
             <p className="text-muted-foreground text-sm leading-normal">
-              Results for <span className="text-foreground/90 font-medium">&ldquo;{searchQuery}&rdquo;</span>
+              Results for <span className="text-foreground/90 font-medium">&ldquo;{qFromUrl}&rdquo;</span>
             </p>
           </div>
         ) : null}
@@ -72,15 +189,23 @@ const ShopPageContent = () => {
         ) : products.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-foreground/80 text-sm">No products found</p>
-            {(searchQuery || selectedCategory !== "all") && (
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push("/shop")}>
+            {hasActiveQuery && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => {
+                  setSearchDraft("");
+                  router.push("/shop");
+                }}
+              >
                 View all products
               </Button>
             )}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5 [&>*]:min-w-0">
+            <div className="grid grid-cols-2 gap-3 *:min-w-0 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5">
               {products.map((product) => (
                 <ProductCard key={product.productId} product={product} compact />
               ))}

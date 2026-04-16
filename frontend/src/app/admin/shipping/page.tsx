@@ -255,7 +255,7 @@ export default function AdminShippingPage() {
                     <p className="text-muted-foreground mt-2 border-border/60 rounded-md border border-dashed px-2 py-1.5 text-xs leading-relaxed">
                       Included checkout: no separate shipping charge. These amounts are reference-only for quotes and
                       admin; switch to <span className="font-medium text-foreground">Separate line</span> to use them as
-                      charged fees.
+                      charged fees
                     </p>
                   )}
                 </div>
@@ -307,7 +307,7 @@ export default function AdminShippingPage() {
                                       displayIncluded && "text-muted-foreground pointer-events-none",
                                     )}
                                   >
-                                    Offer at checkout
+                                    Display at checkout
                                   </Label>
                                 </div>
                               </div>
@@ -395,8 +395,7 @@ export default function AdminShippingPage() {
                           Included (no shipping line)
                         </Label>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                          No shipping line added; total equals subtotal. List prices are unchanged; zone fees are not
-                          split across items. Free-shipping rules and the cart progress bar do not apply at checkout.
+                        Ignore shipping fees and include them in the product price. Other settings will be disabled because shipping will be free
                         </p>
                       </div>
                     </div>
@@ -416,7 +415,7 @@ export default function AdminShippingPage() {
                   {displayIncluded ? (
                     <p className="text-muted-foreground border-border/60 rounded-md border border-dashed px-2 py-2 text-xs leading-relaxed">
                       Not used when display is Included: checkout does not add a shipping fee, so thresholds and cart
-                      progress do not apply.
+                      progress do not apply
                     </p>
                   ) : (
                     <>
