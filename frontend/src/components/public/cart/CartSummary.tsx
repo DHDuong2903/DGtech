@@ -1,13 +1,24 @@
 import { Button } from "@/src/components/ui/button";
 import { formatCurrency } from "../../../utils";
+import type { FreeShippingMotivation } from "@/src/types";
+import { FreeShippingCartProgress } from "./FreeShippingCartProgress";
 
 interface CartSummaryProps {
   totalItems: number;
   totalPrice: number;
+  /** Full-cart subtotal for free-ship progress (usually `cart.totalPrice`). */
+  cartTotalForShippingBar?: number;
+  freeShippingMotivation?: FreeShippingMotivation | null;
   onCheckout: () => void;
 }
 
-export function CartSummary({ totalItems, totalPrice, onCheckout }: CartSummaryProps) {
+export function CartSummary({
+  totalItems,
+  totalPrice,
+  cartTotalForShippingBar,
+  freeShippingMotivation,
+  onCheckout,
+}: CartSummaryProps) {
   return (
     <div className="bg-card border-border sticky top-4 rounded-lg border p-4 shadow-sm">
       {totalItems === 0 ? (
@@ -16,6 +27,14 @@ export function CartSummary({ totalItems, totalPrice, onCheckout }: CartSummaryP
         </div>
       ) : (
         <>
+          {cartTotalForShippingBar != null && (
+            <div className="mb-3">
+              <FreeShippingCartProgress
+                motivation={freeShippingMotivation}
+                cartTotal={cartTotalForShippingBar}
+              />
+            </div>
+          )}
           <div className="mb-4 space-y-2 border-b pb-3">
             <div className="text-foreground flex justify-between text-sm">
               <span>

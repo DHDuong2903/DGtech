@@ -10,6 +10,11 @@ import { Order } from "./orderModel.js";
 import { OrderItem } from "./orderItemModel.js";
 import { Payment } from "./paymentModel.js";
 import { UserAddress } from "./userAddressModel.js";
+import { ShippingZone } from "./shippingZoneModel.js";
+import { ShippingMethod } from "./shippingMethodModel.js";
+import { ShippingRate } from "./shippingRateModel.js";
+import { ShippingProvinceZone } from "./shippingProvinceZoneModel.js";
+import { ShippingSetting } from "./shippingSettingModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -70,4 +75,30 @@ OrderItem.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
 Order.hasOne(Payment, { foreignKey: "orderId", as: "payment" });
 Payment.belongsTo(Order, { foreignKey: "orderId", as: "order" });
 
-export { Category, Product, ProductVariant, User, Review, Cart, CartItem, Order, OrderItem, Payment, UserAddress };
+ShippingZone.hasMany(ShippingMethod, { foreignKey: "zoneId", as: "methods", onDelete: "CASCADE" });
+ShippingMethod.belongsTo(ShippingZone, { foreignKey: "zoneId", as: "zone" });
+
+ShippingMethod.hasOne(ShippingRate, { foreignKey: "methodId", as: "rate", onDelete: "CASCADE" });
+ShippingRate.belongsTo(ShippingMethod, { foreignKey: "methodId", as: "method" });
+
+ShippingZone.hasMany(ShippingProvinceZone, { foreignKey: "zoneId", as: "provinceMappings", onDelete: "CASCADE" });
+ShippingProvinceZone.belongsTo(ShippingZone, { foreignKey: "zoneId", as: "zone" });
+
+export {
+  Category,
+  Product,
+  ProductVariant,
+  User,
+  Review,
+  Cart,
+  CartItem,
+  Order,
+  OrderItem,
+  Payment,
+  UserAddress,
+  ShippingZone,
+  ShippingMethod,
+  ShippingRate,
+  ShippingProvinceZone,
+  ShippingSetting,
+};

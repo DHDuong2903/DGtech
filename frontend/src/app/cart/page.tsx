@@ -9,7 +9,7 @@ import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 
 export default function CartPage() {
-  const { cart, loading, fetchCart, removeManyFromCart } = useCartStore();
+  const { cart, freeShippingMotivation, loading, fetchCart, removeManyFromCart } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
   const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -140,6 +140,8 @@ export default function CartPage() {
               <CartSummary
                 totalItems={selectedSummary.totalItems}
                 totalPrice={selectedSummary.totalPrice}
+                cartTotalForShippingBar={Number(cart.totalPrice) || 0}
+                freeShippingMotivation={freeShippingMotivation}
                 onCheckout={handleCheckout}
               />
             </div>

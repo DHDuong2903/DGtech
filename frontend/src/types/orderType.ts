@@ -16,6 +16,14 @@ export interface OrderItem {
 export interface Order {
   orderId: string;
   clerkId: string;
+  /** Line items total before shipping. */
+  subtotal?: number;
+  shippingFee?: number;
+  /** Snapshot: `separate` | `included` — how shipping was shown/charged at checkout. */
+  shippingDisplayMode?: "separate" | "included" | string | null;
+  shippingMethodCode?: string | null;
+  shippingMethodName?: string | null;
+  shippingMethodEtaNote?: string | null;
   totalPrice: number;
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";
   shippingAddress: string;
@@ -35,6 +43,10 @@ export interface CreateOrderRequest {
   shippingAddress?: string;
   phone?: string;
   userAddressId?: string;
+  /** Required when ordering without a saved address (server validates against VN catalog). */
+  provinceCode?: string;
+  /** `standard` | `express` — must match an option returned by shipping quote for the province. */
+  shippingMethodCode?: string;
   paymentMethod: "COD" | "BANK_TRANSFER";
   notes?: string;
 }

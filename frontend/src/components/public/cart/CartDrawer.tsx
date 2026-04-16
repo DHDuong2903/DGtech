@@ -18,6 +18,7 @@ import type { Cart, CartItem as CartItemType } from "@/src/types";
 import { formatCurrency } from "@/src/utils";
 import { sortCartItemsForDisplay } from "@/src/utils/cartUtils";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
+import { FreeShippingCartProgress } from "./FreeShippingCartProgress";
 
 function cartLineQuantity(cart: Cart) {
   return cart.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -107,6 +108,7 @@ function CartSheetLine({ item }: { item: CartItemType }) {
 
 export function CartDrawer() {
   const cart = useCartStore((s) => s.cart);
+  const freeShippingMotivation = useCartStore((s) => s.freeShippingMotivation);
   const cartSheetOpen = useCartStore((s) => s.cartSheetOpen);
   const setCartSheetOpen = useCartStore((s) => s.setCartSheetOpen);
 
@@ -156,6 +158,12 @@ export function CartDrawer() {
 
         {cart && hasLines && (
           <div className="border-border shrink-0 border-t">
+            <div className="px-4 pt-3">
+              <FreeShippingCartProgress
+                motivation={freeShippingMotivation}
+                cartTotal={Number(cart.totalPrice) || 0}
+              />
+            </div>
             <div className="text-foreground flex items-center justify-between px-4 py-3 text-sm">
               <span className="font-medium">Estimated total</span>
               <span className="text-base font-semibold text-orange-600 tabular-nums">

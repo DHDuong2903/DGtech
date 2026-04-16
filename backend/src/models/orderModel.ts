@@ -15,10 +15,37 @@ export const Order = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    subtotal: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    shippingFee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    shippingDisplayMode: {
+      type: DataTypes.STRING(16),
+      allowNull: true,
+    },
+    shippingMethodCode: {
+      type: DataTypes.STRING(32),
+      allowNull: true,
+    },
+    shippingMethodName: {
+      type: DataTypes.STRING(128),
+      allowNull: true,
+    },
+    shippingMethodEtaNote: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
     totalPrice: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      comment: "Grand total: subtotal + shippingFee",
     },
     status: {
       type: DataTypes.ENUM("PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED", "CANCELLED"),
