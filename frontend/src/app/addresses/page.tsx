@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
+import { DeleteConfirmModal } from "@/src/components/admin/DeleteConfirmModal";
 import { addressApi } from "@/src/apis/addressApi";
 import { VN_PROVINCES, vnWardsForProvince } from "@/src/constants/vnAdministrative";
 import { Button } from "@/src/components/ui/button";
@@ -26,6 +27,8 @@ import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { cn } from "@/src/lib/utils";
 import type { UserAddress, VnProvince, VnWard } from "@/src/types";
 import { useAuth } from "@/src/hooks";
+
+const MAX_USER_ADDRESSES = 3;
 
 const emptyDraft = (): VnAddressDraft => ({
   phone: "",
@@ -50,6 +53,8 @@ export default function AddressesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<VnAddressDraft>(emptyDraft());
   const [saving, setSaving] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteWorking, setDeleteWorking] = useState(false);
 
   const loadAddresses = useCallback(async () => {
     const { addresses: list } = await addressApi.list();
@@ -91,6 +96,10 @@ export default function AddressesPage() {
   }, [draft.provinceCode]);
 
   const openCreate = () => {
+    if (addresses.length >= MAX_USER_ADDRESSES) {
+      toast.error(`You can save up to ${MAX_USER_ADDRESSES} addresses.`);
+      return;
+    }
     setEditingId(null);
     setDraft(emptyDraft());
     setDialogOpen(true);
@@ -113,6 +122,10 @@ export default function AddressesPage() {
   const handleSave = async () => {
     if (!draft.phone.trim() || !draft.provinceCode || !draft.wardCode || !draft.addressLine.trim()) {
       toast.error("Please fill in all required fields.");
+      return;
+    }
+    if (!editingId && addresses.length >= MAX_USER_ADDRESSES) {
+      toast.error(`You can save up to ${MAX_USER_ADDRESSES} addresses.`);
       return;
     }
     setSaving(true);
@@ -141,20 +154,25 @@ export default function AddressesPage() {
     }
   };
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      if (!confirm("Delete this address?")) return;
-      try {
-        await addressApi.remove(id);
-        toast.success("Address removed.");
-        await loadAddresses();
-      } catch (e: unknown) {
-        const err = e as { response?: { data?: { error?: string } } };
-        toast.error(err.response?.data?.error || "Could not delete address.");
-      }
-    },
-    [loadAddresses],
-  );
+  const deleteTarget = deleteTargetId ? addresses.find((a) => a.addressId === deleteTargetId) : null;
+
+  const confirmDeleteAddress = useCallback(async () => {
+    if (!deleteTargetId) return;
+    setDeleteWorking(true);
+    try {
+      await addressApi.remove(deleteTargetId);
+      toast.success("Address removed.");
+      setDeleteTargetId(null);
+      await loadAddresses();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || "Could not delete address.");
+    } finally {
+      setDeleteWorking(false);
+    }
+  }, [deleteTargetId, loadAddresses]);
+
+  const atAddressLimit = addresses.length >= MAX_USER_ADDRESSES;
 
   if (!isLoaded || loading) {
     return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
@@ -165,7 +183,14 @@ export default function AddressesPage() {
       <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
         {addresses.length > 0 && (
           <div className="mb-4 flex justify-end">
-            <Button type="button" size="sm" onClick={openCreate} className="gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              onClick={openCreate}
+              disabled={atAddressLimit}
+              title={atAddressLimit ? `Maximum ${MAX_USER_ADDRESSES} addresses` : undefined}
+              className="gap-1.5"
+            >
               <Plus className="size-3.5" />
               Add address
             </Button>
@@ -176,14 +201,27 @@ export default function AddressesPage() {
           <div className="bg-card border-border rounded-lg border py-16 text-center shadow-sm">
             <MapPin className="text-muted-foreground mx-auto mb-4 h-16 w-16" aria-hidden />
             <h2 className="text-foreground mb-2 text-xl font-semibold">No saved addresses</h2>
-            <p className="text-muted-foreground mb-6">Add an address to keep checkout quick and accurate.</p>
-            <Button type="button" size="sm" className="gap-1.5" onClick={openCreate}>
+            <p className="text-muted-foreground mb-6">
+              Add an address to keep checkout quick and accurate. You can save up to {MAX_USER_ADDRESSES} addresses.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5"
+              onClick={openCreate}
+              disabled={atAddressLimit}
+              title={atAddressLimit ? `Maximum ${MAX_USER_ADDRESSES} addresses` : undefined}
+            >
               <MapPin className="size-3.5" />
               Add address
             </Button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border">
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-sm">
+              You can save up to {MAX_USER_ADDRESSES} delivery addresses ({addresses.length}/{MAX_USER_ADDRESSES} used).
+            </p>
+            <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -202,7 +240,7 @@ export default function AddressesPage() {
                         {a.isDefault ? (
                           <Badge
                             variant="secondary"
-                            className="bg-orange-500/15 text-orange-800 dark:text-orange-300 shrink-0 text-xs font-normal"
+                            className="border-orange-500/35 bg-orange-500/12 text-orange-700 shadow-none dark:bg-orange-500/18 dark:text-orange-300 shrink-0 border text-xs font-medium"
                           >
                             Default
                           </Badge>
@@ -235,7 +273,7 @@ export default function AddressesPage() {
                           variant="ghost"
                           size="icon-sm"
                           className="text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDelete(a.addressId)}
+                          onClick={() => setDeleteTargetId(a.addressId)}
                         >
                           <Trash2 className="size-4" />
                           <span className="sr-only">Delete</span>
@@ -246,6 +284,7 @@ export default function AddressesPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
       </div>
@@ -268,7 +307,7 @@ export default function AddressesPage() {
             showDefaultCheckbox
             idPrefix="dlg"
           />
-          <DialogFooter className="mt-1 gap-4 pt-1 sm:justify-end">
+          <DialogFooter className="mt-1 gap-2 pt-1 sm:justify-end">
             <Button type="button" variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
@@ -285,6 +324,31 @@ export default function AddressesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmModal
+        isOpen={!!deleteTargetId}
+        onClose={() => {
+          if (!deleteWorking) setDeleteTargetId(null);
+        }}
+        onConfirm={() => void confirmDeleteAddress()}
+        itemName={deleteTarget ? `${deleteTarget.addressLine}` : ""}
+        itemType="address"
+        title="Delete address"
+        description={
+          <>
+            Are you sure you want to delete this saved address? This cannot be undone.
+            {deleteTarget ? (
+              <span className="text-muted-foreground mt-2 block text-sm">
+                {deleteTarget.phone} · {deleteTarget.addressLine}, {deleteTarget.wardName},{" "}
+                {deleteTarget.provinceName}
+              </span>
+            ) : null}
+          </>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+        confirmLoading={deleteWorking}
+      />
     </div>
   );
 }

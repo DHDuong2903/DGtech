@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { useCartStore, useOrderStore } from "../../stores";
 import { useAuth } from "@/src/hooks";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Card } from "@/src/components/ui/card";
@@ -475,7 +476,14 @@ function CheckoutContent() {
                     orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
                   }
                 >
-                  {orderLoading ? "Placing order…" : "Place order"}
+                  {orderLoading ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      Placing order
+                    </>
+                  ) : (
+                    "Place order"
+                  )}
                 </Button>
               </form>
             </Card>
@@ -565,7 +573,10 @@ function CheckoutContent() {
                 <div className="text-foreground flex justify-between">
                   <span>Shipping:</span>
                   {shipQuoteLoading ? (
-                    <span className="text-muted-foreground font-semibold">Đang tính…</span>
+                    <span className="text-muted-foreground inline-flex items-center gap-1.5 font-semibold">
+                      <Spinner className="size-3.5" />
+                      Đang tính
+                    </span>
                   ) : shipQuoteError ? (
                     <span className="text-destructive max-w-[55%] text-right text-xs font-medium">{shipQuoteError}</span>
                   ) : shipQuote?.displayMode === "included" ? (

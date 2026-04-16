@@ -1,4 +1,5 @@
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,14 @@ export const CancelOrderDialog = ({ open, onOpenChange, onConfirm, isLoading = f
             Keep order
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? "Cancelling…" : "Cancel order"}
+            {isLoading ? (
+              <>
+                <Spinner data-icon="inline-start" />
+                Cancelling order
+              </>
+            ) : (
+              "Cancel order"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

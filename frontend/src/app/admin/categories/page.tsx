@@ -223,7 +223,7 @@ const CategoriesPage = () => {
               {bulkWorking ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Deleting…
+                  Deleting
                 </>
               ) : (
                 "Delete all"

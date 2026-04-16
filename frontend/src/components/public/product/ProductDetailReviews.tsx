@@ -98,10 +98,10 @@ export const ProductDetailReviews = ({ reviews, isLoggedIn, onSubmit }: ProductD
                 {submitting ? (
                   <>
                     <Spinner data-icon="inline-start" />
-                    Submit
+                    Submitting
                   </>
                 ) : (
-                  "Submit"
+                  "Submit review"
                 )}
               </Button>
             </div>

@@ -97,7 +97,7 @@ export const CategoryModal = ({ isOpen, onClose, onSave, category, mode }: Categ
               {saving ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  {mode === "create" ? "Creating…" : "Saving…"}
+                  {mode === "create" ? "Creating" : "Saving"}
                 </>
               ) : mode === "create" ? (
                 "Create"

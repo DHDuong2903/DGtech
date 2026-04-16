@@ -1,5 +1,6 @@
 import { Card } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
+import { Spinner } from "@/src/components/ui/spinner";
 import { Copy, Check, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/src/utils";
 
@@ -97,12 +98,12 @@ export const PaymentBankInfo = ({
       <Button onClick={onCheckStatus} disabled={checking} className="w-full mt-6" variant="outline">
         {checking ? (
           <>
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            Checking…
+            <Spinner data-icon="inline-start" />
+            Checking status
           </>
         ) : (
           <>
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-4 w-4" />
             Check payment status
           </>
         )}

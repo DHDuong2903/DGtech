@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import {
@@ -107,6 +108,7 @@ function CartSheetLine({ item }: { item: CartItemType }) {
 }
 
 export function CartDrawer() {
+  const router = useRouter();
   const cart = useCartStore((s) => s.cart);
   const freeShippingMotivation = useCartStore((s) => s.freeShippingMotivation);
   const cartSheetOpen = useCartStore((s) => s.cartSheetOpen);
@@ -116,6 +118,15 @@ export function CartDrawer() {
   const sortedItems = useMemo(() => sortCartItemsForDisplay(cartItems ?? []), [cartItems]);
   const hasLines = sortedItems.length > 0;
   const lineQty = cart ? cartLineQuantity(cart) : 0;
+
+  const goToCheckout = () => {
+    if (!sortedItems.length) return;
+    const ids = sortedItems.map((i) => i.cartItemId);
+    const params = new URLSearchParams();
+    params.set("items", encodeURIComponent(JSON.stringify(ids)));
+    setCartSheetOpen(false);
+    router.push(`/checkout?${params.toString()}`);
+  };
 
   return (
     <Drawer
@@ -174,7 +185,7 @@ export function CartDrawer() {
         )}
 
         <DrawerFooter className="border-border mt-0 shrink-0 gap-2 border-t p-4 pt-3">
-          <Button type="button" size="lg" className="w-full" disabled={!hasLines}>
+          <Button type="button" size="lg" className="w-full" disabled={!hasLines} onClick={goToCheckout}>
             Checkout
           </Button>
         </DrawerFooter>

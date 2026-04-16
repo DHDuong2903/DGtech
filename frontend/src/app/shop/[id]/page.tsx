@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ const ProductDetailPage = () => {
   const productId = params.id as string;
 
   const { user } = useUser();
-  const { addToCart, loading: cartLoading } = useCartStore();
+  const { addToCart, loading: cartLoading, fetchCart, updateCartItem, setCartSheetOpen } = useCartStore();
   const {
     currentProduct: product,
     relatedProducts,
@@ -38,6 +38,7 @@ const ProductDetailPage = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [buyNowBusy, setBuyNowBusy] = useState(false);
 
   useEffect(() => {
     if (productId) {
@@ -96,6 +97,65 @@ const ProductDetailPage = () => {
       console.error("Add to cart error:", error);
     }
   };
+
+  const handleBuyNow = useCallback(async () => {
+    if (!user) {
+      toast.error("Please sign in to continue");
+      return;
+    }
+    if (!product) return;
+    if (hasRealVariants && (!selectedVariant || selectedVariant.isDefault)) {
+      toast.error("Please select a product variant");
+      return;
+    }
+    const variantId = selectedVariant?.variantId;
+    setBuyNowBusy(true);
+    try {
+      let cart = useCartStore.getState().cart;
+      if (!cart?.items) {
+        await fetchCart();
+        cart = useCartStore.getState().cart;
+      }
+      const match = cart?.items?.find(
+        (it) =>
+          it.productId === product.productId && String(it.variantId ?? "") === String(variantId ?? ""),
+      );
+      if (match) {
+        await updateCartItem(match.cartItemId, quantity, { suppressSuccessToast: true });
+      } else {
+        await addToCart(product.productId, quantity, variantId, {
+          openSheet: false,
+          suppressSuccessToast: true,
+        });
+      }
+      const updated = useCartStore.getState().cart;
+      const line = updated?.items?.find(
+        (it) =>
+          it.productId === product.productId && String(it.variantId ?? "") === String(variantId ?? ""),
+      );
+      if (!line) {
+        toast.error("Could not update your cart. Try again.");
+        return;
+      }
+      setCartSheetOpen(false);
+      router.push(`/cart?selectOnly=${encodeURIComponent(line.cartItemId)}`);
+    } catch (error) {
+      console.error("Buy now error:", error);
+    } finally {
+      setBuyNowBusy(false);
+    }
+  }, [
+    user,
+    product,
+    hasRealVariants,
+    selectedVariant,
+    quantity,
+    fetchCart,
+    updateCartItem,
+    addToCart,
+    setCartSheetOpen,
+    router,
+  ]);
 
   const handleSubmitReviewWrapper = async (rating: number, comment: string) => {
     if (!user) {
@@ -161,10 +221,12 @@ const ProductDetailPage = () => {
                 quantity={quantity}
                 maxStock={displayStock}
                 isLoading={cartLoading}
+                isBuyNowLoading={buyNowBusy}
                 hasVariants={hasRealVariants}
                 isVariantSelected={isVariantSelected}
                 onQuantityChange={handleQuantityChange}
                 onAddToCart={handleAddToCart}
+                onBuyNow={handleBuyNow}
               />
             )}
 

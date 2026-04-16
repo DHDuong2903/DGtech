@@ -231,8 +231,17 @@ export default function ProductDetailPage() {
                   disabled={saving}
                   className="gap-2"
                 >
-                  {saving ? <Spinner /> : <Save className="h-4 w-4" />}
-                  Save
+                  {saving ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      Saving
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save
+                    </>
+                  )}
                 </Button>
               </>
             )}

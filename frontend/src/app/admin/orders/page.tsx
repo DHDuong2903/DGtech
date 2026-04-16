@@ -256,7 +256,7 @@ const AdminOrdersPage = () => {
               {updating ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Đang cập nhật…
+                  Đang cập nhật
                 </>
               ) : (
                 "Xác nhận"
