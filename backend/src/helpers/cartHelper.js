@@ -1,4 +1,4 @@
-import { Cart, CartItem, Product, ProductVariant } from "../models/associationsModel.js";
+import { Cart, CartItem, Product, ProductVariant, ShippingSetting } from "../models/associationsModel.js";
 
 // Cap nhat tong tien va so luong trong gio hang
 export const updateCartTotals = async (cartId) => {
@@ -47,3 +47,27 @@ export const getCartWithDetails = async (clerkId) => {
     ],
   });
 };
+
+/**
+ * Payload for storefront cart free-ship progress (subtotal vs threshold).
+ * @returns {{ show: false } | { show: true, minSubtotal: number, standardOnly: boolean }}
+ */
+export async function getFreeShippingMotivation() {
+  try {
+    const row = await ShippingSetting.findByPk(1);
+    if (!row) return { show: false };
+    if (row.displayMode === "included") return { show: false };
+    if (!row.freeShippingEnabled) return { show: false };
+    if (row.showFreeShippingProgressInCart === false) return { show: false };
+    const min = Math.round(Number(row.freeShippingMinSubtotal) * 100) / 100;
+    if (!Number.isFinite(min) || min <= 0) return { show: false };
+    return {
+      show: true,
+      minSubtotal: min,
+      standardOnly: row.freeShippingStandardOnly !== false,
+    };
+  } catch (e) {
+    console.error("getFreeShippingMotivation", e);
+    return { show: false };
+  }
+}

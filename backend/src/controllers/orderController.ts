@@ -9,10 +9,16 @@ import {
   UserAddress,
   User,
 } from "../models/associationsModel.js";
-import { formatShippingSnapshot } from "../helpers/vnAddressHelper.js";
+import { formatShippingSnapshot, getProvinceName } from "../helpers/vnAddressHelper.js";
+import {
+  loadSelectedCartLines,
+  computeSubtotalFromLines,
+  resolveShippingForCheckout,
+  ShippingConfigError,
+  normalizeShippingMethodCode,
+} from "../services/shippingService.js";
 import { sequelize } from "../libs/db.js";
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
-import { Op } from "sequelize";
 
 // Tao order moi tu cac san pham duoc chon trong cart
 export const createOrder = async (req: any, res: any) => {
@@ -20,7 +26,16 @@ export const createOrder = async (req: any, res: any) => {
 
   try {
     const { userId: clerkId } = req.auth;
-    const { selectedItems, shippingAddress, phone, paymentMethod, notes, userAddressId } = req.body;
+    const {
+      selectedItems,
+      shippingAddress,
+      phone,
+      paymentMethod,
+      notes,
+      userAddressId,
+      provinceCode,
+      shippingMethodCode: shippingMethodCodeRaw,
+    } = req.body;
 
     // Validate
     if (!selectedItems || !Array.isArray(selectedItems) || selectedItems.length === 0) {
@@ -31,6 +46,7 @@ export const createOrder = async (req: any, res: any) => {
     let resolvedShipping = typeof shippingAddress === "string" ? shippingAddress.trim() : "";
     let resolvedPhone = typeof phone === "string" ? phone.trim() : "";
     let resolvedUserAddressId = userAddressId || null;
+    let provinceCodeForShip = "";
 
     if (resolvedUserAddressId) {
       const saved = await UserAddress.findOne({
@@ -54,32 +70,30 @@ export const createOrder = async (req: any, res: any) => {
         provinceName: saved.provinceName,
       });
       resolvedPhone = saved.phone;
+      provinceCodeForShip = String(saved.provinceCode || "").trim();
     } else if (!resolvedShipping || !resolvedPhone) {
       await transaction.rollback();
       return res.status(400).json({ error: "Vui lòng cung cấp đầy đủ thông tin giao hàng" });
+    } else {
+      provinceCodeForShip = typeof provinceCode === "string" ? provinceCode.trim() : "";
+      if (!provinceCodeForShip || !getProvinceName(provinceCodeForShip)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: "Vui lòng gửi provinceCode hợp lệ khi không dùng địa chỉ đã lưu",
+        });
+      }
     }
 
-    // Get products from cart items including variants
-    const cartItems = await CartItem.findAll({
-      where: { cartItemId: selectedItems },
-      include: [
-        {
-          model: Product,
-          as: "product",
-          attributes: ["productId", "name", "price", "stock", "status"],
-        },
-        {
-          model: ProductVariant,
-          as: "variant",
-          attributes: ["variantId", "price", "stock"],
-        },
-      ],
-      transaction,
-    });
-
-    if (cartItems.length === 0) {
+    let cartItems;
+    let cart;
+    try {
+      ({ cart, cartItems } = await loadSelectedCartLines(clerkId, selectedItems, transaction));
+    } catch (e) {
       await transaction.rollback();
-      return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
+      if (e instanceof ShippingConfigError) {
+        return res.status(400).json({ error: e.message, code: e.code });
+      }
+      throw e;
     }
 
     for (const cartItem of cartItems) {
@@ -102,15 +116,28 @@ export const createOrder = async (req: any, res: any) => {
       }
     }
 
-    // Calculate total
-    let totalPrice = 0;
-    const orderItemsData = [];
+    const subtotal = computeSubtotalFromLines(cartItems);
+    const shippingMethodCode = normalizeShippingMethodCode(shippingMethodCodeRaw);
+    let ship;
+    try {
+      ship = await resolveShippingForCheckout(provinceCodeForShip, subtotal, {
+        methodCode: shippingMethodCode,
+        transaction,
+      });
+    } catch (e) {
+      await transaction.rollback();
+      if (e instanceof ShippingConfigError) {
+        const status = e.code === "SETTINGS_MISSING" ? 500 : 400;
+        return res.status(status).json({ error: e.message, code: e.code });
+      }
+      throw e;
+    }
+    const shippingFee = ship.shippingFee;
+    const totalPrice = ship.totalPrice;
 
+    const orderItemsData = [];
     for (const cartItem of cartItems) {
       const itemPrice = cartItem.variant ? cartItem.variant.price : cartItem.product.price;
-      const itemTotal = itemPrice * cartItem.quantity;
-      totalPrice += itemTotal;
-
       orderItemsData.push({
         productId: cartItem.productId,
         variantId: cartItem.variantId,
@@ -123,6 +150,8 @@ export const createOrder = async (req: any, res: any) => {
     const order = await Order.create(
       {
         clerkId,
+        subtotal,
+        shippingFee,
         totalPrice,
         shippingAddress: resolvedShipping,
         phone: resolvedPhone,
@@ -130,6 +159,10 @@ export const createOrder = async (req: any, res: any) => {
         paymentMethod: paymentMethod || "COD",
         notes: notes || null,
         status: paymentMethod === "BANK_TRANSFER" ? "PENDING" : "PROCESSING",
+        shippingDisplayMode: ship.displayMode,
+        shippingMethodCode: ship.shippingMethodCode,
+        shippingMethodName: ship.shippingMethodName,
+        shippingMethodEtaNote: ship.shippingMethodEtaNote,
       },
       { transaction },
     );
@@ -170,7 +203,7 @@ export const createOrder = async (req: any, res: any) => {
 
     // Remove selected items from cart
     await CartItem.destroy({
-      where: { cartItemId: selectedItems },
+      where: { cartItemId: selectedItems, cartId: cart.cartId },
       transaction,
     });
 

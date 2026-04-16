@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Images, LayoutDashboard, Package, Sofa, Tag, Users } from "lucide-react";
+import { Images, LayoutDashboard, Package, Sofa, Tag, Truck, Users } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Admin layout
@@ -28,6 +28,7 @@ export const ADMIN_SIDEBAR_NAV_ITEMS: AdminSidebarNavItem[] = [
   { id: "categories", label: "Categories", icon: Tag, href: "/admin/categories" },
   { id: "users", label: "Users", icon: Users, href: "/admin/users" },
   { id: "slideshows", label: "Slideshows", icon: Images, href: "/admin/slideshows" },
+  { id: "shipping", label: "Shipping", icon: Truck, href: "/admin/shipping" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -44,6 +45,7 @@ export const API_ROUTE = {
   REVIEWS: "/reviews",
   SLIDESHOWS: "/slideshows",
   ADDRESSES: "/addresses",
+  SHIPPING: "/shipping",
 } as const;
 
 // ---------------------------------------------------------------------------

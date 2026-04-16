@@ -5,3 +5,4 @@ export { CartItemList } from "./CartItemList";
 export { CartSummary } from "./CartSummary";
 export { CartLoadingState } from "./CartLoadingState";
 export { CartSheet } from "./CartDrawer";
+export { FreeShippingCartProgress } from "./FreeShippingCartProgress";

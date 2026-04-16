@@ -1,6 +1,11 @@
 // @ts-nocheck
 import { Cart, CartItem, Product, ProductVariant } from "../models/associationsModel.js";
-import { updateCartTotals, getCartWithDetails } from "../helpers/cartHelper.js";
+import { updateCartTotals, getCartWithDetails, getFreeShippingMotivation } from "../helpers/cartHelper.js";
+
+async function sendCartResponse(res: any, data: Record<string, unknown>) {
+  const freeShippingMotivation = await getFreeShippingMotivation();
+  res.status(200).json({ ...data, freeShippingMotivation });
+}
 
 // Lay gio hang cua user hien tai
 export const getCart = async (req: any, res: any) => {
@@ -14,7 +19,7 @@ export const getCart = async (req: any, res: any) => {
       cart = await getCartWithDetails(clerkId);
     }
 
-    res.status(200).json({ cart });
+    await sendCartResponse(res, { cart });
   } catch (error) {
     console.error("Loi khi getCart", error);
     res.status(500).json({ error: "Không thể lấy giỏ hàng" });
@@ -94,7 +99,7 @@ export const addToCart = async (req: any, res: any) => {
 
     cart = await getCartWithDetails(clerkId);
 
-    res.status(200).json({ cart, message });
+    await sendCartResponse(res, { cart, message });
   } catch (error) {
     console.error("Loi khi addToCart", error);
     res.status(500).json({ error: "Không thể thêm sản phẩm vào giỏ hàng" });
@@ -146,9 +151,10 @@ export const updateCartItem = async (req: any, res: any) => {
 
     const updatedCart = await getCartWithDetails(clerkId);
 
-    res
-      .status(200)
-      .json({ cart: updatedCart, message: "Sản phẩm trong giỏ hàng đã được cập nhật" });
+    await sendCartResponse(res, {
+      cart: updatedCart,
+      message: "Sản phẩm trong giỏ hàng đã được cập nhật",
+    });
   } catch (error) {
     console.error("Loi khi updateCartItem", error);
     res.status(500).json({ error: "Không thể cập nhật sản phẩm trong giỏ hàng" });
@@ -180,7 +186,7 @@ export const removeFromCart = async (req: any, res: any) => {
 
     const updatedCart = await getCartWithDetails(clerkId);
 
-    res.status(200).json({ cart: updatedCart, message: "Sản phẩm đã được xóa khỏi giỏ hàng" });
+    await sendCartResponse(res, { cart: updatedCart, message: "Sản phẩm đã được xóa khỏi giỏ hàng" });
   } catch (error) {
     console.error("Loi khi removeFromCart", error);
     res.status(500).json({ error: "Không thể xóa sản phẩm khỏi giỏ hàng" });
@@ -205,7 +211,7 @@ export const clearCart = async (req: any, res: any) => {
 
     const updatedCart = await getCartWithDetails(clerkId);
 
-    res.status(200).json({ cart: updatedCart, message: "Giỏ hàng đã được làm trống" });
+    await sendCartResponse(res, { cart: updatedCart, message: "Giỏ hàng đã được làm trống" });
   } catch (error) {
     console.error("Loi khi clearCart", error);
     res.status(500).json({ error: "Không thể làm trống giỏ hàng" });

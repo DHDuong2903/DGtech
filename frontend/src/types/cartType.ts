@@ -1,5 +1,10 @@
 import { Product, ProductVariant } from "./productType";
 
+/** Mirrors cart API `freeShippingMotivation` when free-ship bar is enabled in admin. */
+export type FreeShippingMotivation =
+  | { show: false }
+  | { show: true; minSubtotal: number; standardOnly: boolean };
+
 export interface CartItem {
   cartItemId: string;
   cartId: string;

@@ -17,6 +17,7 @@ import orderRoute from "./routes/orderRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import slideshowsRoute from "./routes/slideshowsRoute.js";
 import addressRoute from "./routes/addressRoute.js";
+import shippingRoute from "./routes/shippingRoute.js";
 
 dotenv.config();
 const app = express();
@@ -57,6 +58,7 @@ app.use("/api/orders", orderRoute);
 app.use("/api/payments", paymentRoute);
 app.use("/api/slideshows", slideshowsRoute);
 app.use("/api/addresses", addressRoute);
+app.use("/api/shipping", shippingRoute);
 
 // JSON errors for /api (multer/Cloudinary used to call next(err) → HTML `<pre>[object Object]</pre>`)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

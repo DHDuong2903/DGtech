@@ -22,6 +22,8 @@ import { VN_PROVINCES, vnWardsForProvince } from "@/src/constants/vnAdministrati
 import { VnAddressFormFields, type VnAddressDraft } from "@/src/components/public/address/VnAddressFormFields";
 import type { UserAddress, VnProvince, VnWard } from "@/src/types";
 import { formatCheckoutShippingSnapshot } from "@/src/types/userAddressType";
+import { shippingApi, type ShippingQuoteResponse, type ShippingQuoteOptionDTO } from "@/src/apis/shippingApi";
+import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
 
 type ShipMode = "saved" | "new";
 
@@ -53,6 +55,10 @@ function CheckoutContent() {
   const [provinces, setProvinces] = useState<VnProvince[]>([]);
   const [wards, setWards] = useState<VnWard[]>([]);
   const [draft, setDraft] = useState<VnAddressDraft>(emptyDraft());
+  const [shipQuote, setShipQuote] = useState<ShippingQuoteResponse | null>(null);
+  const [shipQuoteLoading, setShipQuoteLoading] = useState(false);
+  const [shipQuoteError, setShipQuoteError] = useState<string | null>(null);
+  const [shippingMethodCode, setShippingMethodCode] = useState<string>("standard");
 
   const selectedItemsParam = searchParams.get("items");
   const selectedItems = useMemo(() => {
@@ -69,12 +75,75 @@ function CheckoutContent() {
     return cart.items.filter((item) => selectedItems.includes(item.cartItemId));
   }, [cart, selectedItems]);
 
-  const totalPrice = useMemo(() => {
+  const subtotalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => {
       const price = item.variant?.price ?? item.product.price;
       return sum + price * item.quantity;
     }, 0);
   }, [checkoutItems]);
+
+  const provinceForQuote = useMemo(() => {
+    if (shipMode === "saved" && selectedAddressId) {
+      const a = addresses.find((x) => x.addressId === selectedAddressId);
+      return a?.provinceCode?.trim() || "";
+    }
+    return draft.provinceCode?.trim() || "";
+  }, [shipMode, selectedAddressId, addresses, draft.provinceCode]);
+
+  const selectedItemsKey = useMemo(() => JSON.stringify([...selectedItems].sort()), [selectedItems]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!provinceForQuote || selectedItems.length === 0) {
+      setShipQuote(null);
+      setShipQuoteError(null);
+      setShipQuoteLoading(false);
+      setShippingMethodCode("standard");
+      return;
+    }
+    setShipQuoteLoading(true);
+    setShipQuoteError(null);
+    (async () => {
+      try {
+        const q = await shippingApi.quote({
+          selectedItems,
+          provinceCode: provinceForQuote,
+        });
+        if (!cancelled) {
+          setShipQuote(q);
+          setShippingMethodCode((prev) =>
+            q.options?.some((o) => o.code === prev) ? prev : q.defaultMethodCode || "standard",
+          );
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setShipQuote(null);
+          const msg =
+            (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            "Không tính được phí giao hàng";
+          setShipQuoteError(msg);
+        }
+      } finally {
+        if (!cancelled) setShipQuoteLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [provinceForQuote, selectedItemsKey, selectedItems]);
+
+  const selectedShipOption: ShippingQuoteOptionDTO | null = useMemo(() => {
+    if (!shipQuote?.options?.length) return null;
+    return (
+      shipQuote.options.find((o) => o.code === shippingMethodCode) ||
+      shipQuote.options.find((o) => o.code === shipQuote.defaultMethodCode) ||
+      shipQuote.options[0]
+    );
+  }, [shipQuote, shippingMethodCode]);
+
+  const displaySubtotal = shipQuote?.subtotal ?? subtotalItems;
+  const displayShippingFee = selectedShipOption?.shippingFee ?? null;
+  const displayTotal = selectedShipOption?.totalPrice ?? subtotalItems;
 
   const totalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -155,6 +224,7 @@ function CheckoutContent() {
         userAddressId: selectedAddressId,
         paymentMethod,
         notes: notes.trim() || undefined,
+        shippingMethodCode: shippingMethodCode || "standard",
       });
       if (order) {
         try {
@@ -187,8 +257,10 @@ function CheckoutContent() {
       selectedItems,
       shippingAddress: snapshot,
       phone: draft.phone.trim(),
+      provinceCode: draft.provinceCode.trim(),
       paymentMethod,
       notes: notes.trim() || undefined,
+      shippingMethodCode: shippingMethodCode || "standard",
     });
 
     if (order) {
@@ -206,13 +278,18 @@ function CheckoutContent() {
     }
   };
 
-  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId;
+  const needShippingQuote = !!provinceForQuote && selectedItems.length > 0;
+  const shippingQuoteReady =
+    !needShippingQuote || (!!shipQuote && !shipQuoteLoading && !shipQuoteError);
+
+  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId && shippingQuoteReady;
   const canSubmitNew =
     shipMode === "new" &&
     !!draft.phone.trim() &&
     !!draft.provinceCode &&
     !!draft.wardCode &&
-    !!draft.addressLine.trim();
+    !!draft.addressLine.trim() &&
+    shippingQuoteReady;
 
   if (!isLoaded || cartLoading || addrLoading) {
     return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
@@ -394,7 +471,9 @@ function CheckoutContent() {
                   type="submit"
                   size="lg"
                   className="w-full"
-                  disabled={orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)}
+                  disabled={
+                    orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
+                  }
                 >
                   {orderLoading ? "Placing order…" : "Place order"}
                 </Button>
@@ -440,19 +519,83 @@ function CheckoutContent() {
               </div>
 
               <div className="border-t pt-4 space-y-3">
+                {!shipQuoteLoading && !shipQuoteError && shipQuote && shipQuote.options.length > 1 && (
+                  <div className="space-y-2 pb-2">
+                    <Label className="text-sm font-medium">Delivery speed</Label>
+                    <RadioGroup
+                      className="grid gap-2"
+                      value={shippingMethodCode}
+                      onValueChange={setShippingMethodCode}
+                    >
+                      {shipQuote.options.map((opt) => (
+                        <div
+                          key={opt.code}
+                          className={cn(
+                            "border-border flex items-start gap-2 rounded-md border p-2.5 text-sm",
+                            shippingMethodCode === opt.code && "border-orange-500 bg-orange-500/5",
+                          )}
+                        >
+                          <RadioGroupItem value={opt.code} id={`ship-${opt.code}`} className="mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <Label htmlFor={`ship-${opt.code}`} className="cursor-pointer font-medium leading-snug">
+                              {opt.name}{" "}
+                              <span className="text-muted-foreground font-normal">
+                                (
+                                {shipQuote.displayMode === "included"
+                                  ? formatCurrency(opt.baseZoneFee)
+                                  : formatCurrency(opt.shippingFee)}
+                                )
+                              </span>
+                            </Label>
+                            {opt.customerEtaNote ? (
+                              <p className="text-muted-foreground mt-0.5 text-xs leading-snug">{opt.customerEtaNote}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                )}
                 <div className="text-foreground flex justify-between">
                   <span>
                     Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"}):
                   </span>
-                  <span className="font-semibold">{formatCurrency(totalPrice)}</span>
+                  <span className="font-semibold">{formatCurrency(displaySubtotal)}</span>
                 </div>
                 <div className="text-foreground flex justify-between">
                   <span>Shipping:</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
+                  {shipQuoteLoading ? (
+                    <span className="text-muted-foreground font-semibold">Đang tính…</span>
+                  ) : shipQuoteError ? (
+                    <span className="text-destructive max-w-[55%] text-right text-xs font-medium">{shipQuoteError}</span>
+                  ) : shipQuote?.displayMode === "included" ? (
+                    <span className="text-muted-foreground max-w-[58%] text-right text-xs font-medium">
+                      Đã gồm trong giá sản phẩm
+                    </span>
+                  ) : displayShippingFee !== null &&
+                    displayShippingFee <= 0 &&
+                    selectedShipOption?.freeShippingApplied ? (
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      Miễn phí (đạt ngưỡng)
+                    </span>
+                  ) : displayShippingFee !== null && displayShippingFee <= 0 ? (
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
+                  ) : displayShippingFee !== null ? (
+                    <span className="font-semibold">{formatCurrency(displayShippingFee)}</span>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">Chọn tỉnh/thành</span>
+                  )}
                 </div>
+                {shipQuote?.displayMode === "included" && !shipQuoteLoading && !shipQuoteError && selectedShipOption && (
+                  <p className="text-muted-foreground text-[10px] leading-snug">
+                    {selectedShipOption.baseZoneFee > 0
+                      ? `Phí tham khảo (${shipQuote.zoneName ?? "—"} — ${selectedShipOption.name}): ${formatCurrency(selectedShipOption.baseZoneFee)}; không cộng vào tổng.`
+                      : "Không cộng phí ship riêng; tổng thanh toán bằng tổng giá dòng hàng (subtotal)."}
+                  </p>
+                )}
                 <div className="flex justify-between items-center border-t pt-3">
                   <span className="text-lg font-bold">Total:</span>
-                  <span className="text-2xl font-bold text-orange-600">{formatCurrency(totalPrice)}</span>
+                  <span className="text-2xl font-bold text-orange-600">{formatCurrency(displayTotal)}</span>
                 </div>
               </div>
             </Card>

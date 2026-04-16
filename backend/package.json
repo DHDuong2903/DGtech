@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "db:migrate": "sequelize-cli db:migrate --config sequelize.config.cjs",
     "db:migrate:development": "node migrate-development.cjs",
-    "db:migrate:undo": "sequelize-cli db:migrate:undo --config sequelize.config.cjs"
+    "db:migrate:undo": "sequelize-cli db:migrate:undo --config sequelize.config.cjs",
+    "validate:vn-zones": "node scripts/validate-province-zone-keys.mjs"
   },
   "keywords": [],
   "author": "",

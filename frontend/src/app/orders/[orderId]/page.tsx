@@ -194,16 +194,50 @@ export default function OrderDetailPage() {
               <div className="space-y-3 mb-4 pb-4 border-b">
                 <div className="text-foreground flex justify-between">
                   <span>Subtotal ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                  <span className="font-semibold">{formatCurrency(currentOrder.totalPrice)}</span>
+                  <span className="font-semibold">
+                    {formatCurrency(
+                      currentOrder.subtotal != null
+                        ? Number(currentOrder.subtotal)
+                        : Number(currentOrder.totalPrice),
+                    )}
+                  </span>
                 </div>
+                {(currentOrder.shippingMethodName || currentOrder.shippingMethodCode) && (
+                  <div className="text-muted-foreground flex justify-between text-sm">
+                    <span>Delivery</span>
+                    <span className="max-w-[60%] text-right font-medium text-foreground">
+                      {currentOrder.shippingMethodName || currentOrder.shippingMethodCode}
+                      {currentOrder.shippingMethodEtaNote
+                        ? ` — ${currentOrder.shippingMethodEtaNote}`
+                        : ""}
+                    </span>
+                  </div>
+                )}
                 <div className="text-foreground flex justify-between">
                   <span>Shipping</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
+                  {currentOrder.shippingDisplayMode === "included" ? (
+                    <span className="text-muted-foreground max-w-[58%] text-right text-xs font-medium">
+                      Đã gồm trong giá sản phẩm
+                    </span>
+                  ) : (
+                    (() => {
+                      const fee =
+                        currentOrder.shippingFee != null ? Number(currentOrder.shippingFee) : 0;
+                      if (fee <= 0) {
+                        return (
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
+                        );
+                      }
+                      return <span className="font-semibold">{formatCurrency(fee)}</span>;
+                    })()
+                  )}
                 </div>
               </div>
               <div className="flex justify-between items-center mb-6">
                 <span className="text-foreground text-lg font-bold">Total:</span>
-                <span className="text-2xl font-bold text-orange-600">{formatCurrency(currentOrder.totalPrice)}</span>
+                <span className="text-2xl font-bold text-orange-600">
+                  {formatCurrency(Number(currentOrder.totalPrice))}
+                </span>
               </div>
 
               {currentOrder.status === "DELIVERED" && <Button className="w-full mb-3">Buy again</Button>}

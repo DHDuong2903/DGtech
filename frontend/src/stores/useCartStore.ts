@@ -1,13 +1,15 @@
 // Zustand store for Cart
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { Cart, ApiError } from "../types";
+import { Cart, ApiError, type FreeShippingMotivation } from "../types";
 import { cartApi } from "../apis";
 import { toast } from "sonner";
 
 interface CartState {
   // State
   cart: Cart | null;
+  /** From cart API — free-ship threshold bar when enabled in admin. */
+  freeShippingMotivation: FreeShippingMotivation | null;
   loading: boolean;
   error: string | null;
   /** Mini cart sheet after add-to-cart (not persisted). */
@@ -31,6 +33,7 @@ export const useCartStore = create<CartState>()(
       (set) => ({
         // Initial state
         cart: null,
+        freeShippingMotivation: null,
         loading: false,
         error: null,
         cartSheetOpen: false,
@@ -42,7 +45,11 @@ export const useCartStore = create<CartState>()(
           set({ loading: true, error: null });
           try {
             const response = await cartApi.getCart();
-            set({ cart: response.cart, loading: false });
+            set({
+              cart: response.cart,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              loading: false,
+            });
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (err: any) {
             console.error("Error fetching cart:", err);
@@ -54,7 +61,7 @@ export const useCartStore = create<CartState>()(
                 loading: false,
               });
             } else {
-              set({ loading: false, cart: null });
+              set({ loading: false, cart: null, freeShippingMotivation: null });
             }
           }
         },
@@ -64,7 +71,11 @@ export const useCartStore = create<CartState>()(
           set({ loading: true, error: null });
           try {
             const response = await cartApi.addToCart({ productId, quantity, variantId });
-            set({ cart: response.cart, loading: false });
+            set({
+              cart: response.cart,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              loading: false,
+            });
             requestAnimationFrame(() => {
               set({ cartSheetOpen: true });
             });
@@ -87,7 +98,11 @@ export const useCartStore = create<CartState>()(
             const response = await cartApi.updateCartItem(cartItemId, {
               quantity,
             });
-            set({ cart: response.cart, loading: false });
+            set({
+              cart: response.cart,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              loading: false,
+            });
             toast.success(response.message || "Cập nhật giỏ hàng thành công");
           } catch (err) {
             console.error("Error updating cart item:", err);
@@ -103,7 +118,11 @@ export const useCartStore = create<CartState>()(
           set({ loading: true, error: null });
           try {
             const response = await cartApi.removeFromCart(cartItemId);
-            set({ cart: response.cart, loading: false });
+            set({
+              cart: response.cart,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              loading: false,
+            });
             toast.success(response.message || "Sản phẩm đã được xóa khỏi giỏ hàng");
           } catch (err) {
             console.error("Error removing from cart:", err);
@@ -120,11 +139,17 @@ export const useCartStore = create<CartState>()(
           set({ loading: true, error: null });
           try {
             let lastCart: Cart | null = null;
+            let lastMotivation: FreeShippingMotivation = { show: false };
             for (const id of unique) {
               const response = await cartApi.removeFromCart(id);
               lastCart = response.cart;
+              lastMotivation = response.freeShippingMotivation ?? { show: false };
             }
-            set({ cart: lastCart, loading: false });
+            set({
+              cart: lastCart,
+              freeShippingMotivation: lastMotivation,
+              loading: false,
+            });
             toast.success(
               unique.length === 1 ? "Item removed from cart" : `${unique.length} items removed from cart`
             );
@@ -136,7 +161,10 @@ export const useCartStore = create<CartState>()(
             toast.error(errorMessage);
             try {
               const response = await cartApi.getCart();
-              set({ cart: response.cart });
+              set({
+                cart: response.cart,
+                freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              });
             } catch {
               /* ignore resync failure */
             }
@@ -148,7 +176,11 @@ export const useCartStore = create<CartState>()(
           set({ loading: true, error: null });
           try {
             const response = await cartApi.clearCart();
-            set({ cart: response.cart, loading: false });
+            set({
+              cart: response.cart,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              loading: false,
+            });
             toast.success(response.message || "Giỏ hàng đã được làm trống");
           } catch (err) {
             console.error("Error clearing cart:", err);

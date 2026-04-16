@@ -26,6 +26,8 @@ interface OrderState {
     shippingAddress?: string;
     phone?: string;
     userAddressId?: string;
+    provinceCode?: string;
+    shippingMethodCode?: string;
     paymentMethod: "COD" | "BANK_TRANSFER";
     notes?: string;
   }) => Promise<Order | null>;
