@@ -47,13 +47,13 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
       </TableCell>
       <TableCell className="min-w-[200px] max-w-[min(100vw-12rem,28rem)]">
         <div className="flex items-center gap-3">
-          <div className="bg-muted relative h-12 w-12 shrink-0 overflow-hidden rounded-md md:h-14 md:w-14">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md md:h-14 md:w-14">
             {item.product.imageUrl ? (
               <Image
                 src={item.product.imageUrl}
                 alt=""
                 fill
-                className="object-contain p-1"
+                className="object-contain p-0"
               />
             ) : (
               <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6 md:h-7 md:w-7" />
@@ -88,7 +88,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
         </div>
       </TableCell>
       <TableCell className="hidden whitespace-nowrap sm:table-cell">
-        <div className="flex flex-wrap items-baseline justify-end gap-1.5">
+        <div className="flex flex-wrap items-baseline justify-start gap-1.5">
           <span className="text-orange-600 font-semibold tabular-nums">{formatCurrency(itemPrice)}</span>
           {showCompareStrike ? (
             <span className="text-muted-foreground text-sm line-through tabular-nums">

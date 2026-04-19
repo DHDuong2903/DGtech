@@ -334,17 +334,7 @@ export default function AddressesPage() {
         itemName={deleteTarget ? `${deleteTarget.addressLine}` : ""}
         itemType="address"
         title="Delete address"
-        description={
-          <>
-            Are you sure you want to delete this saved address? This cannot be undone.
-            {deleteTarget ? (
-              <span className="text-muted-foreground mt-2 block text-sm">
-                {deleteTarget.phone} · {deleteTarget.addressLine}, {deleteTarget.wardName},{" "}
-                {deleteTarget.provinceName}
-              </span>
-            ) : null}
-          </>
-        }
+        description="Are you sure you want to delete this saved address? This cannot be undone."
         cancelLabel="Cancel"
         confirmLabel="Delete"
         confirmLoading={deleteWorking}

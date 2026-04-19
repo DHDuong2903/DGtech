@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { CartItem as CartItemComponent } from "./CartItem";
-import { CartBulkSelectionBar } from "./CartBulkSelectionBar";
+import { Button } from "@/src/components/ui/button";
 import { CartItem as CartItemType } from "@/src/types";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { Checkbox } from "@/src/components/ui/checkbox";
@@ -32,11 +32,6 @@ export function CartItemList({
 
   return (
     <div className="bg-card overflow-hidden rounded-lg border">
-      <CartBulkSelectionBar
-        selectedCount={selectedCount}
-        onDeleteSelected={onRemoveSelected}
-        disabled={removeSelectedDisabled}
-      />
       <div className="overflow-x-auto">
         <Table>
           <TableHeader className="bg-card border-b">
@@ -53,20 +48,31 @@ export function CartItemList({
               <TableHead>Product</TableHead>
               <TableHead className="hidden sm:table-cell">Price</TableHead>
               <TableHead>Quantity</TableHead>
-              <TableHead className="w-12 px-2 text-right">
-                <span className="sr-only">Actions</span>
+              <TableHead className="min-w-[100px] px-2 text-right">
+                {selectedCount > 0 ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => void onRemoveSelected()}
+                    disabled={removeSelectedDisabled}
+                  >
+                    Remove ({selectedCount})
+                  </Button>
+                ) : (
+                  <span className="sr-only">Actions</span>
+                )}
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-          {sortedItems.map((item) => (
-            <CartItemComponent
-              key={item.cartItemId}
-              item={item}
-              selected={selectedItems.has(item.cartItemId)}
-              onToggleSelect={onToggleSelect}
-            />
-          ))}
+            {sortedItems.map((item) => (
+              <CartItemComponent
+                key={item.cartItemId}
+                item={item}
+                selected={selectedItems.has(item.cartItemId)}
+                onToggleSelect={onToggleSelect}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>

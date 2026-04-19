@@ -171,9 +171,7 @@ export function CartDrawer() {
         </DrawerHeader>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {!hasLines ? (
-            <p className="text-muted-foreground p-4 text-sm">No items in your cart.</p>
-          ) : (
+          {hasLines && (
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {sortedItems.map((item) => (
                 <CartSheetLine key={item.cartItemId} item={item} />
