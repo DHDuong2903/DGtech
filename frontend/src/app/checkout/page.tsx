@@ -10,7 +10,7 @@ import { Spinner } from "@/src/components/ui/spinner";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Card } from "@/src/components/ui/card";
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft, BadgePercent, Package } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "../../utils";
 import Image from "next/image";
@@ -518,6 +518,12 @@ function CheckoutContent() {
                         </p>
                       )}
                       <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                      {item.appliedCampaign?.name ? (
+                        <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
+                          <BadgePercent className="h-3.5 w-3.5 shrink-0 text-orange-600" aria-hidden />
+                          <span className="truncate">{item.appliedCampaign.name}</span>
+                        </p>
+                      ) : null}
                       <p className="text-sm font-semibold text-orange-600">
                         {formatCurrency((item.variant?.price ?? item.product.price) * item.quantity)}
                       </p>

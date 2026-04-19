@@ -1,7 +1,7 @@
 "use client";
 
 import { ProductVariant } from "@/src/types/productType";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 
@@ -25,6 +25,14 @@ export const VariantSelector = (props: VariantSelectorProps) => {
     const v = props.selectedVariant;
     return v && !v.isDefault ? { ...v.attributes } : {};
   });
+
+  // PDP can set the cheapest real variant after fetch; keep chip UI in sync (and after client-side product changes).
+  useEffect(() => {
+    const v = props.selectedVariant;
+    if (v && !v.isDefault) {
+      setSelectedAttrs({ ...v.attributes });
+    }
+  }, [props.selectedVariant?.variantId]);
 
   const handleAttrSelect = (name: string, value: string) => {
     const newAttrs = { ...selectedAttrs, [name]: value };

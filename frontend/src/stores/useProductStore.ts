@@ -56,7 +56,11 @@ interface ProductState {
 
 export const useProductStore = create<ProductState>()(
   devtools(
-    (set) => ({
+    (set) => {
+      /** Latest product id requested by `fetchProductById` — ignores stale axios responses after client-side navigations. */
+      let detailFetchLatestId: string | null = null;
+
+      return {
       // Initial state
       products: [],
       currentProduct: null,
@@ -103,14 +107,22 @@ export const useProductStore = create<ProductState>()(
 
       // Fetch single product by ID
       fetchProductById: async (id: string) => {
-        set({ loading: true, error: null });
+        detailFetchLatestId = id;
+        // Clear previous detail immediately so PDP never shows another product's prices after client-side navigation.
+        set({ loading: true, error: null, currentProduct: null, relatedProducts: [] });
         try {
           const product = await productsApi.getById(id);
-          set({ currentProduct: product, loading: false });
+          if (detailFetchLatestId !== id) return;
+          set({ currentProduct: product, loading: false, error: null });
         } catch (err) {
           console.error("Error fetching product:", err);
+          if (detailFetchLatestId !== id) return;
           const error = err as ApiError;
-          set({ error: error.message || "Failed to fetch product", loading: false });
+          set({
+            currentProduct: null,
+            error: error.message || "Failed to fetch product",
+            loading: false,
+          });
         }
       },
 
@@ -232,7 +244,8 @@ export const useProductStore = create<ProductState>()(
       clearError: () => {
         set({ error: null });
       },
-    }),
+    };
+    },
     { name: "ProductStore" }
   )
 );

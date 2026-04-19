@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useCartStore, useProductStore, useReviewStore } from "../../../stores";
 import {
   ProductLoadingState,
@@ -17,8 +17,44 @@ import {
   VariantSelector,
 } from "../../../components/public/product";
 import { cn } from "@/src/lib/utils";
+import { toMoneyNumber } from "@/src/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import type { Product } from "@/src/types";
 import { ProductVariant } from "@/src/types/productType";
+
+/** Storefront list/detail use the same min sale price among real variants (see backend applyCampaignPricingToProductForStorefront). */
+function pickCheapestRealVariant(variants: ProductVariant[]): ProductVariant | null {
+  const real = variants.filter((v) => !v.isDefault);
+  if (!real.length) return null;
+  let best = real[0];
+  let bestPrice = toMoneyNumber(best.price);
+  if (!Number.isFinite(bestPrice)) bestPrice = Number.POSITIVE_INFINITY;
+  for (let i = 1; i < real.length; i++) {
+    const v = real[i];
+    const p = toMoneyNumber(v.price);
+    const ok = Number.isFinite(p) ? p : Number.POSITIVE_INFINITY;
+    if (ok < bestPrice) {
+      best = v;
+      bestPrice = ok;
+    }
+  }
+  return best;
+}
+
+function resolveStorefrontSelectedVariant(
+  product: Product | null | undefined,
+  userSelectedVariantId: string | null,
+): ProductVariant | null {
+  if (!product?.variants?.length) return null;
+  const vs = product.variants;
+  if (userSelectedVariantId) {
+    const hit = vs.find((v) => v.variantId === userSelectedVariantId);
+    if (hit) return hit;
+  }
+  const cheapestReal = pickCheapestRealVariant(vs);
+  if (cheapestReal) return cheapestReal;
+  return vs.find((v) => v.isDefault) ?? vs[0] ?? null;
+}
 
 const ProductDetailPage = () => {
   const params = useParams();
@@ -26,6 +62,7 @@ const ProductDetailPage = () => {
   const productId = params.id as string;
 
   const { user } = useUser();
+  const { isLoaded: clerkLoaded } = useAuth();
   const { addToCart, loading: cartLoading, fetchCart, updateCartItem, setCartSheetOpen } = useCartStore();
   const {
     currentProduct: product,
@@ -37,25 +74,27 @@ const ProductDetailPage = () => {
   const { reviews, fetchReviewsByProductId, createReview } = useReviewStore();
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  /** When null, PDP uses the cheapest real variant (same anchor price as cards). Set when shopper picks options. */
+  const [userSelectedVariantId, setUserSelectedVariantId] = useState<string | null>(null);
   const [buyNowBusy, setBuyNowBusy] = useState(false);
 
   useEffect(() => {
-    if (productId) {
-      fetchProductById(productId);
-      fetchReviewsByProductId(productId);
-    }
-  }, [productId, fetchProductById, fetchReviewsByProductId]);
+    if (!productId || !clerkLoaded) return;
+    setQuantity(1);
+    setUserSelectedVariantId(null);
+    fetchProductById(productId);
+    fetchReviewsByProductId(productId);
+  }, [productId, clerkLoaded, fetchProductById, fetchReviewsByProductId]);
 
-  // Set default variant if it's a simple product
-  useEffect(() => {
-    if (product?.variants) {
-      const defaultVar = product.variants.find((v) => v.isDefault);
-      if (defaultVar) {
-        setSelectedVariant(defaultVar);
-      }
-    }
-  }, [product]);
+  const selectedVariant = useMemo(
+    () => resolveStorefrontSelectedVariant(product, userSelectedVariantId),
+    [product, userSelectedVariantId],
+  );
+
+  const handleVariantSelect = useCallback((v: ProductVariant | null) => {
+    // Partial attribute selection calls null; keep auto/last full variant for price until a full match.
+    if (v?.variantId) setUserSelectedVariantId(v.variantId);
+  }, []);
 
   // Fetch related products based on category
   useEffect(() => {
@@ -67,8 +106,9 @@ const ProductDetailPage = () => {
   const hasRealVariants = product?.variants?.some((v) => !v.isDefault) ?? false;
   const isVariantSelected = !!selectedVariant && (!hasRealVariants || !selectedVariant.isDefault);
 
-  const displayPrice = selectedVariant?.price ?? product?.price ?? 0;
-  const displayCompareAtPrice = selectedVariant?.compareAtPrice ?? product?.compareAtPrice ?? null;
+  const displayPrice = toMoneyNumber(selectedVariant?.price ?? product?.price) || 0;
+  const listNum = toMoneyNumber(selectedVariant?.compareAtPrice ?? product?.compareAtPrice ?? null);
+  const displayCompareAtPrice = Number.isFinite(listNum) ? listNum : null;
   const displayStock = selectedVariant?.stock ?? product?.stock ?? 0;
 
   const handleQuantityChange = (delta: number) => {
@@ -175,7 +215,7 @@ const ProductDetailPage = () => {
     });
   };
 
-  if (loading) {
+  if (!clerkLoaded || loading) {
     return <ProductLoadingState />;
   }
 
@@ -210,9 +250,10 @@ const ProductDetailPage = () => {
 
             {hasRealVariants && (
               <VariantSelector
+                key={product.productId}
                 variants={product.variants || []}
                 selectedVariant={selectedVariant}
-                onSelect={setSelectedVariant}
+                onSelect={handleVariantSelect}
               />
             )}
 

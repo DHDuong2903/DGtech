@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/src/components/ui/button";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { BadgePercent, Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { Checkbox } from "@/src/components/ui/checkbox";
@@ -29,6 +29,8 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
   };
 
   const itemPrice = item.variant ? item.variant.price : item.product.price;
+  const compareAt = item.variant?.compareAtPrice ?? item.product.compareAtPrice ?? null;
+  const showCompareStrike = compareAt != null && compareAt > itemPrice;
   const maxStock = item.variant ? item.variant.stock : item.product.stock;
 
   const hasRealVariant = item.variant && Object.keys(item.variant.attributes).length > 0;
@@ -68,12 +70,32 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
                 ))}
               </div>
             )}
-            <p className="text-orange-600 mt-1 text-sm font-semibold sm:hidden">{formatCurrency(itemPrice)}</p>
+            {item.appliedCampaign?.name ? (
+              <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
+                <BadgePercent className="h-3.5 w-3.5 shrink-0 text-orange-600" aria-hidden />
+                <span className="truncate">{item.appliedCampaign.name}</span>
+              </p>
+            ) : null}
+            <div className="mt-1 flex flex-wrap items-baseline gap-1.5 sm:hidden">
+              <span className="text-orange-600 text-sm font-semibold tabular-nums">{formatCurrency(itemPrice)}</span>
+              {showCompareStrike ? (
+                <span className="text-muted-foreground text-xs line-through tabular-nums">
+                  {formatCurrency(compareAt)}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       </TableCell>
       <TableCell className="hidden whitespace-nowrap sm:table-cell">
-        <span className="text-orange-600 font-semibold">{formatCurrency(itemPrice)}</span>
+        <div className="flex flex-wrap items-baseline justify-end gap-1.5">
+          <span className="text-orange-600 font-semibold tabular-nums">{formatCurrency(itemPrice)}</span>
+          {showCompareStrike ? (
+            <span className="text-muted-foreground text-sm line-through tabular-nums">
+              {formatCurrency(compareAt)}
+            </span>
+          ) : null}
+        </div>
       </TableCell>
       <TableCell className="whitespace-nowrap">
         <div className="inline-flex items-center gap-0.5">

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Award, MoreHorizontal, Shield, Trash2, UserCheck } from "lucide-react";
+import { MoreHorizontal, Trash2, Shield, UserCheck } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -21,13 +21,12 @@ function TierBadge({ tier }: { tier: User["tier"] }) {
     return <span className="text-muted-foreground text-sm">—</span>;
   }
   const styles: Record<NonNullable<User["tier"]>, string> = {
-    bronze: "border-amber-700/40 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100",
-    silver: "border-slate-400/50 bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
-    gold: "border-yellow-600/40 bg-yellow-50 text-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-100",
+    bronze: "font-normal border-orange-700/20 bg-orange-50 text-orange-800 dark:bg-orange-950/30 dark:text-orange-200",
+    silver: "font-normal border-slate-400/30 bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200",
+    gold: "font-normal border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-200",
   };
   return (
     <Badge variant="outline" className={cn("capitalize", styles[tier])}>
-      <Award className="h-3 w-3" />
       {tier}
     </Badge>
   );
@@ -64,18 +63,8 @@ export function createAdminUserColumns(handlers: {
       cell: ({ row }) => {
         const role = row.original.role;
         return (
-          <Badge variant={role === "admin" ? "default" : "secondary"}>
-            {role === "admin" ? (
-              <>
-                <Shield className="mr-1 h-3 w-3" />
-                Admin
-              </>
-            ) : (
-              <>
-                <UserCheck className="mr-1 h-3 w-3" />
-                User
-              </>
-            )}
+          <Badge variant={role === "admin" ? "default" : "secondary"} className="capitalize font-normal">
+            {role}
           </Badge>
         );
       },
@@ -123,10 +112,10 @@ export function createAdminUserColumns(handlers: {
         const d = row.original.createdAt;
         return d
           ? new Date(d).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
           : "—";
       },
     },
@@ -147,22 +136,22 @@ export function createAdminUserColumns(handlers: {
               <DropdownMenuContent align="end">
                 {(user.role !== "admin" ||
                   (user.role === "admin" && user.clerkId !== handlers.currentUserClerkId)) && (
-                  <>
-                    {user.role !== "admin" && (
-                      <DropdownMenuItem onClick={() => void handlers.onSetRole(user, "admin")}>
-                        <Shield className="h-4 w-4" />
-                        Set as Admin
-                      </DropdownMenuItem>
-                    )}
-                    {user.role === "admin" && user.clerkId !== handlers.currentUserClerkId && (
-                      <DropdownMenuItem onClick={() => void handlers.onSetRole(user, "user")}>
-                        <UserCheck className="h-4 w-4" />
-                        Set as User
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+                    <>
+                      {user.role !== "admin" && (
+                        <DropdownMenuItem onClick={() => void handlers.onSetRole(user, "admin")}>
+                          <Shield className="h-4 w-4" />
+                          Set as Admin
+                        </DropdownMenuItem>
+                      )}
+                      {user.role === "admin" && user.clerkId !== handlers.currentUserClerkId && (
+                        <DropdownMenuItem onClick={() => void handlers.onSetRole(user, "user")}>
+                          <UserCheck className="h-4 w-4" />
+                          Set as User
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                 <DropdownMenuItem variant="destructive" onClick={() => handlers.onDelete(user)}>
                   <Trash2 className="h-4 w-4" />
                   Delete

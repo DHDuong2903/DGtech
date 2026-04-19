@@ -16,11 +16,11 @@ import { handleUploadSingle } from "../middlewares/upload.js";
 
 const router = express.Router();
 
-// Public routes - no auth required
-router.get("/featured", getFeaturedProducts);
+// Public routes — optionalAuth so tier-scoped discount pricing matches PDP/cart when Bearer is sent
+router.get("/featured", optionalAuth, getFeaturedProducts);
 router.get("/admin/inventory", requireAuth, requireAdmin, getAdminInventory);
 router.get("/:productId", optionalAuth, getProductById);
-router.get("/", getAllProducts);
+router.get("/", optionalAuth, getAllProducts);
 
 // Protected routes
 router.use(requireAuth);

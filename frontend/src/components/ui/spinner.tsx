@@ -1,21 +1,17 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Loader2 } from "lucide-react";
+import * as React from "react"
+import { Loader2Icon } from "lucide-react"
 
-import { cn } from "@/src/lib/utils";
+import { cn } from "@/src/lib/utils"
 
-export type SpinnerProps = React.ComponentProps<typeof Loader2> & {
-  "data-icon"?: "inline-start" | "inline-end";
-};
+export type SpinnerProps = React.ComponentProps<typeof Loader2Icon> & {
+  "data-icon"?: "inline-start" | "inline-end"
+}
 
-/**
- * Loading indicator for buttons. Use with {@link Button}: place inside the button and set `disabled` while loading.
- * Optional `data-icon="inline-start"` / `inline-end` for spacing with label text.
- */
 function Spinner({ className, "data-icon": dataIcon, ...props }: SpinnerProps) {
   return (
-    <Loader2
+    <Loader2Icon
       role="status"
       aria-label="Loading"
       data-slot="spinner"
@@ -28,7 +24,7 @@ function Spinner({ className, "data-icon": dataIcon, ...props }: SpinnerProps) {
       )}
       {...props}
     />
-  );
+  )
 }
 
-export { Spinner };
+export { Spinner }

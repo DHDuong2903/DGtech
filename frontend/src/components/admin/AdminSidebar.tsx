@@ -27,11 +27,15 @@ export const AdminSidebar = () => {
             <SidebarMenu>
               {ADMIN_SIDEBAR_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
+                const isActive =
+                  item.href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href}
+                      isActive={isActive}
                       className="hover:bg-muted/80 hover:text-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground"
                     >
                       <Link href={item.href}>

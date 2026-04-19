@@ -76,7 +76,7 @@ export const useCartStore = create<CartState>()(
         },
 
         // Add item to cart
-        addToCart: async (productId: string, quantity = 1, variantId?: string, opts) => {
+        addToCart: async (productId: string, quantity = 1, variantId?: string, opts?: { openSheet?: boolean; suppressSuccessToast?: boolean }) => {
           const openSheet = opts?.openSheet !== false;
           const suppressSuccessToast = opts?.suppressSuccessToast === true;
           set({ loading: true, error: null });
@@ -92,9 +92,7 @@ export const useCartStore = create<CartState>()(
                 set({ cartSheetOpen: true });
               });
             }
-            if (!suppressSuccessToast) {
-              toast.success(response.message || "Sản phẩm đã được thêm vào giỏ hàng");
-            }
+            // toast.success removed as per request
           } catch (err: unknown) {
             console.error("Error adding to cart:", err);
             const errorMessage =
@@ -141,7 +139,7 @@ export const useCartStore = create<CartState>()(
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
-            toast.success(response.message || "Sản phẩm đã được xóa khỏi giỏ hàng");
+            // toast.success removed as per request
           } catch (err) {
             console.error("Error removing from cart:", err);
             const error = err as ApiError;
@@ -168,9 +166,7 @@ export const useCartStore = create<CartState>()(
               freeShippingMotivation: lastMotivation,
               loading: false,
             });
-            toast.success(
-              unique.length === 1 ? "Item removed from cart" : `${unique.length} items removed from cart`
-            );
+            // toast.success removed as per request
           } catch (err) {
             console.error("Error removing cart items:", err);
             const error = err as ApiError;
@@ -199,7 +195,7 @@ export const useCartStore = create<CartState>()(
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
-            toast.success(response.message || "Giỏ hàng đã được làm trống");
+            // toast.success removed as per request
           } catch (err) {
             console.error("Error clearing cart:", err);
             const error = err as ApiError;

@@ -11,6 +11,7 @@ import {
   ShippingRate,
   ShippingSetting,
 } from "../models/associationsModel.js";
+import { enrichCartItemLinesForStorefront } from "./discountCampaignResolveService.js";
 import { getProvinceName } from "../helpers/vnAddressHelper.js";
 
 export const STANDARD_CODE = "standard";
@@ -45,7 +46,7 @@ export async function loadSelectedCartLines(clerkId: string, selectedItems: stri
       {
         model: Product,
         as: "product",
-        attributes: ["productId", "name", "price", "stock", "status"],
+        attributes: ["productId", "name", "price", "stock", "status", "categoryId"],
       },
       {
         model: ProductVariant,
@@ -58,6 +59,7 @@ export async function loadSelectedCartLines(clerkId: string, selectedItems: stri
   if (cartItems.length !== selectedItems.length) {
     throw new ShippingConfigError("Một số sản phẩm không thuộc giỏ hàng của bạn", "CART_MISMATCH");
   }
+  await enrichCartItemLinesForStorefront(cartItems, clerkId);
   return { cart, cartItems };
 }
 

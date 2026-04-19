@@ -1,10 +1,28 @@
 // @ts-nocheck
 import { Cart, CartItem, Product, ProductVariant } from "../models/associationsModel.js";
 import { updateCartTotals, getCartWithDetails, getFreeShippingMotivation } from "../helpers/cartHelper.js";
+import {
+  enrichCartItemLinesForStorefront,
+  serializeCartForStorefrontJson,
+} from "../services/discountCampaignResolveService.js";
 
-async function sendCartResponse(res: any, data: Record<string, unknown>) {
+async function sendCartResponse(res: any, data: Record<string, unknown>, clerkId?: string | null) {
   const freeShippingMotivation = await getFreeShippingMotivation();
-  res.status(200).json({ ...data, freeShippingMotivation });
+  let payload = { ...data };
+  if (payload.cart && clerkId && payload.cart.items?.length) {
+    await enrichCartItemLinesForStorefront(payload.cart.items, clerkId);
+    let sub = 0;
+    for (const it of payload.cart.items) {
+      const unit = it.variant ? parseFloat(it.variant.price) : parseFloat(it.product.price);
+      sub += unit * it.quantity;
+    }
+    sub = Math.round(sub * 100) / 100;
+    if (typeof payload.cart.setDataValue === "function") {
+      payload.cart.setDataValue("totalPrice", sub);
+    }
+    payload = { ...payload, cart: serializeCartForStorefrontJson(payload.cart) };
+  }
+  res.status(200).json({ ...payload, freeShippingMotivation });
 }
 
 // Lay gio hang cua user hien tai
@@ -19,7 +37,7 @@ export const getCart = async (req: any, res: any) => {
       cart = await getCartWithDetails(clerkId);
     }
 
-    await sendCartResponse(res, { cart });
+    await sendCartResponse(res, { cart }, clerkId);
   } catch (error) {
     console.error("Loi khi getCart", error);
     res.status(500).json({ error: "Không thể lấy giỏ hàng" });
@@ -95,11 +113,11 @@ export const addToCart = async (req: any, res: any) => {
       message = "Sản phẩm đã được thêm vào giỏ hàng";
     }
 
-    await updateCartTotals(cart.cartId);
+    await updateCartTotals(cart.cartId, clerkId);
 
     cart = await getCartWithDetails(clerkId);
 
-    await sendCartResponse(res, { cart, message });
+    await sendCartResponse(res, { cart, message }, clerkId);
   } catch (error) {
     console.error("Loi khi addToCart", error);
     res.status(500).json({ error: "Không thể thêm sản phẩm vào giỏ hàng" });
@@ -147,14 +165,18 @@ export const updateCartItem = async (req: any, res: any) => {
     cartItem.quantity = quantity;
     await cartItem.save();
 
-    await updateCartTotals(cart.cartId);
+    await updateCartTotals(cart.cartId, clerkId);
 
     const updatedCart = await getCartWithDetails(clerkId);
 
-    await sendCartResponse(res, {
-      cart: updatedCart,
-      message: "Sản phẩm trong giỏ hàng đã được cập nhật",
-    });
+    await sendCartResponse(
+      res,
+      {
+        cart: updatedCart,
+        message: "Sản phẩm trong giỏ hàng đã được cập nhật",
+      },
+      clerkId
+    );
   } catch (error) {
     console.error("Loi khi updateCartItem", error);
     res.status(500).json({ error: "Không thể cập nhật sản phẩm trong giỏ hàng" });
@@ -182,11 +204,11 @@ export const removeFromCart = async (req: any, res: any) => {
 
     await cartItem.destroy();
 
-    await updateCartTotals(cart.cartId);
+    await updateCartTotals(cart.cartId, clerkId);
 
     const updatedCart = await getCartWithDetails(clerkId);
 
-    await sendCartResponse(res, { cart: updatedCart, message: "Sản phẩm đã được xóa khỏi giỏ hàng" });
+    await sendCartResponse(res, { cart: updatedCart, message: "Sản phẩm đã được xóa khỏi giỏ hàng" }, clerkId);
   } catch (error) {
     console.error("Loi khi removeFromCart", error);
     res.status(500).json({ error: "Không thể xóa sản phẩm khỏi giỏ hàng" });
@@ -211,7 +233,7 @@ export const clearCart = async (req: any, res: any) => {
 
     const updatedCart = await getCartWithDetails(clerkId);
 
-    await sendCartResponse(res, { cart: updatedCart, message: "Giỏ hàng đã được làm trống" });
+    await sendCartResponse(res, { cart: updatedCart, message: "Giỏ hàng đã được làm trống" }, clerkId);
   } catch (error) {
     console.error("Loi khi clearCart", error);
     res.status(500).json({ error: "Không thể làm trống giỏ hàng" });

@@ -82,6 +82,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (productId && typeof productId === "string") {
+      setProduct(null);
       setLoading(true);
       fetchProductById(productId);
     }

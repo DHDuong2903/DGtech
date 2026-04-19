@@ -169,7 +169,7 @@ const ProductsPage = () => {
               <>
                 <h3 className="mt-4 text-lg font-semibold">No products yet</h3>
                 <p className="text-muted-foreground mt-2">Create your first product to get started.</p>
-                <Button asChild className="mt-4">
+                <Button asChild className="mt-4" size="sm">
                   <Link href="/admin/products/create">
                     <Plus className="h-4 w-4" />
                     Create product
