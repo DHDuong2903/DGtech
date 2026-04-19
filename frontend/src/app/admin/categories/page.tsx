@@ -140,7 +140,7 @@ const CategoriesPage = () => {
             <Tag className="text-muted-foreground mx-auto h-12 w-12" />
             <h3 className="mt-4 text-lg font-semibold">No categories yet</h3>
             <p className="text-muted-foreground mt-2">Create your first category to organize products.</p>
-            <Button onClick={openCreateModal} className="mt-4">
+            <Button onClick={openCreateModal} className="mt-4" size="sm">
               <Plus className="h-4 w-4" />
               Add category
             </Button>

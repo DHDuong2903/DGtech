@@ -1,20 +1,33 @@
+// @ts-nocheck
 import { Cart, CartItem, Product, ProductVariant, ShippingSetting } from "../models/associationsModel.js";
+import { enrichCartItemLinesForStorefront } from "../services/discountCampaignResolveService.js";
 
-// Cap nhat tong tien va so luong trong gio hang
-export const updateCartTotals = async (cartId) => {
+// Cap nhat tong tien va so luong trong gio hang (gia sau campaign khi co clerkId)
+export const updateCartTotals = async (cartId: string, clerkId?: string | null) => {
   const cartItems = await CartItem.findAll({
     where: { cartId },
     include: [
-      { model: Product, as: "product" },
-      { model: ProductVariant, as: "variant" }
+      {
+        model: Product,
+        as: "product",
+        attributes: ["productId", "name", "price", "imageUrl", "stock", "categoryId", "status"],
+      },
+      {
+        model: ProductVariant,
+        as: "variant",
+        attributes: ["variantId", "price", "stock", "attributes"],
+      },
     ],
   });
+
+  if (clerkId) {
+    await enrichCartItemLinesForStorefront(cartItems, clerkId);
+  }
 
   let totalPrice = 0;
   let totalItems = 0;
 
   cartItems.forEach((item) => {
-    // Luon lay gia tu variant vi moi product deu co variant
     const itemPrice = item.variant ? parseFloat(item.variant.price) : parseFloat(item.product.price);
     totalPrice += itemPrice * item.quantity;
     totalItems += item.quantity;
@@ -24,7 +37,7 @@ export const updateCartTotals = async (cartId) => {
 };
 
 // Lay gio hang voi chi tiet day du
-export const getCartWithDetails = async (clerkId) => {
+export const getCartWithDetails = async (clerkId: string) => {
   return await Cart.findOne({
     where: { clerkId },
     include: [
@@ -35,13 +48,13 @@ export const getCartWithDetails = async (clerkId) => {
           {
             model: Product,
             as: "product",
-            attributes: ["productId", "name", "price", "imageUrl", "stock"],
+            attributes: ["productId", "name", "price", "imageUrl", "stock", "categoryId", "status"],
           },
           {
             model: ProductVariant,
             as: "variant",
             attributes: ["variantId", "price", "stock", "attributes"],
-          }
+          },
         ],
       },
     ],

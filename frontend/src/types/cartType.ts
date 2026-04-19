@@ -5,6 +5,12 @@ export type FreeShippingMotivation =
   | { show: false }
   | { show: true; minSubtotal: number; standardOnly: boolean };
 
+/** Set by cart API when a discount campaign applies to the line. */
+export type CartItemAppliedCampaign = {
+  campaignId: string;
+  name: string;
+};
+
 export interface CartItem {
   cartItemId: string;
   cartId: string;
@@ -13,6 +19,7 @@ export interface CartItem {
   quantity: number;
   product: Product;
   variant?: ProductVariant;
+  appliedCampaign?: CartItemAppliedCampaign | null;
   createdAt: string;
   updatedAt: string;
 }

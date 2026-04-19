@@ -41,6 +41,24 @@ axiosInstance.interceptors.request.use(
   },
 );
 
+// Bearer must live on the shared axios instance (registered at import time), not only in a
+// child useEffect. Otherwise leaf pages (e.g. PDP) can fire fetches before the Clerk bridge runs,
+// so the first request has no auth and storefront pricing tier/campaigns differ until refresh.
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await getClerkTokenForApi();
+      if (token) {
+        applyBearerToAxiosConfig(config, token);
+      }
+    } catch (error) {
+      console.error("Error getting Clerk token for API request:", error);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
 // Response: on 401, lấy JWT mới từ Clerk (skipCache) và thử lại đúng 1 lần
 axiosInstance.interceptors.response.use(
   (response) => response,

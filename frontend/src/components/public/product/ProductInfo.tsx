@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/src/utils";
+import { formatCurrency, toMoneyNumber } from "@/src/utils";
 
 interface ProductInfoProps {
   name: string;
@@ -8,6 +8,11 @@ interface ProductInfoProps {
 }
 
 export const ProductInfo = ({ name, price, compareAtPrice, description }: ProductInfoProps) => {
+  const sale = toMoneyNumber(price);
+  const list = toMoneyNumber(compareAtPrice);
+  const saleOk = Number.isFinite(sale) ? sale : 0;
+  const showStrike = Number.isFinite(list) && list > saleOk;
+
   return (
     <div className="flex flex-col">
       <div>
@@ -18,11 +23,11 @@ export const ProductInfo = ({ name, price, compareAtPrice, description }: Produc
 
       <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
         <span className="text-primary text-2xl font-bold tracking-tight sm:text-3xl">
-          {formatCurrency(price)}
+          {formatCurrency(saleOk)}
         </span>
-        {compareAtPrice && compareAtPrice > price && (
+        {showStrike && (
           <span className="text-muted-foreground text-base line-through decoration-muted-foreground/50 sm:text-lg">
-            {formatCurrency(compareAtPrice)}
+            {formatCurrency(list)}
           </span>
         )}
       </div>

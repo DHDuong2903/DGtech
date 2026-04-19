@@ -15,6 +15,10 @@ import { ShippingMethod } from "./shippingMethodModel.js";
 import { ShippingRate } from "./shippingRateModel.js";
 import { ShippingProvinceZone } from "./shippingProvinceZoneModel.js";
 import { ShippingSetting } from "./shippingSettingModel.js";
+import { DiscountCampaign } from "./discountCampaignModel.js";
+import { DiscountCampaignProduct } from "./discountCampaignProductModel.js";
+import { DiscountCampaignCategory } from "./discountCampaignCategoryModel.js";
+import { DiscountCampaignVariantPrice } from "./discountCampaignVariantPriceModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -84,6 +88,30 @@ ShippingRate.belongsTo(ShippingMethod, { foreignKey: "methodId", as: "method" })
 ShippingZone.hasMany(ShippingProvinceZone, { foreignKey: "zoneId", as: "provinceMappings", onDelete: "CASCADE" });
 ShippingProvinceZone.belongsTo(ShippingZone, { foreignKey: "zoneId", as: "zone" });
 
+// Discount campaigns (admin): scope + optional per-variant prices
+DiscountCampaign.belongsToMany(Product, {
+  through: DiscountCampaignProduct,
+  foreignKey: "campaignId",
+  otherKey: "productId",
+  as: "products",
+});
+
+DiscountCampaign.belongsToMany(Category, {
+  through: DiscountCampaignCategory,
+  foreignKey: "campaignId",
+  otherKey: "categoryId",
+  as: "categories",
+});
+
+DiscountCampaign.hasMany(DiscountCampaignVariantPrice, {
+  foreignKey: "campaignId",
+  as: "variantPrices",
+  onDelete: "CASCADE",
+});
+DiscountCampaignVariantPrice.belongsTo(DiscountCampaign, { foreignKey: "campaignId", as: "campaign" });
+DiscountCampaignVariantPrice.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
+ProductVariant.hasMany(DiscountCampaignVariantPrice, { foreignKey: "variantId", as: "campaignVariantPrices" });
+
 export {
   Category,
   Product,
@@ -101,4 +129,8 @@ export {
   ShippingRate,
   ShippingProvinceZone,
   ShippingSetting,
+  DiscountCampaign,
+  DiscountCampaignProduct,
+  DiscountCampaignCategory,
+  DiscountCampaignVariantPrice,
 };

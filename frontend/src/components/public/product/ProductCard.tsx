@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Product } from "@/src/types";
-import { formatCurrency } from "@/src/utils";
+import { formatCurrency, toMoneyNumber } from "@/src/utils";
 import { ProductImageFallback } from "./ProductImageFallback";
 
 interface ProductCardProps {
@@ -13,6 +13,10 @@ interface ProductCardProps {
 
 export const ProductCard = ({ product, compact }: ProductCardProps) => {
   const router = useRouter();
+  const sale = toMoneyNumber(product.price);
+  const list = toMoneyNumber(product.compareAtPrice);
+  const saleOk = Number.isFinite(sale) ? sale : 0;
+  const showStrike = Number.isFinite(list) && list > saleOk;
 
   const handleClick = () => {
     router.push(`/shop/${product.productId}`);
@@ -67,9 +71,9 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
               compact ? "text-primary text-sm font-semibold tabular-nums" : "text-primary text-lg font-bold tabular-nums"
             }
           >
-            {formatCurrency(product.price)}
+            {formatCurrency(saleOk)}
           </p>
-          {product.compareAtPrice && product.compareAtPrice > product.price && (
+          {showStrike && (
             <p
               className={
                 compact
@@ -77,7 +81,7 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
                   : "text-muted-foreground text-sm line-through tabular-nums"
               }
             >
-              {formatCurrency(product.compareAtPrice)}
+              {formatCurrency(list)}
             </p>
           )}
         </div>

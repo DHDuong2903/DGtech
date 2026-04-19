@@ -51,7 +51,7 @@ export const useReviewStore = create<ReviewState>()(
             reviews: [newReview, ...state.reviews],
             error: null,
           }));
-          toast.success("Đánh giá của bạn đã được gửi!");
+          // toast.success removed as per request
           return { success: true, data: newReview };
         } catch (err) {
           console.error("Error creating review:", err);

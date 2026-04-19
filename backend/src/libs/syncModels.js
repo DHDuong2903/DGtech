@@ -10,6 +10,10 @@ import { Order } from "../models/orderModel.js";
 import { OrderItem } from "../models/orderItemModel.js";
 import { Payment } from "../models/paymentModel.js";
 import { Slideshow } from "../models/slideshowModel.js";
+import { DiscountCampaign } from "../models/discountCampaignModel.js";
+import { DiscountCampaignProduct } from "../models/discountCampaignProductModel.js";
+import { DiscountCampaignCategory } from "../models/discountCampaignCategoryModel.js";
+import { DiscountCampaignVariantPrice } from "../models/discountCampaignVariantPriceModel.js";
 
 // Import associations
 import "../models/associationsModel.js";

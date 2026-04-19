@@ -2,42 +2,19 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
-import axiosInstance, { applyBearerToAxiosConfig } from "../lib/axios";
-import {
-  getClerkTokenForApi,
-  registerClerkGetToken,
-  unregisterClerkGetToken,
-} from "../lib/clerk-auth-bridge";
+import { registerClerkGetToken, unregisterClerkGetToken } from "../lib/clerk-auth-bridge";
 
 /**
- * Registers Clerk getToken for axios + attaches Bearer on each request.
- * 401 responses are retried once in axios.ts with getToken({ skipCache: true }).
+ * Wires Clerk `getToken` into the axios bridge used by `axios.ts` interceptors (registered at module load).
+ * Registering here on render (not in a child-only useEffect) avoids PDP/list firing before Bearer exists.
+ * 401 responses are still retried once in axios.ts with getToken({ skipCache: true }).
  */
 export const AxiosInterceptorSetup = ({ children }: { children: React.ReactNode }) => {
   const { getToken } = useAuth();
+  registerClerkGetToken((opts) => getToken(opts));
 
   useEffect(() => {
-    registerClerkGetToken((opts) => getToken(opts));
-
-    const requestInterceptor = axiosInstance.interceptors.request.use(
-      async (config) => {
-        try {
-          const token = await getClerkTokenForApi();
-          if (token) {
-            applyBearerToAxiosConfig(config, token);
-          }
-        } catch (error) {
-          console.error("Error getting token:", error);
-        }
-        return config;
-      },
-      (error) => Promise.reject(error),
-    );
-
-    return () => {
-      axiosInstance.interceptors.request.eject(requestInterceptor);
-      unregisterClerkGetToken();
-    };
+    return () => unregisterClerkGetToken();
   }, [getToken]);
 
   return <>{children}</>;

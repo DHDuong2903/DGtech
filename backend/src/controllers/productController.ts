@@ -6,6 +6,10 @@ import {
   getProductWithCategory,
   productIncludeOptions,
 } from "../helpers/productHelper.js";
+import {
+  applyCampaignPricingToProductForStorefront,
+  getStorefrontUserTier,
+} from "../services/discountCampaignResolveService.js";
 import { uploadProductImageBuffer } from "../helpers/uploadProductImage.js";
 
 function normalizeProductStatus(value: unknown): "ACTIVE" | "DRAFT" | null {
@@ -401,6 +405,9 @@ export const getProductById = async (req: any, res: any) => {
 
     clearCompareAtPriceForMultiVariantProduct(product);
 
+    const tier = await getStorefrontUserTier(req.auth?.userId);
+    await applyCampaignPricingToProductForStorefront(product, tier);
+
     return res.status(200).json({ message: "Lay san pham thanh cong", product });
   } catch (error: any) {
     console.log("Loi khi goi getProductById", error);
@@ -473,6 +480,11 @@ export const getAllProducts = async (req: any, res: any) => {
 
     products.rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
 
+    const tier = await getStorefrontUserTier(req.auth?.userId);
+    for (const row of products.rows) {
+      await applyCampaignPricingToProductForStorefront(row, tier);
+    }
+
     return res.status(200).json({
       message: "Lay danh sach san pham thanh cong",
       totalItems: products.count,
@@ -543,6 +555,11 @@ export const getFeaturedProducts = async (req: any, res: any) => {
     });
 
     products.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
+
+    const tier = await getStorefrontUserTier(req.auth?.userId);
+    for (const row of products) {
+      await applyCampaignPricingToProductForStorefront(row, tier);
+    }
 
     return res.status(200).json({
       message: "Lay danh sach san pham noi bat thanh cong",

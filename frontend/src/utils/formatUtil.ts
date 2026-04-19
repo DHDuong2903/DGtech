@@ -1,5 +1,13 @@
 // Format utilities
 
+/** Coerce API / Sequelize DECIMAL (often strings) for safe comparisons and formatting. */
+export function toMoneyNumber(value: unknown): number {
+  if (value === null || value === undefined || value === "") return NaN;
+  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+  const n = Number.parseFloat(String(value).trim());
+  return Number.isFinite(n) ? n : NaN;
+}
+
 /**
  * Format number to VND currency
  */

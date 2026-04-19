@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Minus, Plus, Trash2, X } from "lucide-react";
+import { BadgePercent, Minus, Plus, Trash2, X } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -29,6 +29,8 @@ function CartSheetLine({ item }: { item: CartItemType }) {
   const { loading, updateCartItem, removeFromCart } = useCartStore();
 
   const itemPrice = item.variant ? item.variant.price : item.product.price;
+  const compareAt = item.variant?.compareAtPrice ?? item.product.compareAtPrice ?? null;
+  const showCompareStrike = compareAt != null && compareAt > itemPrice;
   const maxStock = item.variant ? item.variant.stock : item.product.stock;
   const hasRealVariant = !!item.variant && Object.keys(item.variant.attributes ?? {}).length > 0;
 
@@ -59,6 +61,12 @@ function CartSheetLine({ item }: { item: CartItemType }) {
                 ))}
               </div>
             )}
+            {item.appliedCampaign?.name ? (
+              <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
+                <BadgePercent className="h-3.5 w-3.5 shrink-0 text-orange-600" aria-hidden />
+                <span className="truncate">{item.appliedCampaign.name}</span>
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-2 pl-17">
@@ -90,7 +98,14 @@ function CartSheetLine({ item }: { item: CartItemType }) {
         </div>
       </div>
       <div className="flex w-22 shrink-0 flex-col items-end justify-between gap-2 pt-0.5">
-        <span className="text-orange-600 text-sm font-semibold tabular-nums">{formatCurrency(itemPrice)}</span>
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="text-orange-600 text-sm font-semibold tabular-nums">{formatCurrency(itemPrice)}</span>
+          {showCompareStrike ? (
+            <span className="text-muted-foreground text-xs line-through tabular-nums">
+              {formatCurrency(compareAt)}
+            </span>
+          ) : null}
+        </div>
         <Button
           type="button"
           size="icon"
