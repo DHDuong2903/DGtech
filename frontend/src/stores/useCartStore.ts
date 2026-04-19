@@ -117,9 +117,6 @@ export const useCartStore = create<CartState>()(
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
-            if (!suppressSuccessToast) {
-              toast.success(response.message || "Cập nhật giỏ hàng thành công");
-            }
           } catch (err) {
             console.error("Error updating cart item:", err);
             const error = err as ApiError;

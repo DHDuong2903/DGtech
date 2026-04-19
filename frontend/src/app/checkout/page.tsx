@@ -45,7 +45,7 @@ function CheckoutContent() {
   const { cart, loading: cartLoading, fetchCart } = useCartStore();
   const { createOrder, loading: orderLoading } = useOrderStore();
 
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("BANK_TRANSFER");
   const [notes, setNotes] = useState("");
 
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -314,217 +314,231 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-4">
       <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/cart">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Checkout</h1>
-            <p className="text-muted-foreground">
-              {totalItems} {totalItems === 1 ? "item" : "items"}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-6">Shipping details</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {addresses.length > 0 && (
-                  <div className="space-y-3">
-                    <Label className="text-base">Deliver to</Label>
-                    <div className="space-y-2">
-                      <label className="border-border flex cursor-pointer items-start gap-3 rounded-md border p-3">
-                        <input
-                          type="radio"
-                          name="shipMode"
-                          className="mt-1"
-                          checked={shipMode === "saved"}
-                          onChange={() => setShipMode("saved")}
-                        />
-                        <span className="text-sm">
-                          <span className="text-foreground font-medium">Saved address</span>
-                          <span className="text-muted-foreground block text-xs">Choose from your address book</span>
-                        </span>
-                      </label>
-                      <label className="border-border flex cursor-pointer items-start gap-3 rounded-md border p-3">
-                        <input
-                          type="radio"
-                          name="shipMode"
-                          className="mt-1"
-                          checked={shipMode === "new"}
-                          onChange={() => setShipMode("new")}
-                        />
-                        <span className="text-sm">
-                          <span className="text-foreground font-medium">New address</span>
-                          <span className="text-muted-foreground block text-xs">
-                            Province → ward → street (Vietnam)
-                          </span>
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                )}
+            <Card className="p-4 shadow-none">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <h2 className="text-md font-bold mb-4">Shipping</h2>
+                  {addresses.length > 0 ? (
+                    <div className="space-y-4">
+                      <RadioGroup
+                        value={shipMode}
+                        onValueChange={(v) => setShipMode(v as ShipMode)}
+                        className="flex flex-row gap-4 mb-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="saved" id="mode-saved" />
+                          <Label htmlFor="mode-saved" className="font-medium cursor-pointer">Saved address</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="new" id="mode-new" />
+                          <Label htmlFor="mode-new" className="font-medium cursor-pointer">New address</Label>
+                        </div>
+                      </RadioGroup>
 
-                {shipMode === "saved" && addresses.length > 0 && (
-                  <div className="space-y-2">
-                    {addresses.map((a) => (
+                      {shipMode === "saved" && (
+                        <div className="space-y-1">
+                          <RadioGroup
+                            value={selectedAddressId || ""}
+                            onValueChange={setSelectedAddressId}
+                            className="space-y-1"
+                          >
+                            {addresses.map((a) => (
+                              <label
+                                key={a.addressId}
+                                htmlFor={`addr-${a.addressId}`}
+                                className={cn(
+                                  "flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm transition-colors",
+                                  selectedAddressId === a.addressId ? "border-orange-500 bg-orange-500/5" : "border-border",
+                                )}
+                              >
+                                <RadioGroupItem
+                                  value={a.addressId}
+                                  id={`addr-${a.addressId}`}
+                                  className="mt-1"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-foreground font-medium truncate">
+                                      {orderDisplayName} · {a.phone}
+                                    </span>
+                                    {a.isDefault && (
+                                      <span className="text-orange-600 text-[10px] font-semibold px-1.5 py-0.5 bg-orange-50 rounded">Default</span>
+                                    )}
+                                  </div>
+                                  <span className="text-muted-foreground mt-0.5 block text-xs leading-snug">
+                                    {a.addressLine}, {a.wardName}, {a.provinceName}
+                                  </span>
+                                </div>
+                              </label>
+                            ))}
+                          </RadioGroup>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {(shipMode === "new" || addresses.length === 0) && (
+                    <div className={cn(addresses.length > 0 && "mt-4")}>
+                      <VnAddressFormFields
+                        provinces={provinces}
+                        wards={wards}
+                        wardsLoading={false}
+                        value={draft}
+                        onChange={setDraft}
+                        idPrefix="co"
+                        locale="en"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border border-border rounded-md p-4">
+                    <h2 className="text-md font-bold mb-3">Payment method</h2>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(v) => setPaymentMethod(v as "COD" | "BANK_TRANSFER")}
+                      className="space-y-3"
+                    >
                       <label
-                        key={a.addressId}
+                        htmlFor="pay-bank"
                         className={cn(
-                          "flex cursor-pointer gap-3 rounded-md border p-3 text-sm",
-                          selectedAddressId === a.addressId ? "border-orange-500 bg-orange-500/5" : "border-border",
+                          "flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors",
+                          paymentMethod === "BANK_TRANSFER" ? "border-orange-500 bg-orange-500/5" : "border-border",
                         )}
                       >
-                        <input
-                          type="radio"
-                          name="savedAddress"
-                          className="mt-1"
-                          checked={selectedAddressId === a.addressId}
-                          onChange={() => setSelectedAddressId(a.addressId)}
-                        />
-                        <span>
-                          <span className="text-foreground font-medium">
-                            {orderDisplayName} · {a.phone}
-                            {a.isDefault ? (
-                              <span className="text-orange-600 ml-2 text-xs font-normal">Default</span>
-                            ) : null}
-                          </span>
-                          <span className="text-muted-foreground mt-0.5 block text-xs">
-                            {a.addressLine}, {a.wardName}, {a.provinceName}
-                          </span>
-                        </span>
+                        <RadioGroupItem value="BANK_TRANSFER" id="pay-bank" />
+                        <span className="font-medium text-sm">Bank transfer</span>
                       </label>
-                    ))}
-                    <p className="text-muted-foreground text-xs">
-                      Manage addresses in{" "}
-                      <Link href="/addresses" className="text-orange-600 underline-offset-2 hover:underline">
-                        Manage addresses
-                      </Link>
-                      .
-                    </p>
+
+                      <label
+                        htmlFor="pay-cod"
+                        className={cn(
+                          "flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors",
+                          paymentMethod === "COD" ? "border-orange-500 bg-orange-500/5" : "border-border",
+                        )}
+                      >
+                        <RadioGroupItem value="COD" id="pay-cod" />
+                        <span className="font-medium text-sm">Cash on delivery (COD)</span>
+                      </label>
+                    </RadioGroup>
                   </div>
-                )}
 
-                {(shipMode === "new" || addresses.length === 0) && (
-                  <VnAddressFormFields
-                    provinces={provinces}
-                    wards={wards}
-                    wardsLoading={false}
-                    value={draft}
-                    onChange={setDraft}
-                    idPrefix="co"
-                  />
-                )}
-
-                <div>
-                  <Label>Payment method</Label>
-                  <div className="mt-3 space-y-3">
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="cod"
-                        name="paymentMethod"
-                        value="COD"
-                        checked={paymentMethod === "COD"}
-                        onChange={(e) => setPaymentMethod(e.target.value as "COD")}
-                        className="w-4 h-4 text-orange-600 focus:ring-orange-500"
-                      />
-                      <Label htmlFor="cod" className="ml-3 cursor-pointer">
-                        Cash on delivery (COD)
-                      </Label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="bank"
-                        name="paymentMethod"
-                        value="BANK_TRANSFER"
-                        checked={paymentMethod === "BANK_TRANSFER"}
-                        onChange={(e) => setPaymentMethod(e.target.value as "BANK_TRANSFER")}
-                        className="w-4 h-4 text-orange-600 focus:ring-orange-500"
-                      />
-                      <Label htmlFor="bank" className="ml-3 cursor-pointer">
-                        Bank transfer
-                      </Label>
-                    </div>
+                  <div className="border border-border rounded-md p-3">
+                    <h2 className="text-md font-bold mb-3">Shipping method</h2>
+                    {!shipQuoteLoading && !shipQuoteError && shipQuote ? (
+                      <RadioGroup
+                        className="grid gap-2"
+                        value={shippingMethodCode}
+                        onValueChange={setShippingMethodCode}
+                      >
+                        {shipQuote.options.map((opt) => (
+                          <label
+                            key={opt.code}
+                            htmlFor={`ship-${opt.code}`}
+                            className={cn(
+                              "border-border flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm transition-colors",
+                              shippingMethodCode === opt.code && "border-orange-500 bg-orange-500/5",
+                            )}
+                          >
+                            <RadioGroupItem value={opt.code} id={`ship-${opt.code}`} className="mt-1" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-medium leading-snug">
+                                  {opt.name}
+                                </span>
+                                <span className="font-bold text-orange-600 shrink-0">
+                                  {shipQuote.displayMode === "included"
+                                    ? formatCurrency(opt.baseZoneFee)
+                                    : formatCurrency(opt.shippingFee)}
+                                </span>
+                              </div>
+                              {opt.customerEtaNote ? (
+                                <p className="text-muted-foreground mt-1 text-[12px] leading-tight">{opt.customerEtaNote}</p>
+                              ) : null}
+                            </div>
+                          </label>
+                        ))}
+                      </RadioGroup>
+                    ) : shipQuoteLoading ? (
+                      <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                        <Spinner className="size-4" />
+                        Calculating shipping fees...
+                      </div>
+                    ) : (
+                      <div className="py-4 text-sm text-muted-foreground">Please select an address first</div>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="notes">Order notes (optional)</Label>
-                  <Textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Delivery instructions (e.g. morning delivery)"
-                    rows={3}
-                    className="mt-2"
-                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="w-full py-5 text-sm font-semibold"
+                    disabled={
+                      orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
+                    }
+                  >
+                    {orderLoading ? (
+                      <>
+                        <Spinner data-icon="inline-start" />
+                        Placing order
+                      </>
+                    ) : (
+                      "Place order"
+                    )}
+                  </Button>
                 </div>
-
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full"
-                  disabled={
-                    orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
-                  }
-                >
-                  {orderLoading ? (
-                    <>
-                      <Spinner data-icon="inline-start" />
-                      Placing order
-                    </>
-                  ) : (
-                    "Place order"
-                  )}
-                </Button>
               </form>
             </Card>
           </div>
 
           <div className="lg:col-span-1">
-            <Card className="p-6 sticky top-4">
-              <h2 className="text-xl font-bold mb-4">Your order</h2>
+            <Card className="p-4 sticky top-4 shadow-none">
+              <h2 className="text-md font-bold">Your order</h2>
 
-              <div className="space-y-4 mb-6">
+              <div className="mt-2 max-h-[250px] overflow-y-auto pr-2 -mr-2 mb-2 space-y-4">
                 {checkoutItems.map((item) => (
-                  <div key={item.cartItemId} className="flex gap-3">
-                    <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded">
-                      {item.product.imageUrl ? (
-                        <Image
-                          src={item.product.imageUrl}
-                          alt={item.product.name}
-                          fill
-                          className="object-contain p-1"
-                        />
-                      ) : (
-                        <ProductImageFallback className="absolute inset-0" iconClassName="h-8 w-8" />
-                      )}
+                  <div key={item.cartItemId} className="flex justify-between gap-3">
+                    <div className="flex gap-3 min-w-0">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
+                        {item.product.imageUrl ? (
+                          <Image
+                            src={item.product.imageUrl}
+                            alt={item.product.name}
+                            fill
+                            sizes="56px"
+                            className="object-contain"
+                          />
+                        ) : (
+                          <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex flex-col justify-center">
+                        <p className="text-sm font-medium truncate leading-tight">{item.product.name}</p>
+                        {item.variant && !item.variant.isDefault && item.variant.attributes && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {Object.entries(item.variant.attributes)
+                              .map(([k, v]) => `${v}`)
+                              .join(" / ")}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-0.5">Qty: {item.quantity}</p>
+                        {item.appliedCampaign?.name ? (
+                          <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
+                            <BadgePercent className="h-3 w-3 shrink-0 text-orange-600" aria-hidden />
+                            <span className="truncate">{item.appliedCampaign.name}</span>
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.product.name}</p>
-                      {item.variant && !item.variant.isDefault && item.variant.attributes && (
-                        <p className="text-[10px] text-muted-foreground uppercase">
-                          {Object.entries(item.variant.attributes)
-                            .map(([k, v]) => `${k}: ${v}`)
-                            .join(", ")}
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                      {item.appliedCampaign?.name ? (
-                        <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
-                          <BadgePercent className="h-3.5 w-3.5 shrink-0 text-orange-600" aria-hidden />
-                          <span className="truncate">{item.appliedCampaign.name}</span>
-                        </p>
-                      ) : null}
-                      <p className="text-sm font-semibold text-orange-600">
+                    <div className="shrink-0 text-right flex flex-col justify-center">
+                      <p className="text-sm font-bold text-orange-600">
                         {formatCurrency((item.variant?.price ?? item.product.price) * item.quantity)}
                       </p>
                     </div>
@@ -532,87 +546,50 @@ function CheckoutContent() {
                 ))}
               </div>
 
-              <div className="border-t pt-4 space-y-3">
-                {!shipQuoteLoading && !shipQuoteError && shipQuote && shipQuote.options.length > 1 && (
-                  <div className="space-y-2 pb-2">
-                    <Label className="text-sm font-medium">Delivery speed</Label>
-                    <RadioGroup
-                      className="grid gap-2"
-                      value={shippingMethodCode}
-                      onValueChange={setShippingMethodCode}
-                    >
-                      {shipQuote.options.map((opt) => (
-                        <div
-                          key={opt.code}
-                          className={cn(
-                            "border-border flex items-start gap-2 rounded-md border p-2.5 text-sm",
-                            shippingMethodCode === opt.code && "border-orange-500 bg-orange-500/5",
-                          )}
-                        >
-                          <RadioGroupItem value={opt.code} id={`ship-${opt.code}`} className="mt-0.5" />
-                          <div className="min-w-0 flex-1">
-                            <Label htmlFor={`ship-${opt.code}`} className="cursor-pointer font-medium leading-snug">
-                              {opt.name}{" "}
-                              <span className="text-muted-foreground font-normal">
-                                (
-                                {shipQuote.displayMode === "included"
-                                  ? formatCurrency(opt.baseZoneFee)
-                                  : formatCurrency(opt.shippingFee)}
-                                )
-                              </span>
-                            </Label>
-                            {opt.customerEtaNote ? (
-                              <p className="text-muted-foreground mt-0.5 text-xs leading-snug">{opt.customerEtaNote}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-                )}
-                <div className="text-foreground flex justify-between">
+              <div className="pt-0 space-y-3">
+                <div className="text-sm text-foreground flex justify-between">
                   <span>
                     Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"}):
                   </span>
                   <span className="font-semibold">{formatCurrency(displaySubtotal)}</span>
                 </div>
-                <div className="text-foreground flex justify-between">
+                <div className="text-sm text-foreground flex justify-between">
                   <span>Shipping:</span>
                   {shipQuoteLoading ? (
                     <span className="text-muted-foreground inline-flex items-center gap-1.5 font-semibold">
                       <Spinner className="size-3.5" />
-                      Đang tính
+                      Calculating
                     </span>
                   ) : shipQuoteError ? (
                     <span className="text-destructive max-w-[55%] text-right text-xs font-medium">{shipQuoteError}</span>
                   ) : shipQuote?.displayMode === "included" ? (
                     <span className="text-muted-foreground max-w-[58%] text-right text-xs font-medium">
-                      Đã gồm trong giá sản phẩm
+                      Included in product price
                     </span>
                   ) : displayShippingFee !== null &&
                     displayShippingFee <= 0 &&
                     selectedShipOption?.freeShippingApplied ? (
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      Miễn phí (đạt ngưỡng)
+                      Free (threshold met)
                     </span>
                   ) : displayShippingFee !== null && displayShippingFee <= 0 ? (
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
                   ) : displayShippingFee !== null ? (
                     <span className="font-semibold">{formatCurrency(displayShippingFee)}</span>
                   ) : (
-                    <span className="text-muted-foreground text-sm">Chọn tỉnh/thành</span>
+                    <span className="text-muted-foreground text-xs">Pick province/city</span>
                   )}
                 </div>
                 {shipQuote?.displayMode === "included" && !shipQuoteLoading && !shipQuoteError && selectedShipOption && (
                   <p className="text-muted-foreground text-[10px] leading-snug">
                     {selectedShipOption.baseZoneFee > 0
-                      ? `Phí tham khảo (${shipQuote.zoneName ?? "—"} — ${selectedShipOption.name}): ${formatCurrency(selectedShipOption.baseZoneFee)}; không cộng vào tổng.`
-                      : "Không cộng phí ship riêng; tổng thanh toán bằng tổng giá dòng hàng (subtotal)."}
+                      ? `Reference fee (${shipQuote.zoneName ?? "—"} — ${selectedShipOption.name}): ${formatCurrency(selectedShipOption.baseZoneFee)}; not added to total.`
+                      : "Shipping fee is included; total equals subtotal."}
                   </p>
                 )}
                 <div className="flex justify-between items-center border-t pt-3">
                   <span className="text-lg font-bold">Total:</span>
-                  <span className="text-2xl font-bold text-orange-600">{formatCurrency(displayTotal)}</span>
+                  <span className="text-xl font-bold text-orange-600">{formatCurrency(displayTotal)}</span>
                 </div>
               </div>
             </Card>
