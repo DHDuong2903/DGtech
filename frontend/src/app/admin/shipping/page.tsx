@@ -213,7 +213,7 @@ export default function AdminShippingPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-bold tracking-tight">Shipping settings</h1>
           {config && settingsDraft && (

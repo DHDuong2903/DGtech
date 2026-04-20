@@ -121,35 +121,14 @@ const AdminUsersPage = () => {
             filterColumnId="email"
             filterPlaceholder="Search by email…"
             noun="users"
-            bulkSelectionActions={({ selectedData, clearSelection }) => {
+            onBulkDelete={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;
               const actionable = actionableFromSelection(selectedData);
-              const selectedCount = selectedData.length;
-              const skipped = selectedCount - actionable.length;
-
-              return (
-                <>
-                  <span className="text-muted-foreground text-sm font-medium">
-                    {selectedCount} selected
-                    {skipped > 0 ? ` (${skipped} skipped: your account)` : ""}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    disabled={!actionable.length}
-                    onClick={() => {
-                      if (!actionable.length) {
-                        toast.error("No users can be deleted (only your account is selected).");
-                        return;
-                      }
-                      setBulkDeleteTargets(actionable);
-                    }}
-                  >
-                    Delete selected
-                  </Button>
-                </>
-              );
+              if (!actionable.length) {
+                toast.error("No users can be deleted (only your account is selected).");
+                return;
+              }
+              setBulkDeleteTargets(actionable);
             }}
           />
         )}
@@ -169,7 +148,7 @@ const AdminUsersPage = () => {
             <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={updating}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser} disabled={updating}>
+            <Button variant="destructive" size="sm" onClick={handleDeleteUser} disabled={updating}>
               {updating ? (
                 <>
                   <Spinner data-icon="inline-start" />
@@ -195,7 +174,7 @@ const AdminUsersPage = () => {
             <Button variant="outline" onClick={() => setBulkDeleteTargets(null)} disabled={bulkWorking}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
+            <Button variant="destructive" size="sm" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
               {bulkWorking ? (
                 <>
                   <Spinner data-icon="inline-start" />

@@ -62,10 +62,10 @@ export const DeleteConfirmModal = ({
           <DialogDescription className="pt-2">{dialogDescription}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={confirmLoading}>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={confirmLoading}>
             {cancelLabel}
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm} disabled={confirmLoading}>
+          <Button type="button" variant="destructive" size="sm" onClick={onConfirm} disabled={confirmLoading}>
             {confirmLoading ? (
               <>
                 <Spinner data-icon="inline-start" />
