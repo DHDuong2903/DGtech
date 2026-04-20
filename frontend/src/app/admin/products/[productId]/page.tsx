@@ -523,24 +523,10 @@ export default function ProductDetailPage() {
                     filterColumnId="sku"
                     filterPlaceholder="Search by SKU…"
                     noun="variants"
-                    bulkSelectionActions={({ selectedData, clearSelection }) => (
-                      <>
-                        <span className="text-muted-foreground text-sm font-medium">
-                          {selectedData.length} selected
-                        </span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            setVariantsGrid(variantsGrid.filter((v) => !selectedData.includes(v)));
-                            clearSelection();
-                          }}
-                        >
-                          Delete selected
-                        </Button>
-                      </>
-                    )}
+                    onBulkDelete={({ selectedData, clearSelection }) => {
+                      setVariantsGrid(variantsGrid.filter((v) => !selectedData.includes(v)));
+                      clearSelection();
+                    }}
                   />
                 </div>
               )}

@@ -49,7 +49,7 @@ export function createAdminVariantEditColumns(
           type="number"
           step="0.01"
           min="0"
-          className="h-8 max-w-[120px]"
+          className="h-8 max-w-[120px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           value={row.original.price}
           onChange={(e) => {
             setVariantsGrid((g) => {

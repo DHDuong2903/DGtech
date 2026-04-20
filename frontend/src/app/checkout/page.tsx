@@ -319,9 +319,9 @@ function CheckoutContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <Card className="p-4 shadow-none">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form id="checkout-form" onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <h2 className="text-md font-bold mb-4">Shipping</h2>
+                  <h2 className="text-md font-bold mb-4">Delivery location</h2>
                   {addresses.length > 0 ? (
                     <div className="space-y-4">
                       <RadioGroup
@@ -475,25 +475,7 @@ function CheckoutContent() {
                   </div>
                 </div>
 
-                <div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="w-full py-5 text-sm font-semibold"
-                    disabled={
-                      orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
-                    }
-                  >
-                    {orderLoading ? (
-                      <>
-                        <Spinner data-icon="inline-start" />
-                        Placing order
-                      </>
-                    ) : (
-                      "Place order"
-                    )}
-                  </Button>
-                </div>
+                {/* Place order button moved to summary column */}
               </form>
             </Card>
           </div>
@@ -587,10 +569,29 @@ function CheckoutContent() {
                       : "Shipping fee is included; total equals subtotal."}
                   </p>
                 )}
-                <div className="flex justify-between items-center border-t pt-3">
+                <div className="flex justify-between items-center border-t pt-3 mb-4">
                   <span className="text-lg font-bold">Total:</span>
                   <span className="text-xl font-bold text-orange-600">{formatCurrency(displayTotal)}</span>
                 </div>
+
+                <Button
+                  form="checkout-form"
+                  type="submit"
+                  size="sm"
+                  className="w-full py-5 text-sm font-semibold"
+                  disabled={
+                    orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
+                  }
+                >
+                  {orderLoading ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      Placing order
+                    </>
+                  ) : (
+                    "Place order"
+                  )}
+                </Button>
               </div>
             </Card>
           </div>

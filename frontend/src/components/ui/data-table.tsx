@@ -12,6 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { cn } from "@/src/lib/utils";
 
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -43,6 +44,9 @@ export interface DataTableProps<TData, TValue> {
   showFooterSelectionSummary?: boolean;
   enableRowSelection?: boolean;
   bulkSelectionActions?: (ctx: DataTableBulkContext<TData>) => React.ReactNode;
+  /** When provided, the 'actions' column header is replaced by a 'Remove (N)' button when rows are selected. */
+  onBulkDelete?: (ctx: DataTableBulkContext<TData>) => void;
+  bulkDeleteDisabled?: boolean;
   /** Rendered to the right of the search input in the toolbar (e.g. filter popover). */
   toolbarEnd?: React.ReactNode;
   /** Label for the total count (e.g. 'products', 'variants'). Defaults to 'row(s)'. */
@@ -60,6 +64,8 @@ export function DataTable<TData, TValue>({
   showFooterSelectionSummary = true,
   enableRowSelection = true,
   bulkSelectionActions,
+  onBulkDelete,
+  bulkDeleteDisabled,
   toolbarEnd,
   noun = "row(s)",
 }: DataTableProps<TData, TValue>) {
@@ -107,7 +113,7 @@ export function DataTable<TData, TValue>({
 
   const selectedModel = table.getFilteredSelectedRowModel();
   const bulkCtx: DataTableBulkContext<TData> | null =
-    enableRowSelection && bulkSelectionActions && selectedModel.rows.length > 0
+    enableRowSelection && (bulkSelectionActions || onBulkDelete) && selectedModel.rows.length > 0
       ? {
           table,
           selectedRows: selectedModel.rows,
@@ -134,7 +140,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      {bulkCtx && bulkSelectionActions && (
+      {bulkCtx && bulkSelectionActions && !onBulkDelete && (
         <div className="bg-muted/40 flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2">
           {bulkSelectionActions(bulkCtx)}
         </div>
@@ -146,10 +152,23 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  <TableHead key={header.id} className={cn(header.column.id === "actions" && "text-right")}>
+                    {header.column.id === "actions" && bulkCtx && onBulkDelete ? (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onBulkDelete(bulkCtx)}
+                          disabled={bulkDeleteDisabled}
+                        >
+                          Remove ({bulkCtx.selectedRows.length})
+                        </Button>
+                      </div>
+                    ) : (
+                      header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())
+                    )}
                   </TableHead>
                 ))}
               </TableRow>

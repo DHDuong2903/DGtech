@@ -190,23 +190,9 @@ const ProductsPage = () => {
             toolbarEnd={
               <AdminProductFilters categories={categories} applied={appliedFilters} onApply={setAppliedFilters} />
             }
-            bulkSelectionActions={({ selectedData, clearSelection }) => {
+            onBulkDelete={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;
-              const n = selectedData.length;
-              return (
-                <>
-                  <span className="text-muted-foreground text-sm font-medium">{n} selected</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    disabled={n === 0}
-                    onClick={() => setBulkDeleteTargets(selectedData)}
-                  >
-                    Delete selected
-                  </Button>
-                </>
-              );
+              setBulkDeleteTargets(selectedData);
             }}
           />
         )}
@@ -242,10 +228,10 @@ const ProductsPage = () => {
             <DialogDescription>This cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkDeleteTargets(null)} disabled={bulkWorking}>
+            <Button variant="outline" size="sm" onClick={() => setBulkDeleteTargets(null)} disabled={bulkWorking}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
+            <Button variant="destructive" size="sm" onClick={handleBulkDeleteConfirm} disabled={bulkWorking}>
               {bulkWorking ? (
                 <>
                   <Spinner data-icon="inline-start" />
