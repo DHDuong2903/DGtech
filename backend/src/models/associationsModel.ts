@@ -19,6 +19,9 @@ import { DiscountCampaign } from "./discountCampaignModel.js";
 import { DiscountCampaignProduct } from "./discountCampaignProductModel.js";
 import { DiscountCampaignCategory } from "./discountCampaignCategoryModel.js";
 import { DiscountCampaignVariantPrice } from "./discountCampaignVariantPriceModel.js";
+import { Bundle } from "./bundleModel.js";
+import { BundleItem } from "./bundleItemModel.js";
+import { BundlePurchase } from "./bundlePurchaseModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -67,6 +70,9 @@ UserAddress.hasMany(Order, { foreignKey: "userAddressId", as: "orders" });
 Order.hasMany(OrderItem, { foreignKey: "orderId", as: "items", onDelete: "CASCADE" });
 OrderItem.belongsTo(Order, { foreignKey: "orderId", as: "order" });
 
+Order.hasMany(BundlePurchase, { foreignKey: "orderId", as: "bundlePurchases", onDelete: "CASCADE" });
+BundlePurchase.belongsTo(Order, { foreignKey: "orderId", as: "order" });
+
 // Quan he giua Product va OrderItem
 Product.hasMany(OrderItem, { foreignKey: "productId", as: "orderItems" });
 OrderItem.belongsTo(Product, { foreignKey: "productId", as: "product" });
@@ -112,6 +118,15 @@ DiscountCampaignVariantPrice.belongsTo(DiscountCampaign, { foreignKey: "campaign
 DiscountCampaignVariantPrice.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
 ProductVariant.hasMany(DiscountCampaignVariantPrice, { foreignKey: "variantId", as: "campaignVariantPrices" });
 
+// Bundle associations
+Bundle.hasMany(BundleItem, { foreignKey: "bundleId", as: "items", onDelete: "CASCADE" });
+BundleItem.belongsTo(Bundle, { foreignKey: "bundleId", as: "bundle" });
+BundleItem.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
+ProductVariant.hasMany(BundleItem, { foreignKey: "variantId", as: "bundleItems" });
+
+Bundle.hasMany(CartItem, { foreignKey: "bundleId", as: "cartItems" });
+CartItem.belongsTo(Bundle, { foreignKey: "bundleId", as: "bundle" });
+
 export {
   Category,
   Product,
@@ -133,4 +148,7 @@ export {
   DiscountCampaignProduct,
   DiscountCampaignCategory,
   DiscountCampaignVariantPrice,
+  Bundle,
+  BundleItem,
+  BundlePurchase,
 };

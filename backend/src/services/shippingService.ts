@@ -13,6 +13,8 @@ import {
 } from "../models/associationsModel.js";
 import { enrichCartItemLinesForStorefront } from "./discountCampaignResolveService.js";
 import { getProvinceName } from "../helpers/vnAddressHelper.js";
+import { cartLineUnitSubtotal } from "./cartBundleStorefront.js";
+import { storefrontCartItemIncludes } from "../helpers/cartHelper.js";
 
 export const STANDARD_CODE = "standard";
 export const EXPRESS_CODE = "express";
@@ -42,18 +44,7 @@ export async function loadSelectedCartLines(clerkId: string, selectedItems: stri
   }
   const cartItems = await CartItem.findAll({
     where: { cartItemId: { [Op.in]: selectedItems }, cartId: cart.cartId },
-    include: [
-      {
-        model: Product,
-        as: "product",
-        attributes: ["productId", "name", "price", "stock", "status", "categoryId"],
-      },
-      {
-        model: ProductVariant,
-        as: "variant",
-        attributes: ["variantId", "price", "stock"],
-      },
-    ],
+    include: storefrontCartItemIncludes,
     transaction,
   });
   if (cartItems.length !== selectedItems.length) {
@@ -66,8 +57,8 @@ export async function loadSelectedCartLines(clerkId: string, selectedItems: stri
 export function computeSubtotalFromLines(cartItems: any[]) {
   let subtotal = 0;
   for (const cartItem of cartItems) {
-    const itemPrice = cartItem.variant ? cartItem.variant.price : cartItem.product.price;
-    subtotal += Number(itemPrice) * cartItem.quantity;
+    const unit = cartLineUnitSubtotal(cartItem);
+    subtotal += Number(unit) * cartItem.quantity;
   }
   return Math.round(subtotal * 100) / 100;
 }
