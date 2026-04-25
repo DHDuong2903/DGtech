@@ -8,6 +8,7 @@ import {
   Payment,
   UserAddress,
   User,
+  BundlePurchase,
 } from "../models/associationsModel.js";
 import { formatShippingSnapshot, getProvinceName } from "../helpers/vnAddressHelper.js";
 import {
@@ -17,6 +18,12 @@ import {
   ShippingConfigError,
   normalizeShippingMethodCode,
 } from "../services/shippingService.js";
+import {
+  discountFactorForBundle,
+  roundMoney,
+  effectiveStockForBundleLine,
+} from "../services/bundlePricingService.js";
+import { sumEligibleBundlePurchasesForUser } from "../services/bundlePurchaseService.js";
 import { sequelize } from "../libs/db.js";
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
 
@@ -97,21 +104,66 @@ export const createOrder = async (req: any, res: any) => {
     }
 
     for (const cartItem of cartItems) {
-      if (cartItem.product.status !== "ACTIVE") {
-        await transaction.rollback();
-        return res.status(400).json({
-          error: `Sản phẩm "${cartItem.product.name}" không còn được bán`,
-        });
+      const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
+      if (lineType === "BUNDLE") {
+        const lines = cartItem.bundle?.items || [];
+        for (const bi of lines) {
+          const pname = bi.variant?.product?.name || "Bundle item";
+          if (bi.variant?.product?.status !== "ACTIVE") {
+            await transaction.rollback();
+            return res.status(400).json({
+              error: `Sản phẩm "${pname}" trong bundle không còn được bán`,
+            });
+          }
+        }
+      } else {
+        if (cartItem.product.status !== "ACTIVE") {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Sản phẩm "${cartItem.product.name}" không còn được bán`,
+          });
+        }
       }
     }
 
     // Check stock (prefer variant stock)
     for (const cartItem of cartItems) {
-      const stockAvailable = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
-      if (stockAvailable < cartItem.quantity) {
+      const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
+      if (lineType === "BUNDLE") {
+        const lines = cartItem.bundle?.items || [];
+        for (const bi of lines) {
+          const need = (bi.quantity || 0) * cartItem.quantity;
+          const stockAvailable = effectiveStockForBundleLine(bi);
+          const pname = bi.variant?.product?.name || "Bundle item";
+          if (!Number.isFinite(stockAvailable) || stockAvailable < need) {
+            await transaction.rollback();
+            return res.status(400).json({
+              error: `Sản phẩm "${pname}" trong bundle không đủ số lượng trong kho`,
+            });
+          }
+        }
+      } else {
+        const stockAvailable = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
+        if (stockAvailable < cartItem.quantity) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Sản phẩm "${cartItem.product.name}"${cartItem.variant ? " (phân loại đã chọn)" : ""} không đủ số lượng trong kho`,
+          });
+        }
+      }
+    }
+
+    for (const cartItem of cartItems) {
+      const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
+      if (lineType !== "BUNDLE" || !cartItem.bundleId) continue;
+      const b = cartItem.bundle?.get ? cartItem.bundle.get({ plain: true }) : cartItem.bundle;
+      const maxPerUser = parseInt(String(b?.maxPerUser ?? 0), 10) || 0;
+      if (maxPerUser <= 0) continue;
+      const purchased = await sumEligibleBundlePurchasesForUser(clerkId, cartItem.bundleId, transaction);
+      if (purchased + cartItem.quantity > maxPerUser) {
         await transaction.rollback();
         return res.status(400).json({
-          error: `Sản phẩm "${cartItem.product.name}"${cartItem.variant ? " (phân loại đã chọn)" : ""} không đủ số lượng trong kho`,
+          error: `Bạn chỉ được mua tối đa ${maxPerUser} bộ bundle "${b?.name || ""}". Vui lòng chỉnh giỏ hàng.`,
         });
       }
     }
@@ -137,13 +189,32 @@ export const createOrder = async (req: any, res: any) => {
 
     const orderItemsData = [];
     for (const cartItem of cartItems) {
-      const itemPrice = cartItem.variant ? cartItem.variant.price : cartItem.product.price;
-      orderItemsData.push({
-        productId: cartItem.productId,
-        variantId: cartItem.variantId,
-        quantity: cartItem.quantity,
-        price: itemPrice,
-      });
+      const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
+      if (lineType === "BUNDLE" && cartItem.bundle) {
+        const b = cartItem.bundle.get ? cartItem.bundle.get({ plain: true }) : cartItem.bundle;
+        const factor = discountFactorForBundle(b);
+        const bundleQty = cartItem.quantity;
+        for (const bi of b.items || []) {
+          const v = bi.variant;
+          if (!v) continue;
+          const cat = parseFloat(String(v.price));
+          const unitOrderPrice = roundMoney((Number.isFinite(cat) ? cat : 0) * factor);
+          orderItemsData.push({
+            productId: v.productId,
+            variantId: v.variantId,
+            quantity: bi.quantity * bundleQty,
+            price: unitOrderPrice,
+          });
+        }
+      } else {
+        const itemPrice = cartItem.variant ? cartItem.variant.price : cartItem.product.price;
+        orderItemsData.push({
+          productId: cartItem.productId,
+          variantId: cartItem.variantId,
+          quantity: cartItem.quantity,
+          price: itemPrice,
+        });
+      }
     }
 
     // Create order
@@ -180,24 +251,59 @@ export const createOrder = async (req: any, res: any) => {
       ),
     );
 
+    for (const cartItem of cartItems) {
+      const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
+      if (lineType !== "BUNDLE" || !cartItem.bundleId) continue;
+      await BundlePurchase.create(
+        {
+          clerkId,
+          bundleId: cartItem.bundleId,
+          orderId: (order as any).orderId,
+          quantity: cartItem.quantity,
+        },
+        { transaction },
+      );
+    }
+
     // Decrement stock unless BANK_TRANSFER
     if (paymentMethod !== "BANK_TRANSFER") {
       for (const cartItem of cartItems) {
-        // Decrement variant stock if exists
-        if (cartItem.variantId) {
-          await ProductVariant.decrement("stock", {
+        const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
+        if (lineType === "BUNDLE" && cartItem.bundle) {
+          const b = cartItem.bundle.get ? cartItem.bundle.get({ plain: true }) : cartItem.bundle;
+          const bundleQty = cartItem.quantity;
+          for (const bi of b.items || []) {
+            const v = bi.variant;
+            if (!v?.variantId) continue;
+            const dec = bi.quantity * bundleQty;
+            await ProductVariant.decrement("stock", {
+              by: dec,
+              where: { variantId: v.variantId },
+              transaction,
+            });
+            await Product.decrement("stock", {
+              by: dec,
+              where: { productId: v.productId },
+              transaction,
+            });
+          }
+        } else {
+          // Decrement variant stock if exists
+          if (cartItem.variantId) {
+            await ProductVariant.decrement("stock", {
+              by: cartItem.quantity,
+              where: { variantId: cartItem.variantId },
+              transaction,
+            });
+          }
+
+          // Decrement product cache stock
+          await Product.decrement("stock", {
             by: cartItem.quantity,
-            where: { variantId: cartItem.variantId },
+            where: { productId: cartItem.productId },
             transaction,
           });
         }
-
-        // Decrement product cache stock
-        await Product.decrement("stock", {
-          by: cartItem.quantity,
-          where: { productId: cartItem.productId },
-          transaction,
-        });
       }
     }
 

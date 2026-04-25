@@ -15,9 +15,18 @@ export const CartItem = sequelize.define(
       type: DataTypes.UUID,
       allowNull: false,
     },
+    itemType: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "PRODUCT",
+    },
+    bundleId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
     productId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
     },
     variantId: {
       type: DataTypes.UUID,

@@ -1,23 +1,63 @@
 // @ts-nocheck
-import { Cart, CartItem, Product, ProductVariant, ShippingSetting } from "../models/associationsModel.js";
+import {
+  Cart,
+  CartItem,
+  Product,
+  ProductVariant,
+  ShippingSetting,
+  Bundle,
+  BundleItem,
+} from "../models/associationsModel.js";
 import { enrichCartItemLinesForStorefront } from "../services/discountCampaignResolveService.js";
+import { cartLineUnitSubtotal } from "../services/cartBundleStorefront.js";
+
+export const cartItemBundleInclude = {
+  model: Bundle,
+  as: "bundle",
+  required: false,
+  include: [
+    {
+      model: BundleItem,
+      as: "items",
+      include: [
+        {
+          model: ProductVariant,
+          as: "variant",
+          attributes: ["variantId", "price", "stock", "attributes", "productId"],
+          include: [
+            {
+              model: Product,
+              as: "product",
+              attributes: ["productId", "name", "imageUrl", "stock", "status", "categoryId"],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export const storefrontCartItemIncludes = [
+  {
+    model: Product,
+    as: "product",
+    required: false,
+    attributes: ["productId", "name", "price", "imageUrl", "stock", "categoryId", "status"],
+  },
+  {
+    model: ProductVariant,
+    as: "variant",
+    required: false,
+    attributes: ["variantId", "price", "stock", "attributes"],
+  },
+  cartItemBundleInclude,
+];
 
 // Cap nhat tong tien va so luong trong gio hang (gia sau campaign khi co clerkId)
 export const updateCartTotals = async (cartId: string, clerkId?: string | null) => {
   const cartItems = await CartItem.findAll({
     where: { cartId },
-    include: [
-      {
-        model: Product,
-        as: "product",
-        attributes: ["productId", "name", "price", "imageUrl", "stock", "categoryId", "status"],
-      },
-      {
-        model: ProductVariant,
-        as: "variant",
-        attributes: ["variantId", "price", "stock", "attributes"],
-      },
-    ],
+    include: storefrontCartItemIncludes,
   });
 
   if (clerkId) {
@@ -28,8 +68,8 @@ export const updateCartTotals = async (cartId: string, clerkId?: string | null) 
   let totalItems = 0;
 
   cartItems.forEach((item) => {
-    const itemPrice = item.variant ? parseFloat(item.variant.price) : parseFloat(item.product.price);
-    totalPrice += itemPrice * item.quantity;
+    const unit = cartLineUnitSubtotal(item);
+    totalPrice += unit * item.quantity;
     totalItems += item.quantity;
   });
 
@@ -44,18 +84,7 @@ export const getCartWithDetails = async (clerkId: string) => {
       {
         model: CartItem,
         as: "items",
-        include: [
-          {
-            model: Product,
-            as: "product",
-            attributes: ["productId", "name", "price", "imageUrl", "stock", "categoryId", "status"],
-          },
-          {
-            model: ProductVariant,
-            as: "variant",
-            attributes: ["variantId", "price", "stock", "attributes"],
-          },
-        ],
+        include: storefrontCartItemIncludes,
       },
     ],
   });

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { BadgePercent, Minus, Plus, Trash2, X } from "lucide-react";
+import { BadgePercent, ChevronDown, Minus, Plus, Trash2, X } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -18,7 +18,15 @@ import { useCartStore } from "@/src/stores";
 import type { Cart, CartItem as CartItemType } from "@/src/types";
 import { formatCurrency } from "@/src/utils";
 import { sortCartItemsForDisplay } from "@/src/utils/cartUtils";
+import {
+  cartItemCompareAtUnit,
+  cartItemMaxQuantity,
+  cartItemUnitPrice,
+  isBundleCartItem,
+} from "@/src/utils/cartLineUtils";
+import { cn } from "@/src/lib/utils";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
+import { BundleSummaryHeader, BundleLineList, type BundleLineRow } from "@/src/components/public/bundle";
 import { FreeShippingCartProgress } from "./FreeShippingCartProgress";
 
 function cartLineQuantity(cart: Cart) {
@@ -27,17 +35,81 @@ function cartLineQuantity(cart: Cart) {
 
 function CartSheetLine({ item }: { item: CartItemType }) {
   const { loading, updateCartItem, removeFromCart } = useCartStore();
+  const [bundleOpen, setBundleOpen] = useState(false);
 
-  const itemPrice = item.variant ? item.variant.price : item.product.price;
-  const compareAt = item.variant?.compareAtPrice ?? item.product.compareAtPrice ?? null;
+  const itemPrice = cartItemUnitPrice(item);
+  const compareAt = cartItemCompareAtUnit(item);
   const showCompareStrike = compareAt != null && compareAt > itemPrice;
-  const maxStock = item.variant ? item.variant.stock : item.product.stock;
-  const hasRealVariant = !!item.variant && Object.keys(item.variant.attributes ?? {}).length > 0;
+  const maxStock = cartItemMaxQuantity(item);
+  const hasRealVariant =
+    !isBundleCartItem(item) &&
+    !!item.variant &&
+    Object.keys(item.variant.attributes ?? {}).length > 0;
+
+  const bundleLines: BundleLineRow[] | null =
+    isBundleCartItem(item) && item.bundleSnapshot?.lines?.length
+      ? item.bundleSnapshot.lines.map((ln) => ({
+          id: ln.variantId,
+          imageUrl: ln.imageUrl,
+          name: ln.productName ?? "Product",
+          attributes: ln.attributes ?? null,
+          quantity: ln.quantity,
+          href: ln.storefrontProductUrl ?? null,
+        }))
+      : null;
 
   const handleUpdateQuantity = async (newQuantity: number) => {
     if (newQuantity < 1) return;
     await updateCartItem(item.cartItemId, newQuantity);
   };
+
+  if (bundleLines) {
+    return (
+      <div className="border-border border-b last:border-b-0">
+        <div className="flex items-center gap-2 px-3 py-3">
+          <div className="min-w-0 flex-1">
+            <BundleSummaryHeader
+              variant="cart"
+              name={item.bundleSnapshot?.name ?? item.product.name}
+              discountKind={item.bundleSnapshot?.discountKind ?? "PERCENT"}
+              discountValue={item.bundleSnapshot?.discountValue ?? 0}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-0">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="text-muted-foreground h-8 w-8 shrink-0"
+              onClick={() => setBundleOpen((v) => !v)}
+              aria-expanded={bundleOpen}
+              aria-label={bundleOpen ? "Hide bundle contents" : "Show bundle contents"}
+            >
+              <ChevronDown
+                className={cn("h-5 w-5 transition-transform duration-200", bundleOpen && "rotate-180")}
+              />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0 hover:bg-red-50"
+              onClick={() => void removeFromCart(item.cartItemId)}
+              disabled={loading}
+              aria-label="Remove item"
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+          </div>
+        </div>
+        {bundleOpen ? (
+          <div className="border-border bg-muted/20 max-h-[min(18rem,40vh)] overflow-y-auto overscroll-contain border-t px-3 py-3">
+            <BundleLineList lines={bundleLines} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="border-border flex gap-3 border-b px-3 py-3 last:border-b-0">

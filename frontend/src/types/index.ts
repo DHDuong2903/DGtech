@@ -9,6 +9,7 @@ export * from "./paymentType";
 export * from "./slideshowsType";
 export * from "./userAddressType";
 export * from "./discountCampaignType";
+export * from "./bundleType";
 
 // API Response Types
 export interface ApiResponse<T> {

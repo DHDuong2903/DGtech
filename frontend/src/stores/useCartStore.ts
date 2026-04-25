@@ -23,10 +23,15 @@ interface CartState {
     variantId?: string,
     opts?: { openSheet?: boolean; suppressSuccessToast?: boolean },
   ) => Promise<void>;
+  addBundleToCart: (
+    bundleId: string,
+    quantity?: number,
+    opts?: { openSheet?: boolean; suppressSuccessToast?: boolean; throwOnError?: boolean },
+  ) => Promise<void>;
   updateCartItem: (
     cartItemId: string,
     quantity: number,
-    opts?: { suppressSuccessToast?: boolean },
+    opts?: { suppressSuccessToast?: boolean; throwOnError?: boolean },
   ) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   removeManyFromCart: (cartItemIds: string[]) => Promise<void>;
@@ -104,9 +109,42 @@ export const useCartStore = create<CartState>()(
           }
         },
 
+        addBundleToCart: async (
+          bundleId: string,
+          quantity = 1,
+          opts?: { openSheet?: boolean; suppressSuccessToast?: boolean; throwOnError?: boolean },
+        ) => {
+          const openSheet = opts?.openSheet !== false;
+          const throwOnError = opts?.throwOnError === true;
+          set({ loading: true, error: null });
+          try {
+            const response = await cartApi.addToCart({ itemType: "BUNDLE", bundleId, quantity });
+            set({
+              cart: response.cart,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+              loading: false,
+            });
+            if (openSheet) {
+              requestAnimationFrame(() => {
+                set({ cartSheetOpen: true });
+              });
+            }
+          } catch (err: unknown) {
+            console.error("Error adding bundle to cart:", err);
+            const errorMessage =
+              (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error ||
+              (err as { message?: string })?.message ||
+              "Could not add bundle to cart";
+            set({ error: errorMessage, loading: false });
+            toast.error(errorMessage);
+            if (throwOnError) throw err;
+          }
+        },
+
         // Update cart item quantity
         updateCartItem: async (cartItemId: string, quantity: number, opts) => {
           const suppressSuccessToast = opts?.suppressSuccessToast === true;
+          const throwOnError = opts?.throwOnError === true;
           set({ loading: true, error: null });
           try {
             const response = await cartApi.updateCartItem(cartItemId, {
@@ -120,9 +158,13 @@ export const useCartStore = create<CartState>()(
           } catch (err) {
             console.error("Error updating cart item:", err);
             const error = err as ApiError;
-            const errorMessage = error.message || "Lỗi khi cập nhật sản phẩm trong giỏ hàng";
+            const errorMessage =
+              (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+              error.message ||
+              "Lỗi khi cập nhật sản phẩm trong giỏ hàng";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
+            if (throwOnError) throw err;
           }
         },
 

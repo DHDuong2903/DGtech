@@ -10,7 +10,7 @@ import { Spinner } from "@/src/components/ui/spinner";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Card } from "@/src/components/ui/card";
-import { ArrowLeft, BadgePercent, Package } from "lucide-react";
+import { ArrowLeft, BadgePercent, ChevronDown, Package } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "../../utils";
 import Image from "next/image";
@@ -21,10 +21,13 @@ import { ProductImageFallback } from "@/src/components/public/product/ProductIma
 import { addressApi } from "@/src/apis/addressApi";
 import { VN_PROVINCES, vnWardsForProvince } from "@/src/constants/vnAdministrative";
 import { VnAddressFormFields, type VnAddressDraft } from "@/src/components/public/address/VnAddressFormFields";
-import type { UserAddress, VnProvince, VnWard } from "@/src/types";
+import type { CartItem, UserAddress, VnProvince, VnWard } from "@/src/types";
 import { formatCheckoutShippingSnapshot } from "@/src/types/userAddressType";
 import { shippingApi, type ShippingQuoteResponse, type ShippingQuoteOptionDTO } from "@/src/apis/shippingApi";
 import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
+import { sortCartItemsForDisplay } from "@/src/utils/cartUtils";
+import { cartItemUnitPrice, isBundleCartItem } from "@/src/utils/cartLineUtils";
+import { BundleLineList, BundleSummaryHeader, type BundleLineRow } from "@/src/components/public/bundle";
 
 type ShipMode = "saved" | "new";
 
@@ -36,6 +39,47 @@ const emptyDraft = (): VnAddressDraft => ({
   wardName: "",
   addressLine: "",
 });
+
+function CheckoutSidebarBundleRow({ item, bundleLines }: { item: CartItem; bundleLines: BundleLineRow[] }) {
+  const [open, setOpen] = useState(false);
+  const lineTotal = cartItemUnitPrice(item) * item.quantity;
+
+  return (
+    <div className="w-full space-y-0">
+      <div className="flex w-full items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <BundleSummaryHeader
+              variant="cart"
+              name={item.bundleSnapshot?.name ?? item.product.name}
+              discountKind={item.bundleSnapshot?.discountKind ?? "PERCENT"}
+              discountValue={item.bundleSnapshot?.discountValue ?? 0}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground h-8 w-8 shrink-0"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-label={open ? "Hide bundle contents" : "Show bundle contents"}
+          >
+            <ChevronDown className={cn("h-5 w-5 transition-transform duration-200", open && "rotate-180")} />
+          </Button>
+        </div>
+        <p className="text-sm font-bold text-orange-600 shrink-0 tabular-nums">{formatCurrency(lineTotal)}</p>
+      </div>
+      {open ? (
+        <div className="border-border mt-2 w-full max-w-none border-t pt-2">
+          <div className="bg-muted/20 max-h-[min(14rem,35vh)] w-full overflow-y-auto overscroll-contain rounded-md px-2 py-2">
+            <BundleLineList lines={bundleLines} />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function CheckoutContent() {
   const router = useRouter();
@@ -73,13 +117,13 @@ function CheckoutContent() {
 
   const checkoutItems = useMemo(() => {
     if (!cart?.items || selectedItems.length === 0) return [];
-    return cart.items.filter((item) => selectedItems.includes(item.cartItemId));
+    const filtered = cart.items.filter((item) => selectedItems.includes(item.cartItemId));
+    return sortCartItemsForDisplay(filtered);
   }, [cart, selectedItems]);
 
   const subtotalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => {
-      const price = item.variant?.price ?? item.product.price;
-      return sum + price * item.quantity;
+      return sum + cartItemUnitPrice(item) * item.quantity;
     }, 0);
   }, [checkoutItems]);
 
@@ -485,47 +529,74 @@ function CheckoutContent() {
               <h2 className="text-md font-bold">Your order</h2>
 
               <div className="mt-2 max-h-[250px] overflow-y-auto pr-2 -mr-2 mb-2 space-y-4">
-                {checkoutItems.map((item) => (
-                  <div key={item.cartItemId} className="flex justify-between gap-3">
-                    <div className="flex gap-3 min-w-0">
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
-                        {item.product.imageUrl ? (
-                          <Image
-                            src={item.product.imageUrl}
-                            alt={item.product.name}
-                            fill
-                            sizes="56px"
-                            className="object-contain"
-                          />
-                        ) : (
-                          <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex flex-col justify-center">
-                        <p className="text-sm font-medium truncate leading-tight">{item.product.name}</p>
-                        {item.variant && !item.variant.isDefault && item.variant.attributes && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {Object.entries(item.variant.attributes)
-                              .map(([k, v]) => `${v}`)
-                              .join(" / ")}
+                {checkoutItems.map((item) => {
+                  const bundleLines: BundleLineRow[] | null =
+                    isBundleCartItem(item) && item.bundleSnapshot?.lines?.length
+                      ? item.bundleSnapshot.lines.map((ln) => ({
+                          id: ln.variantId,
+                          imageUrl: ln.imageUrl,
+                          name: ln.productName ?? "Product",
+                          attributes: ln.attributes ?? null,
+                          quantity: ln.quantity,
+                          href: ln.storefrontProductUrl ?? null,
+                        }))
+                      : null;
+
+                  return (
+                  <div
+                    key={item.cartItemId}
+                    className={bundleLines ? "w-full" : "flex justify-between gap-3"}
+                  >
+                    {bundleLines ? (
+                      <CheckoutSidebarBundleRow item={item} bundleLines={bundleLines} />
+                    ) : (
+                      <>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 gap-3">
+                            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
+                              {item.product.imageUrl ? (
+                                <Image
+                                  src={item.product.imageUrl}
+                                  alt={item.product.name}
+                                  fill
+                                  sizes="56px"
+                                  className="object-contain"
+                                />
+                              ) : (
+                                <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
+                              )}
+                            </div>
+                            <div className="flex min-w-0 flex-col justify-center">
+                              <p className="truncate text-sm font-medium leading-tight">{item.product.name}</p>
+                              {item.variant &&
+                                !item.variant.isDefault &&
+                                item.variant.attributes && (
+                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                  {Object.entries(item.variant.attributes)
+                                    .map(([k, v]) => `${v}`)
+                                    .join(" / ")}
+                                </p>
+                              )}
+                              <p className="text-muted-foreground mt-0.5 text-xs">Qty: {item.quantity}</p>
+                              {item.appliedCampaign?.name ? (
+                                <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
+                                  <BadgePercent className="h-3 w-3 shrink-0 text-orange-600" aria-hidden />
+                                  <span className="truncate">{item.appliedCampaign.name}</span>
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 flex-col justify-center text-right">
+                          <p className="text-sm font-bold text-orange-600">
+                            {formatCurrency(cartItemUnitPrice(item) * item.quantity)}
                           </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-0.5">Qty: {item.quantity}</p>
-                        {item.appliedCampaign?.name ? (
-                          <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
-                            <BadgePercent className="h-3 w-3 shrink-0 text-orange-600" aria-hidden />
-                            <span className="truncate">{item.appliedCampaign.name}</span>
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right flex flex-col justify-center">
-                      <p className="text-sm font-bold text-orange-600">
-                        {formatCurrency((item.variant?.price ?? item.product.price) * item.quantity)}
-                      </p>
-                    </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="pt-0 space-y-3">

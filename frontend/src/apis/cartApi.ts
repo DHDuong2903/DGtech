@@ -1,6 +1,6 @@
 import { API_ROUTE } from "../constant";
 import axiosInstance from "../lib/axios";
-import { Cart, AddToCartRequest, UpdateCartItemRequest, type FreeShippingMotivation } from "../types";
+import { Cart, type AddToCartRequest, UpdateCartItemRequest, type FreeShippingMotivation } from "../types";
 
 export type CartWithMotivationResponse = {
   cart: Cart;

@@ -9,3 +9,4 @@ export { ProductDetailReviews } from "./ProductDetailReviews";
 export { ReviewsList } from "./ReviewsList";
 export { RelatedProducts } from "./RelatedProducts";
 export { VariantSelector } from "./VariantSelector";
+export { ProductBundleBlocks } from "./ProductBundleBlocks";

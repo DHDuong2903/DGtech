@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CartEmptyState, CartItemList, CartSummary, CartLoadingState } from "../../components/public/cart";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { cartItemUnitPrice } from "@/src/utils/cartLineUtils";
 
 function CartPageContent() {
   const searchParams = useSearchParams();
@@ -69,8 +70,7 @@ function CartPageContent() {
 
     const selectedCartItems = cart.items.filter((item) => selectedItems.has(item.cartItemId));
     const totalPrice = selectedCartItems.reduce((sum, item) => {
-      const price = item.variant ? item.variant.price : item.product.price;
-      return sum + price * item.quantity;
+      return sum + cartItemUnitPrice(item) * item.quantity;
     }, 0);
     const totalItems = selectedCartItems.reduce((sum, item) => sum + item.quantity, 0);
 

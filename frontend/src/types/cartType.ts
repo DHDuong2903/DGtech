@@ -11,6 +11,27 @@ export type CartItemAppliedCampaign = {
   name: string;
 };
 
+export type CartBundleSnapshotLine = {
+  variantId: string;
+  quantity: number;
+  productId: string | null;
+  productName: string | null;
+  imageUrl: string | null;
+  attributes?: Record<string, string> | null;
+  unitCatalogPrice: number | null;
+  storefrontProductUrl: string | null;
+};
+
+export type CartBundleSnapshot = {
+  bundleId: string;
+  name: string;
+  discountKind: string;
+  discountValue: number;
+  originTotal: number;
+  discountedUnitTotal: number;
+  lines: CartBundleSnapshotLine[];
+};
+
 export interface CartItem {
   cartItemId: string;
   cartId: string;
@@ -20,6 +41,10 @@ export interface CartItem {
   product: Product;
   variant?: ProductVariant;
   appliedCampaign?: CartItemAppliedCampaign | null;
+  /** When set, line is a bundle (single cart row). */
+  itemType?: "PRODUCT" | "BUNDLE";
+  bundleId?: string | null;
+  bundleSnapshot?: CartBundleSnapshot | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,11 +59,18 @@ export interface Cart {
   updatedAt: string;
 }
 
-export interface AddToCartRequest {
-  productId: string;
-  variantId?: string;
-  quantity?: number;
-}
+export type AddToCartRequest =
+  | {
+      productId: string;
+      variantId?: string;
+      quantity?: number;
+      itemType?: "PRODUCT";
+    }
+  | {
+      itemType: "BUNDLE";
+      bundleId: string;
+      quantity?: number;
+    };
 
 export interface UpdateCartItemRequest {
   quantity: number;

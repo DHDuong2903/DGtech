@@ -15,7 +15,10 @@ import {
   ProductDetailReviews,
   RelatedProducts,
   VariantSelector,
+  ProductBundleBlocks,
 } from "../../../components/public/product";
+import { bundleApi } from "@/src/apis/bundleApi";
+import type { StorefrontBundleForPdp } from "@/src/types/bundleType";
 import { cn } from "@/src/lib/utils";
 import { toMoneyNumber } from "@/src/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
@@ -63,7 +66,14 @@ const ProductDetailPage = () => {
 
   const { user } = useUser();
   const { isLoaded: clerkLoaded } = useAuth();
-  const { addToCart, loading: cartLoading, fetchCart, updateCartItem, setCartSheetOpen } = useCartStore();
+  const {
+    addToCart,
+    addBundleToCart,
+    loading: cartLoading,
+    fetchCart,
+    updateCartItem,
+    setCartSheetOpen,
+  } = useCartStore();
   const {
     currentProduct: product,
     relatedProducts,
@@ -77,6 +87,8 @@ const ProductDetailPage = () => {
   /** When null, PDP uses the cheapest real variant (same anchor price as cards). Set when shopper picks options. */
   const [userSelectedVariantId, setUserSelectedVariantId] = useState<string | null>(null);
   const [buyNowBusy, setBuyNowBusy] = useState(false);
+  const [bundles, setBundles] = useState<StorefrontBundleForPdp[]>([]);
+  const [bundleBuyBusyId, setBundleBuyBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!productId || !clerkLoaded) return;
@@ -85,6 +97,19 @@ const ProductDetailPage = () => {
     fetchProductById(productId);
     fetchReviewsByProductId(productId);
   }, [productId, clerkLoaded, fetchProductById, fetchReviewsByProductId]);
+
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    void bundleApi.getStorefrontByProduct(productId).then((b) => {
+      if (!cancelled) setBundles(b);
+    }).catch(() => {
+      if (!cancelled) setBundles([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const selectedVariant = useMemo(
     () => resolveStorefrontSelectedVariant(product, userSelectedVariantId),
@@ -197,6 +222,62 @@ const ProductDetailPage = () => {
     router,
   ]);
 
+  const handleBuyNowBundle = useCallback(
+    async (bundleId: string) => {
+      if (!user) {
+        toast.error("Please sign in to continue");
+        return;
+      }
+      const sameBundle = (it: { bundleId?: string | null; bundleSnapshot?: { bundleId?: string | null } | null }) => {
+        const a = it.bundleId ?? it.bundleSnapshot?.bundleId;
+        if (a == null || bundleId == null) return false;
+        return String(a).toLowerCase() === String(bundleId).toLowerCase();
+      };
+
+      setBundleBuyBusyId(bundleId);
+      try {
+        let cart = useCartStore.getState().cart;
+        if (!cart?.items) {
+          await fetchCart();
+          cart = useCartStore.getState().cart;
+        }
+        const match = cart?.items?.find(
+          (it) =>
+            sameBundle(it) && (it.itemType === "BUNDLE" || Boolean(it.bundleSnapshot)),
+        );
+        if (match) {
+          await updateCartItem(match.cartItemId, 1, {
+            suppressSuccessToast: true,
+            throwOnError: true,
+          });
+        } else {
+          await addBundleToCart(bundleId, 1, {
+            openSheet: false,
+            suppressSuccessToast: true,
+            throwOnError: true,
+          });
+        }
+        await fetchCart();
+        const updated = useCartStore.getState().cart;
+        const line = updated?.items?.find(
+          (it) =>
+            sameBundle(it) && (it.itemType === "BUNDLE" || Boolean(it.bundleSnapshot)),
+        );
+        if (!line) {
+          toast.error("Could not update your cart. Try again.");
+          return;
+        }
+        setCartSheetOpen(false);
+        router.push(`/cart?selectOnly=${encodeURIComponent(line.cartItemId)}`);
+      } catch {
+        /* addBundleToCart / updateCartItem already showed toast */
+      } finally {
+        setBundleBuyBusyId(null);
+      }
+    },
+    [user, fetchCart, updateCartItem, addBundleToCart, setCartSheetOpen, router],
+  );
+
   const handleSubmitReviewWrapper = async (rating: number, comment: string) => {
     if (!user) {
       toast.error("Please sign in to write a review");
@@ -272,10 +353,16 @@ const ProductDetailPage = () => {
             )}
 
             {isOutOfStock && (
-              <div className="p-4 bg-destructive/10 text-destructive rounded-lg font-semibold text-center mt-4">
+              <div className="bg-destructive/10 text-destructive rounded-lg p-4 text-center font-semibold">
                 Out of Stock
               </div>
             )}
+
+            <ProductBundleBlocks
+              bundles={bundles}
+              bundleBuyBusyId={bundleBuyBusyId}
+              onBuyNowBundle={handleBuyNowBundle}
+            />
           </div>
         </div>
 

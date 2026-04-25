@@ -1,20 +1,38 @@
 // @ts-nocheck
 import { Cart, CartItem, Product, ProductVariant } from "../models/associationsModel.js";
-import { updateCartTotals, getCartWithDetails, getFreeShippingMotivation } from "../helpers/cartHelper.js";
+import {
+  updateCartTotals,
+  getCartWithDetails,
+  getFreeShippingMotivation,
+  storefrontCartItemIncludes,
+} from "../helpers/cartHelper.js";
 import {
   enrichCartItemLinesForStorefront,
   serializeCartForStorefrontJson,
 } from "../services/discountCampaignResolveService.js";
+import { findBundleWithRelations } from "./bundleController.js";
+import {
+  maxWholeBundlesFromStock,
+} from "../services/bundlePricingService.js";
+import {
+  normalizeBundleCartItemsForStorefront,
+  cartLineUnitSubtotal,
+} from "../services/cartBundleStorefront.js";
+import { sumEligibleBundlePurchasesForUser } from "../services/bundlePurchaseService.js";
 
 async function sendCartResponse(res: any, data: Record<string, unknown>, clerkId?: string | null) {
   const freeShippingMotivation = await getFreeShippingMotivation();
   let payload = { ...data };
   if (payload.cart && clerkId && payload.cart.items?.length) {
-    await enrichCartItemLinesForStorefront(payload.cart.items, clerkId);
+    const list = payload.cart.items;
+    await enrichCartItemLinesForStorefront(
+      list.filter((it: any) => (it.itemType || (it.bundleId ? "BUNDLE" : "PRODUCT")) !== "BUNDLE"),
+      clerkId,
+    );
+    normalizeBundleCartItemsForStorefront(list);
     let sub = 0;
-    for (const it of payload.cart.items) {
-      const unit = it.variant ? parseFloat(it.variant.price) : parseFloat(it.product.price);
-      sub += unit * it.quantity;
+    for (const it of list) {
+      sub += cartLineUnitSubtotal(it) * it.quantity;
     }
     sub = Math.round(sub * 100) / 100;
     if (typeof payload.cart.setDataValue === "function") {
@@ -48,6 +66,88 @@ export const getCart = async (req: any, res: any) => {
 export const addToCart = async (req: any, res: any) => {
   try {
     const { userId: clerkId } = req.auth;
+    const rawType = String(req.body.itemType || "").toUpperCase();
+
+    if (rawType === "BUNDLE" && req.body.bundleId) {
+      const bundleId = String(req.body.bundleId).trim();
+      const quantity = Math.max(1, parseInt(String(req.body.quantity ?? 1), 10) || 1);
+
+      const bundle = await findBundleWithRelations(bundleId);
+      if (!bundle) {
+        return res.status(404).json({ error: "Không tìm thấy bundle" });
+      }
+      const b = bundle.get({ plain: true });
+      if (!b.isEnabled) {
+        return res.status(400).json({ error: "Bundle không khả dụng" });
+      }
+      const lines = b.items || [];
+      const allActive = lines.length && lines.every((it: any) => it.variant?.product?.status === "ACTIVE");
+      if (!allActive) {
+        return res.status(400).json({ error: "Bundle không khả dụng" });
+      }
+      const maxB = maxWholeBundlesFromStock(lines, 0);
+
+      // DB may enforce NOT NULL on productId/variantId — anchor from first bundle line (BundleItem.variantId always set).
+      const row0 = lines[0];
+      const v = row0?.variant;
+      let anchorVariantId = v?.variantId ?? row0?.variantId ?? null;
+      let anchorProductId = v?.productId ?? v?.product?.productId ?? null;
+      if (anchorVariantId && !anchorProductId) {
+        const pv = await ProductVariant.findByPk(anchorVariantId, { attributes: ["productId"] });
+        anchorProductId = pv?.productId ?? null;
+      }
+      if (!anchorVariantId || !anchorProductId) {
+        return res.status(400).json({ error: "Bundle không hợp lệ (thiếu biến thể/sản phẩm neo)" });
+      }
+
+      let cart = await Cart.findOne({ where: { clerkId } });
+      if (!cart) {
+        cart = await Cart.create({ clerkId });
+      }
+
+      let cartItem = await CartItem.findOne({
+        where: { cartId: cart.cartId, bundleId },
+      });
+
+      const existingQty = cartItem?.quantity ?? 0;
+      const targetQty = existingQty + quantity;
+      if (maxB < targetQty) {
+        return res.status(400).json({ error: "Không đủ hàng trong kho cho bundle" });
+      }
+
+      const maxPerUser = parseInt(String(b.maxPerUser ?? 0), 10) || 0;
+      if (maxPerUser > 0) {
+        const purchased = await sumEligibleBundlePurchasesForUser(clerkId, bundleId, null);
+        if (purchased + targetQty > maxPerUser) {
+          return res.status(400).json({
+            error: `Bạn chỉ được mua tối đa ${maxPerUser} bộ bundle này`,
+          });
+        }
+      }
+
+      let message: string;
+      if (cartItem) {
+        cartItem.quantity = targetQty;
+        await cartItem.save();
+        message = `Đã cập nhật số lượng bundle trong giỏ hàng (${targetQty})`;
+      } else {
+        cartItem = await CartItem.create({
+          cartId: cart.cartId,
+          itemType: "BUNDLE",
+          bundleId,
+          productId: anchorProductId,
+          variantId: anchorVariantId,
+          quantity: targetQty,
+        });
+        message = "Bundle đã được thêm vào giỏ hàng";
+      }
+
+      await updateCartTotals(cart.cartId, clerkId);
+      cart = await getCartWithDetails(clerkId);
+      await sendCartResponse(res, { cart, message }, clerkId);
+      return;
+    }
+
     const { productId, variantId, quantity = 1 } = req.body;
 
     if (!productId) {
@@ -87,10 +187,11 @@ export const addToCart = async (req: any, res: any) => {
 
     // Tim item trong gio hang dua tren ca productId va variantId
     let cartItem = await CartItem.findOne({
-      where: { 
-        cartId: cart.cartId, 
+      where: {
+        cartId: cart.cartId,
         productId,
-        variantId: selectedVariant.variantId 
+        variantId: selectedVariant.variantId,
+        itemType: "PRODUCT",
       },
     });
 
@@ -106,6 +207,7 @@ export const addToCart = async (req: any, res: any) => {
     } else {
       cartItem = await CartItem.create({
         cartId: cart.cartId,
+        itemType: "PRODUCT",
         productId,
         variantId: selectedVariant.variantId,
         quantity,
@@ -142,24 +244,43 @@ export const updateCartItem = async (req: any, res: any) => {
 
     const cartItem = await CartItem.findOne({
       where: { cartItemId, cartId: cart.cartId },
-      include: [
-        { model: Product, as: "product" },
-        { model: ProductVariant, as: "variant" }
-      ],
+      include: storefrontCartItemIncludes,
     });
 
     if (!cartItem) {
       return res.status(404).json({ error: "Không tìm thấy sản phẩm trong giỏ hàng" });
     }
 
-    if (cartItem.product.status !== "ACTIVE") {
-      return res.status(400).json({ error: "Sản phẩm không khả dụng" });
-    }
+    const lineType = cartItem.itemType || (cartItem.bundleId ? "BUNDLE" : "PRODUCT");
 
-    // Kiem tra ton kho cua variant
-    const stockToCheck = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
-    if (stockToCheck < quantity) {
-      return res.status(400).json({ error: "Không đủ hàng trong kho" });
+    if (lineType === "BUNDLE") {
+      const lines = cartItem.bundle?.items || [];
+      if (!lines.length) {
+        return res.status(400).json({ error: "Bundle không hợp lệ" });
+      }
+      if (maxWholeBundlesFromStock(lines, 0) < quantity) {
+        return res.status(400).json({ error: "Không đủ hàng trong kho" });
+      }
+      const bundlePlain = cartItem.bundle?.get ? cartItem.bundle.get({ plain: true }) : cartItem.bundle;
+      const maxPerUser = parseInt(String(bundlePlain?.maxPerUser ?? 0), 10) || 0;
+      if (maxPerUser > 0 && cartItem.bundleId) {
+        const purchased = await sumEligibleBundlePurchasesForUser(clerkId, cartItem.bundleId, null);
+        if (purchased + quantity > maxPerUser) {
+          return res.status(400).json({
+            error: `Bạn chỉ được mua tối đa ${maxPerUser} bộ bundle này`,
+          });
+        }
+      }
+    } else {
+      if (!cartItem.product || cartItem.product.status !== "ACTIVE") {
+        return res.status(400).json({ error: "Sản phẩm không khả dụng" });
+      }
+
+      // Kiem tra ton kho cua variant
+      const stockToCheck = cartItem.variant ? cartItem.variant.stock : cartItem.product.stock;
+      if (stockToCheck < quantity) {
+        return res.status(400).json({ error: "Không đủ hàng trong kho" });
+      }
     }
 
     cartItem.quantity = quantity;
@@ -175,7 +296,7 @@ export const updateCartItem = async (req: any, res: any) => {
         cart: updatedCart,
         message: "Sản phẩm trong giỏ hàng đã được cập nhật",
       },
-      clerkId
+      clerkId,
     );
   } catch (error) {
     console.error("Loi khi updateCartItem", error);
@@ -239,4 +360,3 @@ export const clearCart = async (req: any, res: any) => {
     res.status(500).json({ error: "Không thể làm trống giỏ hàng" });
   }
 };
-

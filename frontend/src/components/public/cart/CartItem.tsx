@@ -1,14 +1,23 @@
 "use client";
 
+import { Fragment, useState } from "react";
 import { Button } from "@/src/components/ui/button";
-import { BadgePercent, Minus, Plus, Trash2 } from "lucide-react";
+import { BadgePercent, ChevronDown, Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
+import { BundleSummaryHeader, BundleLineList, type BundleLineRow } from "@/src/components/public/bundle";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { TableCell, TableRow } from "@/src/components/ui/table";
 import { CartItem as CartItemType } from "@/src/types";
 import { useCartStore } from "@/src/stores";
+import { cn } from "@/src/lib/utils";
 import { formatCurrency } from "@/src/utils";
+import {
+  cartItemCompareAtUnit,
+  cartItemMaxQuantity,
+  cartItemUnitPrice,
+  isBundleCartItem,
+} from "@/src/utils/cartLineUtils";
 
 interface CartItemProps {
   item: CartItemType;
@@ -18,6 +27,7 @@ interface CartItemProps {
 
 export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
   const { loading, updateCartItem, removeFromCart } = useCartStore();
+  const [bundleOpen, setBundleOpen] = useState(false);
 
   const handleUpdateQuantity = async (newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -28,12 +38,99 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
     await removeFromCart(item.cartItemId);
   };
 
-  const itemPrice = item.variant ? item.variant.price : item.product.price;
-  const compareAt = item.variant?.compareAtPrice ?? item.product.compareAtPrice ?? null;
+  const itemPrice = cartItemUnitPrice(item);
+  const compareAt = cartItemCompareAtUnit(item);
   const showCompareStrike = compareAt != null && compareAt > itemPrice;
-  const maxStock = item.variant ? item.variant.stock : item.product.stock;
+  const maxStock = cartItemMaxQuantity(item);
 
-  const hasRealVariant = item.variant && Object.keys(item.variant.attributes).length > 0;
+  const hasRealVariant =
+    !isBundleCartItem(item) &&
+    item.variant &&
+    Object.keys(item.variant.attributes ?? {}).length > 0;
+
+  const bundleLines: BundleLineRow[] | null =
+    isBundleCartItem(item) && item.bundleSnapshot?.lines?.length
+      ? item.bundleSnapshot.lines.map((ln) => ({
+          id: ln.variantId,
+          imageUrl: ln.imageUrl,
+          name: ln.productName ?? "Product",
+          attributes: ln.attributes ?? null,
+          quantity: ln.quantity,
+          href: ln.storefrontProductUrl ?? null,
+        }))
+      : null;
+
+  if (bundleLines) {
+    return (
+      <Fragment>
+        <TableRow>
+          <TableCell className="w-10 px-2">
+            <Checkbox
+              id={`select-${item.cartItemId}`}
+              checked={selected}
+              onCheckedChange={() => onToggleSelect(item.cartItemId)}
+              aria-label={`Select ${item.product.name}`}
+            />
+          </TableCell>
+          <TableCell className="min-w-[200px] max-w-[min(100vw-12rem,28rem)]">
+            <BundleSummaryHeader
+              variant="cart"
+              name={item.bundleSnapshot?.name ?? item.product.name}
+              discountKind={item.bundleSnapshot?.discountKind ?? "PERCENT"}
+              discountValue={item.bundleSnapshot?.discountValue ?? 0}
+            />
+          </TableCell>
+          <TableCell className="hidden whitespace-nowrap sm:table-cell">
+            <div className="flex flex-wrap items-baseline justify-start gap-1.5">
+              <span className="text-orange-600 font-semibold tabular-nums">{formatCurrency(itemPrice)}</span>
+              {showCompareStrike ? (
+                <span className="text-muted-foreground text-sm line-through tabular-nums">
+                  {formatCurrency(compareAt)}
+                </span>
+              ) : null}
+            </div>
+          </TableCell>
+          <TableCell className="whitespace-nowrap" />
+          <TableCell className="w-19 px-1 text-right sm:w-21">
+            <div className="inline-flex items-center justify-end gap-0">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground h-8 w-8 shrink-0"
+                onClick={() => setBundleOpen((v) => !v)}
+                aria-expanded={bundleOpen}
+                aria-label={bundleOpen ? "Hide bundle contents" : "Show bundle contents"}
+              >
+                <ChevronDown
+                  className={cn("h-5 w-5 transition-transform duration-200", bundleOpen && "rotate-180")}
+                />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 hover:bg-red-50"
+                onClick={handleRemoveItem}
+                disabled={loading}
+                aria-label="Remove item"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+        {bundleOpen ? (
+          <TableRow className="hover:bg-transparent">
+            <TableCell colSpan={5} className="border-border bg-muted/20 p-0">
+              <div className="max-h-[min(18rem,42vh)] overflow-y-auto overscroll-contain px-4 py-3">
+                <BundleLineList lines={bundleLines} />
+              </div>
+            </TableCell>
+          </TableRow>
+        ) : null}
+      </Fragment>
+    );
+  }
 
   return (
     <TableRow>
@@ -49,12 +146,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
         <div className="flex items-center gap-3">
           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md md:h-14 md:w-14">
             {item.product.imageUrl ? (
-              <Image
-                src={item.product.imageUrl}
-                alt=""
-                fill
-                className="object-contain p-0"
-              />
+              <Image src={item.product.imageUrl} alt="" fill className="object-contain p-0" />
             ) : (
               <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6 md:h-7 md:w-7" />
             )}

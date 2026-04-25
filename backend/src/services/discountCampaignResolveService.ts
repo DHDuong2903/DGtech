@@ -265,6 +265,8 @@ export async function enrichCartItemLinesForStorefront(cartItems: any[], clerkId
   const at = new Date();
   const contexts: VariantPricingContext[] = [];
   for (const item of cartItems) {
+    const itType = item.itemType || (item.bundleId ? "BUNDLE" : "PRODUCT");
+    if (itType === "BUNDLE") continue;
     const product = item.product;
     const variant = item.variant;
     if (!product) continue;
@@ -309,11 +311,13 @@ export function serializeCartForStorefrontJson(cart: any) {
     const row = orig.get({ plain: true });
     const v = orig.variant;
     const p = orig.product;
+    const snap = orig.dataValues?.bundleSnapshot ?? orig.bundleSnapshot;
     return {
       ...row,
       product: p && typeof p.get === "function" ? p.get({ plain: true }) : row.product,
       variant: v && typeof v.get === "function" ? v.get({ plain: true }) : row.variant,
       appliedCampaign: orig.dataValues?.appliedCampaign ?? orig.appliedCampaign ?? null,
+      bundleSnapshot: snap ?? null,
     };
   });
   return plain;
