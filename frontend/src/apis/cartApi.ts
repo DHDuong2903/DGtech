@@ -1,10 +1,11 @@
 import { API_ROUTE } from "../constant";
 import axiosInstance from "../lib/axios";
-import { Cart, type AddToCartRequest, UpdateCartItemRequest, type FreeShippingMotivation } from "../types";
+import { Cart, type AddToCartRequest, UpdateCartItemRequest, type AppliedVoucher, type EligibleVoucher, type FreeShippingMotivation } from "../types";
 
 export type CartWithMotivationResponse = {
   cart: Cart;
   freeShippingMotivation?: FreeShippingMotivation;
+  appliedVoucher?: AppliedVoucher | null;
 };
 
 export const cartApi = {
@@ -38,6 +39,32 @@ export const cartApi = {
   // Clear cart
   clearCart: async (): Promise<CartWithMotivationResponse & { message: string }> => {
     const response = await axiosInstance.delete(API_ROUTE.CART);
+    return response.data;
+  },
+
+  getEligibleVouchers: async (payload: {
+    selectedItems: string[];
+    shippingFee?: number;
+    provinceCode?: string;
+    shippingMethodCode?: string;
+  }): Promise<{ vouchers: EligibleVoucher[]; subtotal: number; shippingFee: number }> => {
+    const response = await axiosInstance.post(`${API_ROUTE.CART}/vouchers/eligible`, payload);
+    return response.data;
+  },
+
+  applyVoucher: async (payload: {
+    voucherId: string;
+    selectedItems: string[];
+    shippingFee?: number;
+    provinceCode?: string;
+    shippingMethodCode?: string;
+  }): Promise<CartWithMotivationResponse> => {
+    const response = await axiosInstance.put(`${API_ROUTE.CART}/vouchers/apply`, payload);
+    return response.data;
+  },
+
+  clearAppliedVoucher: async (): Promise<CartWithMotivationResponse> => {
+    const response = await axiosInstance.delete(`${API_ROUTE.CART}/vouchers/apply`);
     return response.data;
   },
 };

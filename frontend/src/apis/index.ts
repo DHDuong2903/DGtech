@@ -7,6 +7,7 @@ export * from "./cartApi";
 export * from "./paymentApi";
 export * from "./slideshowsApi";
 export * from "./discountCampaignsApi";
+export * from "./vouchersApi";
 
 // Re-export for convenience
 export { categoriesApi } from "./categoriesApi";
@@ -16,3 +17,4 @@ export { reviewsApi } from "./reviewApi";
 export { cartApi } from "./cartApi";
 export { slideshowsApi } from "./slideshowsApi";
 export { discountCampaignsApi } from "./discountCampaignsApi";
+export { vouchersApi } from "./vouchersApi";

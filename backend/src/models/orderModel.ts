@@ -75,6 +75,19 @@ export const Order = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
     },
+    voucherId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    voucherName: {
+      type: DataTypes.STRING(200),
+      allowNull: true,
+    },
+    voucherDiscountAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     timestamps: true,

@@ -12,7 +12,18 @@ import { cartItemUnitPrice } from "@/src/utils/cartLineUtils";
 function CartPageContent() {
   const searchParams = useSearchParams();
   const selectOnlyId = searchParams.get("selectOnly");
-  const { cart, loading, fetchCart, removeManyFromCart } = useCartStore();
+  const {
+    cart,
+    loading,
+    fetchCart,
+    removeManyFromCart,
+    eligibleVouchers,
+    vouchersLoading,
+    fetchEligibleVouchers,
+    applyVoucher,
+    clearAppliedVoucher,
+    appliedVoucher,
+  } = useCartStore();
   const { isSignedIn, isLoaded } = useUser();
   const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -106,6 +117,12 @@ function CartPageContent() {
     await removeManyFromCart(ids);
   };
 
+  useEffect(() => {
+    const selectedItemIds = Array.from(selectedItems);
+    if (selectedItemIds.length === 0) return;
+    void fetchEligibleVouchers({ selectedItems: selectedItemIds });
+  }, [selectedItems, fetchEligibleVouchers]);
+
   // Loading state khi đang check authentication
   if (!isLoaded) {
     return <CartLoadingState type="auth-loading" />;
@@ -125,6 +142,9 @@ function CartPageContent() {
     const selectedItemIds = Array.from(selectedItems);
     const params = new URLSearchParams();
     params.set("items", encodeURIComponent(JSON.stringify(selectedItemIds)));
+    if (appliedVoucher?.voucherId) {
+      params.set("appliedVoucherId", appliedVoucher.voucherId);
+    }
     router.push(`/checkout?${params.toString()}`);
   };
 
@@ -150,6 +170,13 @@ function CartPageContent() {
               <CartSummary
                 totalItems={selectedSummary.totalItems}
                 totalPrice={selectedSummary.totalPrice}
+                vouchers={eligibleVouchers}
+                appliedVoucher={appliedVoucher}
+                vouchersLoading={vouchersLoading}
+                onApplyVoucher={(voucherId) => {
+                  void applyVoucher({ voucherId, selectedItems: Array.from(selectedItems) });
+                }}
+                onClearVoucher={() => void clearAppliedVoucher()}
                 onCheckout={handleCheckout}
               />
             </div>

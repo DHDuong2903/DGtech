@@ -1,4 +1,5 @@
 import { Product, ProductVariant } from "./productType";
+import type { EligibleVoucher } from "./voucherType";
 
 /** Mirrors cart API `freeShippingMotivation` when free-ship bar is enabled in admin. */
 export type FreeShippingMotivation =
@@ -54,10 +55,18 @@ export interface Cart {
   clerkId: string;
   totalPrice: number;
   totalItems: number;
+  appliedVoucherId?: string | null;
   items: CartItem[];
   createdAt: string;
   updatedAt: string;
 }
+
+export type AppliedVoucher = Pick<
+  EligibleVoucher,
+  "voucherId" | "name" | "voucherType" | "discountPercent" | "discountAmount" | "expiresAt"
+> & {
+  isActive: boolean;
+};
 
 export type AddToCartRequest =
   | {

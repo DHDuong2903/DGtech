@@ -9,6 +9,7 @@ import {
   UserAddress,
   User,
   BundlePurchase,
+  UserVoucherRedemption,
 } from "../models/associationsModel.js";
 import { formatShippingSnapshot, getProvinceName } from "../helpers/vnAddressHelper.js";
 import {
@@ -26,6 +27,7 @@ import {
 import { sumEligibleBundlePurchasesForUser } from "../services/bundlePurchaseService.js";
 import { sequelize } from "../libs/db.js";
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
+import { listEligibleVouchersForUser } from "../services/voucherService.js";
 
 // Tao order moi tu cac san pham duoc chon trong cart
 export const createOrder = async (req: any, res: any) => {
@@ -185,7 +187,26 @@ export const createOrder = async (req: any, res: any) => {
       throw e;
     }
     const shippingFee = ship.shippingFee;
-    const totalPrice = ship.totalPrice;
+    let voucherId: string | null = cart.appliedVoucherId || null;
+    let voucherName: string | null = null;
+    let voucherDiscountAmount = 0;
+    if (voucherId) {
+      const eligible = await listEligibleVouchersForUser({
+        clerkId,
+        subtotal,
+        shippingFee,
+        provinceCode: provinceCodeForShip,
+        shippingMethodCode,
+      });
+      const picked = eligible.find((v) => v.voucherId === voucherId);
+      if (picked) {
+        voucherName = picked.name;
+        voucherDiscountAmount = Math.max(0, Math.min(ship.totalPrice, Number(picked.estimatedSavings || 0)));
+      } else {
+        voucherId = null;
+      }
+    }
+    const totalPrice = Math.max(0, ship.totalPrice - voucherDiscountAmount);
 
     const orderItemsData = [];
     for (const cartItem of cartItems) {
@@ -234,6 +255,9 @@ export const createOrder = async (req: any, res: any) => {
         shippingMethodCode: ship.shippingMethodCode,
         shippingMethodName: ship.shippingMethodName,
         shippingMethodEtaNote: ship.shippingMethodEtaNote,
+        voucherId,
+        voucherName,
+        voucherDiscountAmount,
       },
       { transaction },
     );
@@ -312,6 +336,17 @@ export const createOrder = async (req: any, res: any) => {
       where: { cartItemId: selectedItems, cartId: cart.cartId },
       transaction,
     });
+    if (voucherId) {
+      await UserVoucherRedemption.create(
+        {
+          voucherId,
+          clerkId,
+          orderId: (order as any).orderId,
+        },
+        { transaction }
+      );
+    }
+    await cart.update({ appliedVoucherId: null }, { transaction });
 
     // Create payment record if BANK_TRANSFER
     let payment = null;

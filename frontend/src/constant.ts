@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgePercent, Images, LayoutDashboard, Package, Package2, Sofa, Tag, Truck, Users } from "lucide-react";
+import { BadgePercent, Images, Layers, LayoutDashboard, Package, Sofa, Tag, Ticket, Truck, Users } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Admin layout
@@ -30,7 +30,8 @@ export const ADMIN_SIDEBAR_NAV_ITEMS: AdminSidebarNavItem[] = [
   { id: "slideshows", label: "Slideshows", icon: Images, href: "/admin/slideshows" },
   { id: "shipping", label: "Shipping", icon: Truck, href: "/admin/shipping" },
   { id: "discount-campaigns", label: "Discount campaigns", icon: BadgePercent, href: "/admin/discount-campaigns" },
-  { id: "bundles", label: "Bundles", icon: Package2, href: "/admin/bundles" },
+  { id: "bundles", label: "Bundles", icon: Layers, href: "/admin/bundles" },
+  { id: "vouchers", label: "Vouchers", icon: Ticket, href: "/admin/vouchers" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,7 @@ export const API_ROUTE = {
   SHIPPING: "/shipping",
   DISCOUNT_CAMPAIGNS: "/discount-campaigns",
   BUNDLES: "/bundles",
+  VOUCHERS: "/vouchers",
 } as const;
 
 // ---------------------------------------------------------------------------

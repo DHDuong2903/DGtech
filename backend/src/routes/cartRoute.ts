@@ -6,6 +6,9 @@ import {
   updateCartItem,
   removeFromCart,
   clearCart,
+  getEligibleVouchers,
+  applyVoucherToCart,
+  clearAppliedVoucher,
 } from "../controllers/cartController.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 
@@ -25,6 +28,9 @@ router.put("/items/:cartItemId", updateCartItem);
 
 // Remove item from cart
 router.delete("/items/:cartItemId", removeFromCart);
+router.post("/vouchers/eligible", getEligibleVouchers);
+router.put("/vouchers/apply", applyVoucherToCart);
+router.delete("/vouchers/apply", clearAppliedVoucher);
 
 // Clear cart
 router.delete("/", clearCart);
