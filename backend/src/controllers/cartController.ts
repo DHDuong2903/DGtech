@@ -19,6 +19,11 @@ import {
   cartLineUnitSubtotal,
 } from "../services/cartBundleStorefront.js";
 import { sumEligibleBundlePurchasesForUser } from "../services/bundlePurchaseService.js";
+import { Voucher, Cart as CartModel } from "../models/associationsModel.js";
+import { computeSubtotalFromLines, loadSelectedCartLines } from "../services/shippingService.js";
+import {
+  listEligibleVouchersForUser,
+} from "../services/voucherService.js";
 
 async function sendCartResponse(res: any, data: Record<string, unknown>, clerkId?: string | null) {
   const freeShippingMotivation = await getFreeShippingMotivation();
@@ -40,8 +45,99 @@ async function sendCartResponse(res: any, data: Record<string, unknown>, clerkId
     }
     payload = { ...payload, cart: serializeCartForStorefrontJson(payload.cart) };
   }
+  if (payload.cart?.appliedVoucherId) {
+    const appliedVoucher = await Voucher.findByPk(payload.cart.appliedVoucherId, {
+      attributes: ["voucherId", "name", "voucherType", "discountPercent", "discountAmount", "expiresAt", "isActive"],
+    });
+    payload = {
+      ...payload,
+      appliedVoucher: appliedVoucher
+        ? {
+            voucherId: appliedVoucher.voucherId,
+            name: appliedVoucher.name,
+            voucherType: appliedVoucher.voucherType,
+            discountPercent: parseFloat(String(appliedVoucher.discountPercent ?? 0)) || 0,
+            discountAmount: parseFloat(String(appliedVoucher.discountAmount ?? 0)) || 0,
+            expiresAt: appliedVoucher.expiresAt,
+            isActive: !!appliedVoucher.isActive,
+          }
+        : null,
+    };
+  } else {
+    payload = { ...payload, appliedVoucher: null };
+  }
   res.status(200).json({ ...payload, freeShippingMotivation });
 }
+
+export const getEligibleVouchers = async (req: any, res: any) => {
+  try {
+    const { userId: clerkId } = req.auth;
+    const selectedItems = Array.isArray(req.body?.selectedItems) ? req.body.selectedItems : [];
+    if (!selectedItems.length) {
+      return res.status(400).json({ error: "selectedItems is required" });
+    }
+    const { cartItems } = await loadSelectedCartLines(clerkId, selectedItems);
+    const subtotal = computeSubtotalFromLines(cartItems);
+    const shippingFee = Number(req.body?.shippingFee ?? 0) || 0;
+    const vouchers = await listEligibleVouchersForUser({
+      clerkId,
+      subtotal,
+      shippingFee,
+      provinceCode: typeof req.body?.provinceCode === "string" ? req.body.provinceCode : undefined,
+      shippingMethodCode: typeof req.body?.shippingMethodCode === "string" ? req.body.shippingMethodCode : undefined,
+    });
+    return res.json({ vouchers, subtotal, shippingFee });
+  } catch (error: any) {
+    console.error("getEligibleVouchers:", error);
+    return res.status(500).json({ error: "Could not load eligible vouchers", details: error?.message });
+  }
+};
+
+export const applyVoucherToCart = async (req: any, res: any) => {
+  try {
+    const { userId: clerkId } = req.auth;
+    const { voucherId, selectedItems } = req.body || {};
+    if (!voucherId || typeof voucherId !== "string") return res.status(400).json({ error: "voucherId is required" });
+    if (!Array.isArray(selectedItems) || selectedItems.length === 0) {
+      return res.status(400).json({ error: "selectedItems is required" });
+    }
+    const cart = await CartModel.findOne({ where: { clerkId } });
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
+    const { cartItems } = await loadSelectedCartLines(clerkId, selectedItems);
+    const subtotal = computeSubtotalFromLines(cartItems);
+    const shippingFee = Number(req.body?.shippingFee ?? 0) || 0;
+    const vouchers = await listEligibleVouchersForUser({
+      clerkId,
+      subtotal,
+      shippingFee,
+      provinceCode: typeof req.body?.provinceCode === "string" ? req.body.provinceCode : undefined,
+      shippingMethodCode: typeof req.body?.shippingMethodCode === "string" ? req.body.shippingMethodCode : undefined,
+    });
+    const matched = vouchers.find((v) => v.voucherId === voucherId);
+    if (!matched) return res.status(400).json({ error: "Voucher is not eligible" });
+
+    await cart.update({ appliedVoucherId: voucherId });
+    const updated = await getCartWithDetails(clerkId);
+    return sendCartResponse(res, { cart: updated, appliedVoucher: matched }, clerkId);
+  } catch (error: any) {
+    console.error("applyVoucherToCart:", error);
+    return res.status(500).json({ error: "Could not apply voucher", details: error?.message });
+  }
+};
+
+export const clearAppliedVoucher = async (req: any, res: any) => {
+  try {
+    const { userId: clerkId } = req.auth;
+    const cart = await CartModel.findOne({ where: { clerkId } });
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
+    await cart.update({ appliedVoucherId: null });
+    const updated = await getCartWithDetails(clerkId);
+    return sendCartResponse(res, { cart: updated }, clerkId);
+  } catch (error: any) {
+    console.error("clearAppliedVoucher:", error);
+    return res.status(500).json({ error: "Could not clear applied voucher", details: error?.message });
+  }
+};
 
 // Lay gio hang cua user hien tai
 export const getCart = async (req: any, res: any) => {

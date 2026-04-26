@@ -24,10 +24,12 @@ import { VnAddressFormFields, type VnAddressDraft } from "@/src/components/publi
 import type { CartItem, UserAddress, VnProvince, VnWard } from "@/src/types";
 import { formatCheckoutShippingSnapshot } from "@/src/types/userAddressType";
 import { shippingApi, type ShippingQuoteResponse, type ShippingQuoteOptionDTO } from "@/src/apis/shippingApi";
+import { cartApi } from "@/src/apis/cartApi";
 import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
 import { sortCartItemsForDisplay } from "@/src/utils/cartUtils";
 import { cartItemUnitPrice, isBundleCartItem } from "@/src/utils/cartLineUtils";
 import { BundleLineList, BundleSummaryHeader, type BundleLineRow } from "@/src/components/public/bundle";
+import type { EligibleVoucher } from "@/src/types";
 
 type ShipMode = "saved" | "new";
 
@@ -86,7 +88,7 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const { isSignedIn, isLoaded, user: clerkUser } = useUser();
   const { user: appUser } = useAuth();
-  const { cart, loading: cartLoading, fetchCart } = useCartStore();
+  const { cart, loading: cartLoading, fetchCart, appliedVoucher } = useCartStore();
   const { createOrder, loading: orderLoading } = useOrderStore();
 
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("BANK_TRANSFER");
@@ -104,6 +106,8 @@ function CheckoutContent() {
   const [shipQuoteLoading, setShipQuoteLoading] = useState(false);
   const [shipQuoteError, setShipQuoteError] = useState<string | null>(null);
   const [shippingMethodCode, setShippingMethodCode] = useState<string>("standard");
+  const [checkoutVouchers, setCheckoutVouchers] = useState<EligibleVoucher[]>([]);
+  const [checkoutVouchersLoading, setCheckoutVouchersLoading] = useState(false);
 
   const selectedItemsParam = searchParams.get("items");
   const selectedItems = useMemo(() => {
@@ -186,9 +190,41 @@ function CheckoutContent() {
     );
   }, [shipQuote, shippingMethodCode]);
 
+  useEffect(() => {
+    if (selectedItems.length === 0) {
+      setCheckoutVouchers([]);
+      setCheckoutVouchersLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckoutVouchersLoading(true);
+    void (async () => {
+      try {
+        const response = await cartApi.getEligibleVouchers({
+          selectedItems,
+          shippingFee: selectedShipOption?.shippingFee ?? 0,
+          provinceCode: provinceForQuote || undefined,
+          shippingMethodCode,
+        });
+        if (!cancelled) setCheckoutVouchers(response.vouchers ?? []);
+      } catch {
+        if (!cancelled) setCheckoutVouchers([]);
+      } finally {
+        if (!cancelled) setCheckoutVouchersLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedItems, selectedItemsKey, selectedShipOption?.shippingFee, provinceForQuote, shippingMethodCode]);
+
   const displaySubtotal = shipQuote?.subtotal ?? subtotalItems;
   const displayShippingFee = selectedShipOption?.shippingFee ?? null;
-  const displayTotal = selectedShipOption?.totalPrice ?? subtotalItems;
+  const appliedVoucherEstimate = useMemo(() => {
+    if (!appliedVoucher?.voucherId) return 0;
+    return checkoutVouchers.find((v) => v.voucherId === appliedVoucher.voucherId)?.estimatedSavings ?? 0;
+  }, [appliedVoucher?.voucherId, checkoutVouchers]);
+  const displayTotal = Math.max(0, (selectedShipOption?.totalPrice ?? subtotalItems) - appliedVoucherEstimate);
 
   const totalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -326,15 +362,17 @@ function CheckoutContent() {
   const needShippingQuote = !!provinceForQuote && selectedItems.length > 0;
   const shippingQuoteReady =
     !needShippingQuote || (!!shipQuote && !shipQuoteLoading && !shipQuoteError);
+  const voucherCalcReady = !appliedVoucher?.voucherId || !checkoutVouchersLoading;
 
-  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId && shippingQuoteReady;
+  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId && shippingQuoteReady && voucherCalcReady;
   const canSubmitNew =
     shipMode === "new" &&
     !!draft.phone.trim() &&
     !!draft.provinceCode &&
     !!draft.wardCode &&
     !!draft.addressLine.trim() &&
-    shippingQuoteReady;
+    shippingQuoteReady &&
+    voucherCalcReady;
 
   if (!isLoaded || cartLoading || addrLoading) {
     return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
@@ -633,6 +671,12 @@ function CheckoutContent() {
                     <span className="text-muted-foreground text-xs">Pick province/city</span>
                   )}
                 </div>
+                {appliedVoucherEstimate > 0 && appliedVoucher ? (
+                  <div className="text-sm text-foreground flex justify-between">
+                    <span>Voucher ({appliedVoucher.name}):</span>
+                    <span className="font-semibold text-emerald-600">- {formatCurrency(appliedVoucherEstimate)}</span>
+                  </div>
+                ) : null}
                 {shipQuote?.displayMode === "included" && !shipQuoteLoading && !shipQuoteError && selectedShipOption && (
                   <p className="text-muted-foreground text-[10px] leading-snug">
                     {selectedShipOption.baseZoneFee > 0

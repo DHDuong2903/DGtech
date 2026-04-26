@@ -24,6 +24,9 @@ export interface Order {
   shippingMethodCode?: string | null;
   shippingMethodName?: string | null;
   shippingMethodEtaNote?: string | null;
+  voucherId?: string | null;
+  voucherName?: string | null;
+  voucherDiscountAmount?: number;
   totalPrice: number;
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";
   shippingAddress: string;

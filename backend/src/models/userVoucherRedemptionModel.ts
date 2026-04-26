@@ -2,36 +2,30 @@
 import { sequelize } from "../libs/db.js";
 import { DataTypes } from "sequelize";
 
-export const Cart = sequelize.define(
-  "Cart",
+export const UserVoucherRedemption = sequelize.define(
+  "UserVoucherRedemption",
   {
-    cartId: {
-      primaryKey: true,
+    redemptionId: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      unique: true,
+      primaryKey: true,
+    },
+    voucherId: {
+      type: DataTypes.UUID,
+      allowNull: false,
     },
     clerkId: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
-    totalPrice: {
-      type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0.0,
-    },
-    totalItems: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-    appliedVoucherId: {
+    orderId: {
       type: DataTypes.UUID,
       allowNull: true,
     },
   },
   {
     timestamps: true,
-    tableName: "carts",
+    tableName: "user_voucher_redemptions",
+    indexes: [{ fields: ["voucherId", "clerkId"] }],
   }
 );
-

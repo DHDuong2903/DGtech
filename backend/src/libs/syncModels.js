@@ -14,6 +14,8 @@ import { DiscountCampaign } from "../models/discountCampaignModel.js";
 import { DiscountCampaignProduct } from "../models/discountCampaignProductModel.js";
 import { DiscountCampaignCategory } from "../models/discountCampaignCategoryModel.js";
 import { DiscountCampaignVariantPrice } from "../models/discountCampaignVariantPriceModel.js";
+import { Voucher } from "../models/voucherModel.js";
+import { UserVoucherRedemption } from "../models/userVoucherRedemptionModel.js";
 
 // Import associations
 import "../models/associationsModel.js";
@@ -21,6 +23,47 @@ import "../models/associationsModel.js";
 export const syncModels = async () => {
   try {
     await sequelize.sync({ alter: false });
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "carts"
+      ADD COLUMN IF NOT EXISTS "appliedVoucherId" UUID;
+    `);
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "orders"
+      ADD COLUMN IF NOT EXISTS "voucherId" UUID,
+      ADD COLUMN IF NOT EXISTS "voucherName" VARCHAR(200),
+      ADD COLUMN IF NOT EXISTS "voucherDiscountAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0;
+    `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "vouchers" (
+        "voucherId" UUID PRIMARY KEY,
+        "name" VARCHAR(200) NOT NULL,
+        "voucherType" VARCHAR(32) NOT NULL DEFAULT 'PERCENT_DISCOUNT',
+        "audience" VARCHAR(32) NOT NULL DEFAULT 'ALL_USERS',
+        "tierTargets" JSONB NOT NULL DEFAULT '[]'::jsonb,
+        "discountPercent" DECIMAL(10, 2),
+        "discountAmount" DECIMAL(10, 2),
+        "maxUsesPerUser" INTEGER NOT NULL DEFAULT 1,
+        "expiresAt" TIMESTAMPTZ,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "metadata" JSONB NOT NULL DEFAULT '{}'::jsonb,
+        "createdAt" TIMESTAMPTZ NOT NULL,
+        "updatedAt" TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "user_voucher_redemptions" (
+        "redemptionId" UUID PRIMARY KEY,
+        "voucherId" UUID NOT NULL,
+        "clerkId" VARCHAR(255) NOT NULL,
+        "orderId" UUID,
+        "createdAt" TIMESTAMPTZ NOT NULL,
+        "updatedAt" TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "user_voucher_redemptions_voucherId_clerkId_idx"
+      ON "user_voucher_redemptions" ("voucherId", "clerkId");
+    `);
     console.log("Models da duoc dong bo voi database");
   } catch (error) {
     console.error("Loi khi dong bo syncModels:", error);

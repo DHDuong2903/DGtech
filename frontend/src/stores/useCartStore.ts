@@ -1,7 +1,7 @@
 // Zustand store for Cart
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { Cart, ApiError, type FreeShippingMotivation } from "../types";
+import { Cart, ApiError, type AppliedVoucher, type EligibleVoucher, type FreeShippingMotivation } from "../types";
 import { cartApi } from "../apis";
 import { toast } from "sonner";
 
@@ -12,6 +12,9 @@ interface CartState {
   freeShippingMotivation: FreeShippingMotivation | null;
   loading: boolean;
   error: string | null;
+  eligibleVouchers: EligibleVoucher[];
+  vouchersLoading: boolean;
+  appliedVoucher: AppliedVoucher | null;
   /** Mini cart sheet after add-to-cart (not persisted). */
   cartSheetOpen: boolean;
 
@@ -39,6 +42,20 @@ interface CartState {
   setError: (error: string | null) => void;
   clearError: () => void;
   setCartSheetOpen: (open: boolean) => void;
+  fetchEligibleVouchers: (payload: {
+    selectedItems: string[];
+    shippingFee?: number;
+    provinceCode?: string;
+    shippingMethodCode?: string;
+  }) => Promise<void>;
+  applyVoucher: (payload: {
+    voucherId: string;
+    selectedItems: string[];
+    shippingFee?: number;
+    provinceCode?: string;
+    shippingMethodCode?: string;
+  }) => Promise<boolean>;
+  clearAppliedVoucher: () => Promise<void>;
 }
 
 export const useCartStore = create<CartState>()(
@@ -50,6 +67,9 @@ export const useCartStore = create<CartState>()(
         freeShippingMotivation: null,
         loading: false,
         error: null,
+        eligibleVouchers: [],
+        vouchersLoading: false,
+        appliedVoucher: null,
         cartSheetOpen: false,
 
         setCartSheetOpen: (open) => set({ cartSheetOpen: open }),
@@ -61,6 +81,7 @@ export const useCartStore = create<CartState>()(
             const response = await cartApi.getCart();
             set({
               cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
@@ -89,6 +110,7 @@ export const useCartStore = create<CartState>()(
             const response = await cartApi.addToCart({ productId, quantity, variantId });
             set({
               cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
@@ -121,6 +143,7 @@ export const useCartStore = create<CartState>()(
             const response = await cartApi.addToCart({ itemType: "BUNDLE", bundleId, quantity });
             set({
               cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
@@ -152,6 +175,7 @@ export const useCartStore = create<CartState>()(
             });
             set({
               cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
@@ -175,6 +199,7 @@ export const useCartStore = create<CartState>()(
             const response = await cartApi.removeFromCart(cartItemId);
             set({
               cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
@@ -195,13 +220,16 @@ export const useCartStore = create<CartState>()(
           try {
             let lastCart: Cart | null = null;
             let lastMotivation: FreeShippingMotivation = { show: false };
+            let lastApplied: AppliedVoucher | null = null;
             for (const id of unique) {
               const response = await cartApi.removeFromCart(id);
               lastCart = response.cart;
               lastMotivation = response.freeShippingMotivation ?? { show: false };
+              lastApplied = response.appliedVoucher ?? null;
             }
             set({
               cart: lastCart,
+              appliedVoucher: lastApplied,
               freeShippingMotivation: lastMotivation,
               loading: false,
             });
@@ -216,6 +244,7 @@ export const useCartStore = create<CartState>()(
               const response = await cartApi.getCart();
               set({
                 cart: response.cart,
+                appliedVoucher: response.appliedVoucher ?? null,
                 freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               });
             } catch {
@@ -231,6 +260,7 @@ export const useCartStore = create<CartState>()(
             const response = await cartApi.clearCart();
             set({
               cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
               freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
               loading: false,
             });
@@ -249,6 +279,57 @@ export const useCartStore = create<CartState>()(
 
         // Clear error
         clearError: () => set({ error: null }),
+
+        fetchEligibleVouchers: async (payload) => {
+          set({ vouchersLoading: true });
+          try {
+            const response = await cartApi.getEligibleVouchers(payload);
+            set({ eligibleVouchers: response.vouchers ?? [], vouchersLoading: false });
+          } catch (err) {
+            const message =
+              (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+              "Could not load vouchers";
+            set({ vouchersLoading: false, error: message, eligibleVouchers: [] });
+          }
+        },
+
+        applyVoucher: async (payload) => {
+          set({ vouchersLoading: true, error: null });
+          try {
+            const response = await cartApi.applyVoucher(payload);
+            set({
+              vouchersLoading: false,
+              cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+            });
+            return true;
+          } catch (err) {
+            const message =
+              (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Could not apply voucher";
+            set({ vouchersLoading: false, error: message });
+            toast.error(message);
+            return false;
+          }
+        },
+
+        clearAppliedVoucher: async () => {
+          set({ vouchersLoading: true, error: null });
+          try {
+            const response = await cartApi.clearAppliedVoucher();
+            set({
+              vouchersLoading: false,
+              cart: response.cart,
+              appliedVoucher: response.appliedVoucher ?? null,
+              freeShippingMotivation: response.freeShippingMotivation ?? { show: false },
+            });
+          } catch (err) {
+            const message =
+              (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Could not clear voucher";
+            set({ vouchersLoading: false, error: message });
+            toast.error(message);
+          }
+        },
       }),
       {
         name: "cart-storage", // name in localStorage

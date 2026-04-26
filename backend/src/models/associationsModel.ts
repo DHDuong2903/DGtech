@@ -22,6 +22,8 @@ import { DiscountCampaignVariantPrice } from "./discountCampaignVariantPriceMode
 import { Bundle } from "./bundleModel.js";
 import { BundleItem } from "./bundleItemModel.js";
 import { BundlePurchase } from "./bundlePurchaseModel.js";
+import { Voucher } from "./voucherModel.js";
+import { UserVoucherRedemption } from "./userVoucherRedemptionModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -127,6 +129,19 @@ ProductVariant.hasMany(BundleItem, { foreignKey: "variantId", as: "bundleItems" 
 Bundle.hasMany(CartItem, { foreignKey: "bundleId", as: "cartItems" });
 CartItem.belongsTo(Bundle, { foreignKey: "bundleId", as: "bundle" });
 
+Voucher.hasMany(Cart, { foreignKey: "appliedVoucherId", as: "appliedCarts" });
+Cart.belongsTo(Voucher, { foreignKey: "appliedVoucherId", as: "appliedVoucher" });
+
+Voucher.hasMany(Order, { foreignKey: "voucherId", as: "orders" });
+Order.belongsTo(Voucher, { foreignKey: "voucherId", as: "voucher" });
+
+Voucher.hasMany(UserVoucherRedemption, { foreignKey: "voucherId", as: "redemptions", onDelete: "CASCADE" });
+UserVoucherRedemption.belongsTo(Voucher, { foreignKey: "voucherId", as: "voucher" });
+User.hasMany(UserVoucherRedemption, { foreignKey: "clerkId", as: "voucherRedemptions" });
+UserVoucherRedemption.belongsTo(User, { foreignKey: "clerkId", as: "user" });
+Order.hasMany(UserVoucherRedemption, { foreignKey: "orderId", as: "voucherRedemptions" });
+UserVoucherRedemption.belongsTo(Order, { foreignKey: "orderId", as: "order" });
+
 export {
   Category,
   Product,
@@ -151,4 +166,6 @@ export {
   Bundle,
   BundleItem,
   BundlePurchase,
+  Voucher,
+  UserVoucherRedemption,
 };
