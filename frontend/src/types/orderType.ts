@@ -27,6 +27,12 @@ export interface Order {
   voucherId?: string | null;
   voucherName?: string | null;
   voucherDiscountAmount?: number;
+  taxAmount?: number;
+  itemsTaxAmount?: number;
+  shippingTaxAmount?: number;
+  taxRateSnapshot?: number;
+  taxEnabledSnapshot?: boolean;
+  taxIncludedSnapshot?: boolean;
   totalPrice: number;
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED";
   shippingAddress: string;

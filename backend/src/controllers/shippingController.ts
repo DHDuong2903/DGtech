@@ -18,6 +18,7 @@ import {
   STANDARD_CODE,
   EXPRESS_CODE,
 } from "../services/shippingService.js";
+import { computeTaxBreakdown, getTaxSettings } from "../services/taxService.js";
 
 export const quoteShipping = async (req: any, res: any) => {
   try {
@@ -33,6 +34,26 @@ export const quoteShipping = async (req: any, res: any) => {
     const { cartItems } = await loadSelectedCartLines(clerkId, selectedItems);
     const subtotal = computeSubtotalFromLines(cartItems);
     const quote = await buildShippingQuoteForProvince(provinceCode, subtotal);
+    const taxSettings = await getTaxSettings();
+    const settingsSnapshot = {
+      enableTax: !!taxSettings.enableTax,
+      taxRate: Number(taxSettings.taxRate ?? 0),
+      taxIncluded: taxSettings.taxIncluded !== false,
+    };
+    const optionsWithTax = quote.options.map((opt) => {
+      const tax = computeTaxBreakdown({
+        subtotal: quote.subtotal,
+        shippingFee: Number(opt.shippingFee ?? 0),
+        ...settingsSnapshot,
+      });
+      return {
+        ...opt,
+        itemsTaxAmount: tax.itemsTaxAmount,
+        shippingTaxAmount: tax.shippingTaxAmount,
+        taxAmount: tax.taxAmount,
+        totalWithTax: tax.totalWithTax,
+      };
+    });
 
     res.status(200).json({
       subtotal: quote.subtotal,
@@ -41,9 +62,10 @@ export const quoteShipping = async (req: any, res: any) => {
       zoneKey: quote.zoneKey,
       provinceCode: quote.provinceCode,
       displayMode: quote.displayMode,
-      options: quote.options,
+      options: optionsWithTax,
       defaultMethodCode: quote.defaultMethodCode,
       knownMethodCodes: [STANDARD_CODE, EXPRESS_CODE],
+      taxSettings: settingsSnapshot,
     });
   } catch (e: any) {
     if (e instanceof ShippingConfigError) {

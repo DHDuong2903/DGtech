@@ -232,6 +232,20 @@ export default function OrderDetailPage() {
                     })()
                   )}
                 </div>
+                {(currentOrder.taxEnabledSnapshot || Number(currentOrder.taxAmount || 0) > 0) && (
+                  <div className="text-foreground flex justify-between">
+                    <span>VAT</span>
+                    <span className="font-semibold">{formatCurrency(Number(currentOrder.taxAmount || 0))}</span>
+                  </div>
+                )}
+                {Number(currentOrder.voucherDiscountAmount || 0) > 0 && (
+                  <div className="text-foreground flex justify-between">
+                    <span>Voucher discount</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      -{formatCurrency(Number(currentOrder.voucherDiscountAmount || 0))}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex justify-between items-center mb-6">
                 <span className="text-foreground text-lg font-bold">Total:</span>

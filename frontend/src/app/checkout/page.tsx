@@ -220,11 +220,13 @@ function CheckoutContent() {
 
   const displaySubtotal = shipQuote?.subtotal ?? subtotalItems;
   const displayShippingFee = selectedShipOption?.shippingFee ?? null;
+  const displayTaxAmount = selectedShipOption?.taxAmount ?? 0;
+  const displayTaxEnabled = !!shipQuote?.taxSettings?.enableTax;
   const appliedVoucherEstimate = useMemo(() => {
     if (!appliedVoucher?.voucherId) return 0;
     return checkoutVouchers.find((v) => v.voucherId === appliedVoucher.voucherId)?.estimatedSavings ?? 0;
   }, [appliedVoucher?.voucherId, checkoutVouchers]);
-  const displayTotal = Math.max(0, (selectedShipOption?.totalPrice ?? subtotalItems) - appliedVoucherEstimate);
+  const displayTotal = Math.max(0, (selectedShipOption?.totalWithTax ?? selectedShipOption?.totalPrice ?? subtotalItems) - appliedVoucherEstimate);
 
   const totalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -363,8 +365,9 @@ function CheckoutContent() {
   const shippingQuoteReady =
     !needShippingQuote || (!!shipQuote && !shipQuoteLoading && !shipQuoteError);
   const voucherCalcReady = !appliedVoucher?.voucherId || !checkoutVouchersLoading;
+  const taxCalcReady = !needShippingQuote || selectedShipOption?.totalWithTax != null || !displayTaxEnabled;
 
-  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId && shippingQuoteReady && voucherCalcReady;
+  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId && shippingQuoteReady && voucherCalcReady && taxCalcReady;
   const canSubmitNew =
     shipMode === "new" &&
     !!draft.phone.trim() &&
@@ -372,7 +375,8 @@ function CheckoutContent() {
     !!draft.wardCode &&
     !!draft.addressLine.trim() &&
     shippingQuoteReady &&
-    voucherCalcReady;
+    voucherCalcReady &&
+    taxCalcReady;
 
   if (!isLoaded || cartLoading || addrLoading) {
     return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
@@ -671,6 +675,12 @@ function CheckoutContent() {
                     <span className="text-muted-foreground text-xs">Pick province/city</span>
                   )}
                 </div>
+                {displayTaxEnabled && displayTaxAmount > 0 ? (
+                  <div className="text-sm text-foreground flex justify-between">
+                    <span>VAT:</span>
+                    <span className="font-semibold">{formatCurrency(displayTaxAmount)}</span>
+                  </div>
+                ) : null}
                 {appliedVoucherEstimate > 0 && appliedVoucher ? (
                   <div className="text-sm text-foreground flex justify-between">
                     <span>Voucher ({appliedVoucher.name}):</span>

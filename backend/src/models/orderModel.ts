@@ -88,6 +88,36 @@ export const Order = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    taxAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    itemsTaxAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    shippingTaxAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    taxRateSnapshot: {
+      type: DataTypes.DECIMAL(6, 4),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    taxEnabledSnapshot: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    taxIncludedSnapshot: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
   },
   {
     timestamps: true,

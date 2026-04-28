@@ -24,6 +24,7 @@ import { BundleItem } from "./bundleItemModel.js";
 import { BundlePurchase } from "./bundlePurchaseModel.js";
 import { Voucher } from "./voucherModel.js";
 import { UserVoucherRedemption } from "./userVoucherRedemptionModel.js";
+import { TaxSetting } from "./taxSettingModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -168,4 +169,5 @@ export {
   BundlePurchase,
   Voucher,
   UserVoucherRedemption,
+  TaxSetting,
 };
