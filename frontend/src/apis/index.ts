@@ -8,6 +8,7 @@ export * from "./paymentApi";
 export * from "./slideshowsApi";
 export * from "./discountCampaignsApi";
 export * from "./vouchersApi";
+export * from "./taxsApi";
 
 // Re-export for convenience
 export { categoriesApi } from "./categoriesApi";
@@ -18,3 +19,4 @@ export { cartApi } from "./cartApi";
 export { slideshowsApi } from "./slideshowsApi";
 export { discountCampaignsApi } from "./discountCampaignsApi";
 export { vouchersApi } from "./vouchersApi";
+export { taxsApi } from "./taxsApi";

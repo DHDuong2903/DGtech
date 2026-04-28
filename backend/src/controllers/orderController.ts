@@ -28,6 +28,7 @@ import { sumEligibleBundlePurchasesForUser } from "../services/bundlePurchaseSer
 import { sequelize } from "../libs/db.js";
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
 import { listEligibleVouchersForUser } from "../services/voucherService.js";
+import { computeTaxBreakdown, getTaxSettings } from "../services/taxService.js";
 
 // Tao order moi tu cac san pham duoc chon trong cart
 export const createOrder = async (req: any, res: any) => {
@@ -187,6 +188,17 @@ export const createOrder = async (req: any, res: any) => {
       throw e;
     }
     const shippingFee = ship.shippingFee;
+    const taxSettings = await getTaxSettings(transaction);
+    const taxSnapshot = {
+      enableTax: !!taxSettings.enableTax,
+      taxRate: Number(taxSettings.taxRate ?? 0),
+      taxIncluded: taxSettings.taxIncluded !== false,
+    };
+    const taxBreakdown = computeTaxBreakdown({
+      subtotal,
+      shippingFee,
+      ...taxSnapshot,
+    });
     let voucherId: string | null = cart.appliedVoucherId || null;
     let voucherName: string | null = null;
     let voucherDiscountAmount = 0;
@@ -201,12 +213,12 @@ export const createOrder = async (req: any, res: any) => {
       const picked = eligible.find((v) => v.voucherId === voucherId);
       if (picked) {
         voucherName = picked.name;
-        voucherDiscountAmount = Math.max(0, Math.min(ship.totalPrice, Number(picked.estimatedSavings || 0)));
+        voucherDiscountAmount = Math.max(0, Math.min(taxBreakdown.totalWithTax, Number(picked.estimatedSavings || 0)));
       } else {
         voucherId = null;
       }
     }
-    const totalPrice = Math.max(0, ship.totalPrice - voucherDiscountAmount);
+    const totalPrice = Math.max(0, taxBreakdown.totalWithTax - voucherDiscountAmount);
 
     const orderItemsData = [];
     for (const cartItem of cartItems) {
@@ -258,6 +270,12 @@ export const createOrder = async (req: any, res: any) => {
         voucherId,
         voucherName,
         voucherDiscountAmount,
+        taxAmount: taxBreakdown.taxAmount,
+        itemsTaxAmount: taxBreakdown.itemsTaxAmount,
+        shippingTaxAmount: taxBreakdown.shippingTaxAmount,
+        taxRateSnapshot: taxSnapshot.taxRate,
+        taxEnabledSnapshot: taxSnapshot.enableTax,
+        taxIncludedSnapshot: taxSnapshot.taxIncluded,
       },
       { transaction },
     );

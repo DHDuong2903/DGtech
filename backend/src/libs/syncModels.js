@@ -16,6 +16,7 @@ import { DiscountCampaignCategory } from "../models/discountCampaignCategoryMode
 import { DiscountCampaignVariantPrice } from "../models/discountCampaignVariantPriceModel.js";
 import { Voucher } from "../models/voucherModel.js";
 import { UserVoucherRedemption } from "../models/userVoucherRedemptionModel.js";
+import { TaxSetting } from "../models/taxSettingModel.js";
 
 // Import associations
 import "../models/associationsModel.js";
@@ -31,7 +32,13 @@ export const syncModels = async () => {
       ALTER TABLE IF EXISTS "orders"
       ADD COLUMN IF NOT EXISTS "voucherId" UUID,
       ADD COLUMN IF NOT EXISTS "voucherName" VARCHAR(200),
-      ADD COLUMN IF NOT EXISTS "voucherDiscountAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0;
+      ADD COLUMN IF NOT EXISTS "voucherDiscountAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "taxAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "itemsTaxAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "shippingTaxAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "taxRateSnapshot" DECIMAL(6, 4) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "taxEnabledSnapshot" BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS "taxIncludedSnapshot" BOOLEAN NOT NULL DEFAULT true;
     `);
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "vouchers" (
@@ -63,6 +70,27 @@ export const syncModels = async () => {
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS "user_voucher_redemptions_voucherId_clerkId_idx"
       ON "user_voucher_redemptions" ("voucherId", "clerkId");
+    `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "tax_settings" (
+        "id" INTEGER PRIMARY KEY,
+        "enableTax" BOOLEAN NOT NULL DEFAULT false,
+        "taxRate" DECIMAL(6, 4) NOT NULL DEFAULT 0.1,
+        "taxIncluded" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMPTZ NOT NULL,
+        "updatedAt" TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await sequelize.query(`
+      INSERT INTO "tax_settings" ("id","enableTax","taxRate","taxIncluded","createdAt","updatedAt")
+      VALUES (1,false,0.1,true,NOW(),NOW())
+      ON CONFLICT ("id") DO NOTHING;
+    `);
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "tax_settings" DROP COLUMN IF EXISTS "applyTaxToShipping";
+    `);
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "orders" DROP COLUMN IF EXISTS "applyTaxToShippingSnapshot";
     `);
     console.log("Models da duoc dong bo voi database");
   } catch (error) {

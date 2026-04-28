@@ -11,6 +11,10 @@ export type ShippingQuoteOptionDTO = {
   freeShippingApplied: boolean;
   shippingLabel: string;
   displayMode: "separate" | "included";
+  itemsTaxAmount?: number;
+  shippingTaxAmount?: number;
+  taxAmount?: number;
+  totalWithTax?: number;
 };
 
 export type ShippingQuoteResponse = {
@@ -23,6 +27,11 @@ export type ShippingQuoteResponse = {
   options: ShippingQuoteOptionDTO[];
   defaultMethodCode: string;
   knownMethodCodes?: string[];
+  taxSettings?: {
+    enableTax: boolean;
+    taxRate: number;
+    taxIncluded: boolean;
+  };
 };
 
 export type BasicZoneMethodRow = {
