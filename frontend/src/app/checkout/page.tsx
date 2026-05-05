@@ -619,7 +619,7 @@ function CheckoutContent() {
                                     .join(" / ")}
                                 </p>
                               )}
-                              <p className="text-muted-foreground mt-0.5 text-xs">Qty: {item.quantity}</p>
+                              <p className="text-muted-foreground mt-0.5 text-xs">x {item.quantity}</p>
                               {item.appliedCampaign?.name ? (
                                 <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
                                   <BadgePercent className="h-3 w-3 shrink-0 text-orange-600" aria-hidden />

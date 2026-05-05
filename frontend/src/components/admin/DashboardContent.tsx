@@ -36,7 +36,7 @@ export const DashboardContent = () => {
   const { products, fetchProducts, loading: productsLoading } = useProductStore();
   const { categories, fetchCategories, loading: categoriesLoading } = useCategoryStore();
   const { users, fetchAllUsers, loading: usersLoading } = useUserStore();
-  const { orders, fetchAllOrders, loading: ordersLoading } = useOrderStore();
+  const { adminOrders: orders, fetchAllOrders, loading: ordersLoading } = useOrderStore();
 
   const dashboardLoading = productsLoading || categoriesLoading || usersLoading || ordersLoading;
 
@@ -201,7 +201,7 @@ export const DashboardContent = () => {
                 ) : (
                   <div className="space-y-4">
                     {recentOrders.map((order) => (
-                      <Link key={order.orderId} href={`/orders/${order.orderId}`}>
+                      <Link key={order.orderId} href={`/admin/orders/${order.orderId}`}>
                         <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                           <div className="flex-1">
                             <p className="font-medium text-sm">#{order.orderId.slice(0, 8)}</p>

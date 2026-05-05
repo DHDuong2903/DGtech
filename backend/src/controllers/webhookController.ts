@@ -2,10 +2,10 @@
 import { Payment } from "../models/paymentModel.js";
 import { Order } from "../models/orderModel.js";
 import { OrderItem } from "../models/orderItemModel.js";
-import { Product } from "../models/productModel.js";
 import { User } from "../models/userModel.js";
 import { sequelize } from "../libs/db.js";
 import { verifyWebhookSignature, extractOrderCode } from "../helpers/paymentHelper.js";
+import { completeBankTransferPayment } from "../services/orderPaymentCompletionService.js";
 import { Webhook } from "svix";
 
 // Handle SePay webhook
@@ -96,46 +96,18 @@ export const handleSepayWebhook = async (req: any, res: any) => {
       return res.status(400).json({ error: "Amount mismatch" });
     }
 
-    await payment.update(
-      {
-        status: "PAID",
-        transactionId: transactionId,
-        paidAt: transactionDate || new Date(),
-        metadata: webhookData,
-      },
-      { transaction }
-    );
-
-    for (const item of payment.order.items) {
-      await Product.decrement("stock", {
-        by: item.quantity,
-        where: { productId: item.productId },
-        transaction,
-      });
-    }
-
-    await payment.order.update(
-      {
-        status: "SHIPPED",
-      },
-      { transaction }
-    );
+    await completeBankTransferPayment({
+      order: payment.order,
+      payment,
+      transaction,
+      paidAt: transactionDate || new Date(),
+      transactionId,
+      metadata: webhookData,
+    });
 
     await transaction.commit();
 
     console.log("Payment successful for order:", payment.orderId);
-
-    setTimeout(async () => {
-      try {
-        const order = await Order.findByPk(payment.orderId);
-        if (order && order.status === "SHIPPED") {
-          await order.update({ status: "COMPLETED" });
-          console.log("Order auto-completed:", payment.orderId);
-        }
-      } catch (error) {
-        console.error("Error auto-completing order:", error);
-      }
-    }, 10000);
 
     res.status(200).json({
       success: true,

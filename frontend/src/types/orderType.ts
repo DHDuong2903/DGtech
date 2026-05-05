@@ -13,6 +13,19 @@ export interface OrderItem {
   updatedAt: string;
 }
 
+/** Buyer snapshot on admin APIs when `user` is included. */
+export interface OrderBuyerSummary {
+  clerkId: string;
+  username?: string | null;
+  email?: string | null;
+}
+
+export interface OrderPaymentSummary {
+  status?: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | string;
+  paymentMethod?: "COD" | "BANK_TRANSFER" | string;
+  paidAt?: string | null;
+}
+
 export interface Order {
   orderId: string;
   clerkId: string;
@@ -41,7 +54,12 @@ export interface Order {
   notes?: string;
   userAddressId?: string | null;
   items: OrderItem[];
-  payment?: any; // Payment info if exists
+  payment?: OrderPaymentSummary | null;
+  /** Present on admin list/detail when backend includes User. */
+  user?: OrderBuyerSummary;
+  adminNotes?: string | null;
+  trackingNumber?: string | null;
+  carrierName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
