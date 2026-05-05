@@ -6,9 +6,16 @@ import { useOrderStore } from "../../../stores";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
-import { ArrowLeft, Package, MapPin, Phone, CreditCard, FileText } from "lucide-react";
+import { Separator } from "@/src/components/ui/separator";
+import { ArrowLeft, Package, MapPin, Phone, CreditCard, FileText, Truck } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency, getStatusColor, getStatusLabel } from "../../../utils";
+import {
+  formatCurrency,
+  getPaymentStatusColor,
+  getPaymentStatusLabel,
+  getStatusColor,
+  getStatusLabel,
+} from "../../../utils";
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import {
@@ -23,6 +30,7 @@ import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
+import { Spinner } from "@/src/components/ui/spinner";
 
 const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
   return method === "COD" ? "Cash on delivery (COD)" : "Bank transfer";
@@ -35,6 +43,7 @@ export default function OrderDetailPage() {
   const { isSignedIn, isLoaded } = useUser();
   const { currentOrder, loading, fetchOrderById, cancelOrder } = useOrderStore();
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -50,8 +59,13 @@ export default function OrderDetailPage() {
 
   const handleCancelOrder = async () => {
     if (!currentOrder) return;
-    await cancelOrder(currentOrder.orderId);
-    setShowCancelModal(false);
+    setCancelling(true);
+    try {
+      await cancelOrder(currentOrder.orderId);
+      setShowCancelModal(false);
+    } finally {
+      setCancelling(false);
+    }
   };
 
   if (!isLoaded || loading) {
@@ -75,111 +89,136 @@ export default function OrderDetailPage() {
     );
   }
 
+  const isCancelled = currentOrder.status === "CANCELLED";
+  const canCancel = currentOrder.status === "PENDING" || currentOrder.status === "PROCESSING";
+
+  const paymentStatusLabel = isCancelled
+    ? "Cancelled"
+    : getPaymentStatusLabel(currentOrder.paymentMethod, currentOrder.status, currentOrder.payment);
+  const paymentStatusColor = isCancelled
+    ? "border-red-500/30 bg-red-500/15 text-red-950 dark:text-red-300"
+    : getPaymentStatusColor(currentOrder.paymentMethod, currentOrder.status, currentOrder.payment);
+
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-background py-8">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-3">
       <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/orders">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+        <div className="mb-3 space-y-3">
+          <Link
+            href="/orders"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
           </Link>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-foreground">Order #{currentOrder.orderId.slice(0, 8)}</h1>
-              <Badge className={getStatusColor(currentOrder.status)}>{getStatusLabel(currentOrder.status)}</Badge>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-bold text-foreground">Order #{currentOrder.orderId.slice(0, 8)}</h1>
+                <Badge className={cn("font-normal", getStatusColor(currentOrder.status))}>
+                  {getStatusLabel(currentOrder.status)}
+                </Badge>
+                <Badge className={cn("font-normal", paymentStatusColor)}>{paymentStatusLabel}</Badge>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                Placed on {new Date(currentOrder.createdAt).toLocaleString("en-US")}
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              Placed on {new Date(currentOrder.createdAt).toLocaleString("en-US")}
-            </p>
+            {canCancel && (
+              <Button variant="destructive" size="sm" onClick={() => setShowCancelModal(true)}>
+                Cancel order
+              </Button>
+            )}
           </div>
-          {(currentOrder.status === "PENDING" || currentOrder.status === "PROCESSING") && (
-            <Button variant="destructive" onClick={() => setShowCancelModal(true)}>
-              Cancel order
-            </Button>
-          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Order Items */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6">
-              <h2 className="text-foreground mb-4 text-xl font-bold">Items</h2>
-              <div className="space-y-4">
-                {currentOrder.items.map((item) => (
-                  <div key={item.orderItemId} className="flex gap-4 pb-4 border-b last:border-0 last:pb-0">
-                    <div className="bg-muted relative h-24 w-24 shrink-0 overflow-hidden rounded">
-                      {item.product?.imageUrl ? (
-                        <Image
-                          src={item.product.imageUrl}
-                          alt={item.product?.name || "Product"}
-                          fill
-                          className="object-contain p-2"
-                        />
-                      ) : (
-                        <ProductImageFallback className="absolute inset-0" iconClassName="h-10 w-10" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-foreground mb-1 text-lg font-semibold">{item.product?.name || "Product"}</h3>
-
-                      {/* Variant Info */}
-                      {item.variant && !item.variant.isDefault && item.variant.attributes && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {Object.entries(item.variant.attributes).map(([key, value]) => (
-                            <Badge
-                              key={key}
-                              variant="secondary"
-                              className="px-2 py-0.5 text-[10px] font-normal uppercase"
-                            >
-                              {key}: {String(value)}
-                            </Badge>
-                          ))}
+          <div className="lg:col-span-2 space-y-3">
+            <Card className="overflow-hidden gap-0 p-0 shadow-none">
+              <div className="border-b bg-muted/30 p-3">
+                <h2 className="text-foreground font-semibold">Items</h2>
+              </div>
+              <div className="p-3">
+                <div className="max-h-44 overflow-y-auto">
+                  <div className="divide-y pr-2">
+                    {currentOrder.items.map((item) => (
+                      <div key={item.orderItemId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-background">
+                          {item.product?.imageUrl ? (
+                            <Image
+                              src={item.product.imageUrl}
+                              alt={item.product?.name || "Product"}
+                              fill
+                              className="object-contain"
+                            />
+                          ) : (
+                            <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6" />
+                          )}
                         </div>
-                      )}
-
-                      <p className="text-muted-foreground mb-2">Qty: {item.quantity}</p>
-                      <p className="text-orange-600 font-bold">{formatCurrency(item.price)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-orange-600">{formatCurrency(item.price * item.quantity)}</p>
-                    </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {item.product?.name || "Product"}
+                          </p>
+                          <p className="text-muted-foreground text-xs">x {item.quantity}</p>
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold tabular-nums">
+                          {formatCurrency(item.price * item.quantity)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6">
-              <h2 className="text-foreground mb-4 text-xl font-bold">Order details</h2>
-              <div className="space-y-4">
+            <Card className="overflow-hidden gap-0 p-0 shadow-none">
+              <div className="border-b bg-muted/30 p-3">
+                <h2 className="text-foreground font-semibold">Delivery & payment details</h2>
+              </div>
+              <div className="space-y-3 p-3">
                 <div className="flex gap-3">
                   <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium mb-1">Shipping address</p>
-                    <p className="text-muted-foreground">{currentOrder.shippingAddress}</p>
+                    <p className="font-medium text-sm mb-0.5">Shipping address</p>
+                    <p className="text-muted-foreground text-sm">{currentOrder.shippingAddress}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
                   <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium mb-1">Phone</p>
-                    <p className="text-muted-foreground">{currentOrder.phone}</p>
+                    <p className="font-medium text-sm mb-0.5">Phone</p>
+                    <p className="text-muted-foreground text-sm">{currentOrder.phone}</p>
                   </div>
                 </div>
+                {(currentOrder.shippingMethodName || currentOrder.shippingMethodCode) && (
+                  <div className="flex gap-3">
+                    <Truck className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm mb-0.5">Delivery method</p>
+                      <p className="text-muted-foreground text-sm">
+                        {currentOrder.shippingMethodName || currentOrder.shippingMethodCode}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium mb-1">Payment method</p>
-                    <p className="text-muted-foreground">{getPaymentMethodLabel(currentOrder.paymentMethod)}</p>
+                    <p className="font-medium text-sm mb-0.5">Payment</p>
+                    <p className="text-muted-foreground text-sm">
+                      <span className={cn("font-medium", isCancelled ? "text-red-600 dark:text-red-400" : "")}>
+                        {paymentStatusLabel}
+                      </span>
+                    </p>
                   </div>
                 </div>
                 {currentOrder.notes && (
                   <div className="flex gap-3">
                     <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium mb-1">Notes</p>
-                      <p className="text-muted-foreground">{currentOrder.notes}</p>
+                      <p className="font-medium text-sm mb-0.5">Order note</p>
+                      <p className="text-muted-foreground text-sm">{currentOrder.notes}</p>
                     </div>
                   </div>
                 )}
@@ -189,77 +228,78 @@ export default function OrderDetailPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="p-6 sticky top-4">
-              <h2 className="text-foreground mb-4 text-xl font-bold">Summary</h2>
-              <div className="space-y-3 mb-4 pb-4 border-b">
-                <div className="text-foreground flex justify-between">
-                  <span>Subtotal ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                  <span className="font-semibold">
-                    {formatCurrency(
-                      currentOrder.subtotal != null
-                        ? Number(currentOrder.subtotal)
-                        : Number(currentOrder.totalPrice),
-                    )}
-                  </span>
-                </div>
-                {(currentOrder.shippingMethodName || currentOrder.shippingMethodCode) && (
-                  <div className="text-muted-foreground flex justify-between text-sm">
-                    <span>Delivery</span>
-                    <span className="max-w-[60%] text-right font-medium text-foreground">
-                      {currentOrder.shippingMethodName || currentOrder.shippingMethodCode}
-                      {currentOrder.shippingMethodEtaNote
-                        ? ` — ${currentOrder.shippingMethodEtaNote}`
-                        : ""}
+            <Card className="overflow-hidden gap-0 p-0 sticky top-4 shadow-none">
+              <div className="border-b bg-muted/30 p-3">
+                <h2 className="text-foreground font-semibold">Order summary</h2>
+              </div>
+              <div className="p-3 space-y-3">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">
+                      Subtotal ({currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {formatCurrency(
+                        currentOrder.subtotal != null ? Number(currentOrder.subtotal) : Number(currentOrder.totalPrice),
+                      )}
                     </span>
                   </div>
-                )}
-                <div className="text-foreground flex justify-between">
-                  <span>Shipping</span>
-                  {currentOrder.shippingDisplayMode === "included" ? (
-                    <span className="text-muted-foreground max-w-[58%] text-right text-xs font-medium">
-                      Đã gồm trong giá sản phẩm
-                    </span>
-                  ) : (
-                    (() => {
-                      const fee =
-                        currentOrder.shippingFee != null ? Number(currentOrder.shippingFee) : 0;
-                      if (fee <= 0) {
-                        return (
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
-                        );
-                      }
-                      return <span className="font-semibold">{formatCurrency(fee)}</span>;
-                    })()
+
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Shipping</span>
+                    {currentOrder.shippingDisplayMode === "included" ? (
+                      <span className="text-muted-foreground max-w-[58%] text-right text-xs font-medium">
+                        Included in product price
+                      </span>
+                    ) : (
+                      (() => {
+                        const fee = currentOrder.shippingFee != null ? Number(currentOrder.shippingFee) : 0;
+                        if (fee <= 0) {
+                          return <span className="font-medium text-emerald-600 dark:text-emerald-400">Free</span>;
+                        }
+                        return <span className="font-medium tabular-nums">{formatCurrency(fee)}</span>;
+                      })()
+                    )}
+                  </div>
+                  {(currentOrder.taxEnabledSnapshot || Number(currentOrder.taxAmount || 0) > 0) && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">VAT</span>
+                      <span className="font-medium tabular-nums">
+                        {formatCurrency(Number(currentOrder.taxAmount || 0))}
+                      </span>
+                    </div>
+                  )}
+                  {Number(currentOrder.voucherDiscountAmount || 0) > 0 && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">Voucher discount</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        −{formatCurrency(Number(currentOrder.voucherDiscountAmount || 0))}
+                      </span>
+                    </div>
                   )}
                 </div>
-                {(currentOrder.taxEnabledSnapshot || Number(currentOrder.taxAmount || 0) > 0) && (
-                  <div className="text-foreground flex justify-between">
-                    <span>VAT</span>
-                    <span className="font-semibold">{formatCurrency(Number(currentOrder.taxAmount || 0))}</span>
-                  </div>
-                )}
-                {Number(currentOrder.voucherDiscountAmount || 0) > 0 && (
-                  <div className="text-foreground flex justify-between">
-                    <span>Voucher discount</span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      -{formatCurrency(Number(currentOrder.voucherDiscountAmount || 0))}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-foreground text-lg font-bold">Total:</span>
-                <span className="text-2xl font-bold text-orange-600">
-                  {formatCurrency(Number(currentOrder.totalPrice))}
-                </span>
-              </div>
+                <Separator />
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-semibold text-base">Total</span>
+                  <span className="text-xl font-bold tabular-nums tracking-tight">
+                    {formatCurrency(Number(currentOrder.totalPrice))}
+                  </span>
+                </div>
 
-              {currentOrder.status === "DELIVERED" && <Button className="w-full mb-3">Buy again</Button>}
-              <Link href="/orders">
-                <Button variant="outline" className="w-full">
-                  Back to orders
-                </Button>
-              </Link>
+                <div className="space-y-2 pt-0">
+                  {currentOrder.status === "COMPLETED" && <Button className="w-full">Buy again</Button>}
+                  {canCancel && (
+                    <Button variant="destructive" className="w-full" onClick={() => setShowCancelModal(true)}>
+                      Cancel order
+                    </Button>
+                  )}
+                  <Link href="/orders" className="block">
+                    <Button variant="outline" className="w-full">
+                      Back to orders
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </Card>
           </div>
         </div>
@@ -272,15 +312,22 @@ export default function OrderDetailPage() {
               <DialogDescription className="pt-2">
                 Are you sure you want to cancel order{" "}
                 <span className="font-semibold">#{currentOrder.orderId.slice(0, 8)}</span>? Item quantities will be
-                returned to inventory.
+                returned to stock. This cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowCancelModal(false)}>
-                Close
+              <Button type="button" variant="outline" onClick={() => setShowCancelModal(false)} disabled={cancelling}>
+                Keep order
               </Button>
-              <Button type="button" variant="destructive" onClick={handleCancelOrder}>
-                Cancel order
+              <Button type="button" variant="destructive" onClick={handleCancelOrder} disabled={cancelling}>
+                {cancelling ? (
+                  <>
+                    <Spinner data-icon="inline-start" />
+                    Cancelling…
+                  </>
+                ) : (
+                  "Cancel order"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

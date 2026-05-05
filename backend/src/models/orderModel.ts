@@ -118,6 +118,19 @@ export const Order = sequelize.define(
       allowNull: false,
       defaultValue: true,
     },
+    adminNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Internal admin-only notes; not shown on customer storefront by default",
+    },
+    trackingNumber: {
+      type: DataTypes.STRING(128),
+      allowNull: true,
+    },
+    carrierName: {
+      type: DataTypes.STRING(128),
+      allowNull: true,
+    },
   },
   {
     timestamps: true,

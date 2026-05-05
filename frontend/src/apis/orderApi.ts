@@ -44,6 +44,8 @@ export const orderApi = {
     status?: string;
     page?: number;
     limit?: number;
+    paymentMethod?: string;
+    search?: string;
   }): Promise<{
     orders: Order[];
     pagination: {
@@ -57,11 +59,41 @@ export const orderApi = {
     return response.data;
   },
 
+  // Admin: Single order (any customer)
+  getAdminOrderById: async (orderId: string): Promise<{ order: Order }> => {
+    const response = await axiosInstance.get(`${API_ROUTE.ORDERS}/admin/${orderId}`);
+    return response.data;
+  },
+
   // Admin: Update order status
   updateOrderStatus: async (orderId: string, status: string): Promise<{ order: Order; message: string }> => {
     const response = await axiosInstance.put(`${API_ROUTE.ORDERS}/admin/${orderId}/status`, {
       status,
     });
+    return response.data;
+  },
+
+  // Admin: Confirm bank transfer manually
+  confirmAdminPayment: async (
+    orderId: string,
+    body?: { reference?: string; transactionId?: string },
+  ): Promise<{ order: Order; message: string; alreadyPaid?: boolean }> => {
+    const response = await axiosInstance.put(`${API_ROUTE.ORDERS}/admin/${orderId}/confirm-payment`, body ?? {});
+    return response.data;
+  },
+
+  // Admin: Internal notes + tracking
+  patchAdminOrder: async (
+    orderId: string,
+    body: { adminNotes?: string; trackingNumber?: string; carrierName?: string },
+  ): Promise<{ order: Order; message: string }> => {
+    const response = await axiosInstance.patch(`${API_ROUTE.ORDERS}/admin/${orderId}`, body);
+    return response.data;
+  },
+
+  /** Admin: permanently remove order and related records (with stock restore if needed). */
+  deleteAdminOrder: async (orderId: string): Promise<{ message: string }> => {
+    const response = await axiosInstance.delete(`${API_ROUTE.ORDERS}/admin/${orderId}`);
     return response.data;
   },
 };

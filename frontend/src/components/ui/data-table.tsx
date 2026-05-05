@@ -51,6 +51,8 @@ export interface DataTableProps<TData, TValue> {
   toolbarEnd?: React.ReactNode;
   /** Label for the total count (e.g. 'products', 'variants'). Defaults to 'row(s)'. */
   noun?: string;
+  /** When false, hides the bottom pagination row (e.g. server-side paging). Default true. */
+  showPagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -68,6 +70,7 @@ export function DataTable<TData, TValue>({
   bulkDeleteDisabled,
   toolbarEnd,
   noun = "row(s)",
+  showPagination = true,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -196,41 +199,43 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-muted-foreground flex flex-1 flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <span className="flex items-center gap-1">
-            <span>{table.getFilteredRowModel().rows.length}</span> {noun}
-            {enableRowSelection && table.getFilteredSelectedRowModel().rows.length > 0 && (
-              <span className="ml-1 opacity-70">
-                ({table.getFilteredSelectedRowModel().rows.length} selected)
-              </span>
-            )}
-          </span>
+      {showPagination && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-muted-foreground flex flex-1 flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <span className="flex items-center gap-1">
+              <span>{table.getFilteredRowModel().rows.length}</span> {noun}
+              {enableRowSelection && table.getFilteredSelectedRowModel().rows.length > 0 && (
+                <span className="ml-1 opacity-70">
+                  ({table.getFilteredSelectedRowModel().rows.length} selected)
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
