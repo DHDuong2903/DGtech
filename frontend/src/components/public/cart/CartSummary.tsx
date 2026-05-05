@@ -4,6 +4,8 @@ import { Ticket } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { formatCurrency } from "../../../utils";
 import type { AppliedVoucher, EligibleVoucher } from "@/src/types";
+import { useCartStore } from "@/src/stores/useCartStore";
+import { FreeShippingCartProgress } from "./FreeShippingCartProgress";
 
 interface CartSummaryProps {
   totalItems: number;
@@ -47,8 +49,13 @@ export function CartSummary({
     return "Bonus points";
   };
 
+  const freeShippingMotivation = useCartStore((s) => s.freeShippingMotivation);
+
   return (
     <div className="bg-card border-border sticky top-4 rounded-lg border p-4 shadow-sm">
+      <div className="mb-4">
+        <FreeShippingCartProgress motivation={freeShippingMotivation} cartTotal={totalPrice} />
+      </div>
       <div className="mb-4 space-y-3">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Your vouchers</p>
         <div>
@@ -70,7 +77,8 @@ export function CartSummary({
                       <p className="text-foreground text-xs font-semibold tracking-tight">{voucher.name}</p>
                       <p className="text-muted-foreground text-[11px] leading-snug">{voucherBenefitLabel(voucher)}</p>
                       <p className="text-muted-foreground mt-0.5 text-[10px]">
-                        Expires: {voucher.expiresAt ? new Date(voucher.expiresAt).toLocaleDateString("vi-VN") : "No expiry"}
+                        Expires:{" "}
+                        {voucher.expiresAt ? new Date(voucher.expiresAt).toLocaleDateString("vi-VN") : "No expiry"}
                       </p>
                     </div>
                     <Button
@@ -87,9 +95,7 @@ export function CartSummary({
                 );
               })
             )}
-            {vouchersLoading ? (
-              <div className="text-muted-foreground text-xs">Loading vouchers...</div>
-            ) : null}
+            {vouchersLoading ? <div className="text-muted-foreground text-xs">Loading vouchers...</div> : null}
           </div>
         </div>
       </div>

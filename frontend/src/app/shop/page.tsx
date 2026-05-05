@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "../../components/public/product/ProductCard";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { Search } from "lucide-react";
 import { useProductStore, useCategoryStore } from "../../stores";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
@@ -33,11 +34,7 @@ function filtersFromSearchParams(searchParams: URLSearchParams): ShopProductFilt
   };
 }
 
-function buildShopHref(parts: {
-  q: string;
-  filters: ShopProductFilterValues;
-  sort: ShopSortMode;
-}): string {
+function buildShopHref(parts: { q: string; filters: ShopProductFilterValues; sort: ShopSortMode }): string {
   const sp = new URLSearchParams();
   const q = parts.q.trim();
   if (q) sp.set("q", q);
@@ -78,8 +75,7 @@ const ShopPageContent = () => {
 
   useEffect(() => {
     const sortBy = sortMode === "newest" ? "createdAt" : "price";
-    const order: "ASC" | "DESC" =
-      sortMode === "price-asc" ? "ASC" : sortMode === "price-desc" ? "DESC" : "DESC";
+    const order: "ASC" | "DESC" = sortMode === "price-asc" ? "ASC" : sortMode === "price-desc" ? "DESC" : "DESC";
 
     const params: {
       page: number;
@@ -143,38 +139,35 @@ const ShopPageContent = () => {
   };
 
   const hasActiveQuery =
-    qFromUrl.trim() !== "" ||
-    countAppliedShopProductFilters(appliedFilters) > 0 ||
-    countAppliedShopSort(sortMode) > 0;
+    qFromUrl.trim() !== "" || countAppliedShopProductFilters(appliedFilters) > 0 || countAppliedShopSort(sortMode) > 0;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
-        <div className="mb-4 flex flex-col gap-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className={cn("mx-auto max-w-7xl py-3", STOREFRONT_H_PADDING)}>
+        <div className="mb-3 flex flex-col gap-3 sm:mb-3 sm:flex-row sm:items-center sm:justify-between">
           <form
             onSubmit={handleSearchSubmit}
             className="flex flex-1 flex-wrap items-center gap-2"
             role="search"
             aria-label="Search shop"
           >
-            <Input
-              placeholder="Search by name…"
-              className="max-w-sm"
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              aria-label="Search products by name"
-            />
-            <ShopProductFilters
-              categories={categories}
-              applied={appliedFilters}
-              onApply={handleFiltersApply}
-            />
+            <div className="relative max-w-sm w-full">
+              <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+              <Input
+                placeholder="Search by name…"
+                className="pl-9 w-full"
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+                aria-label="Search products by name"
+              />
+            </div>
+            <ShopProductFilters categories={categories} applied={appliedFilters} onApply={handleFiltersApply} />
             <ShopProductSort applied={sortMode} onApply={handleSortApply} />
           </form>
         </div>
 
         {qFromUrl ? (
-          <div className="mb-4 sm:mb-5">
+          <div className="mb-3 sm:mb-3">
             <p className="text-muted-foreground text-sm leading-normal">
               Results for <span className="text-foreground/90 font-medium">&ldquo;{qFromUrl}&rdquo;</span>
             </p>
@@ -182,10 +175,7 @@ const ShopPageContent = () => {
         ) : null}
 
         {loading ? (
-          <PageContentLoader
-            className="w-full"
-            minHeightClass="min-h-[min(50vh,calc(100dvh-14rem))]"
-          />
+          <PageContentLoader className="w-full" minHeightClass="min-h-[min(50vh,calc(100dvh-14rem))]" />
         ) : products.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-foreground/80 text-sm">No products found</p>
@@ -205,7 +195,7 @@ const ShopPageContent = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 *:min-w-0 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 *:min-w-0 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 xl:grid-cols-5">
               {products.map((product) => (
                 <ProductCard key={product.productId} product={product} compact />
               ))}
@@ -245,11 +235,7 @@ const ShopPageContent = () => {
 
 export default function ShopPage() {
   return (
-    <Suspense
-      fallback={
-        <PageContentLoader className="bg-background" minHeightClass="min-h-[50vh]" />
-      }
-    >
+    <Suspense fallback={<PageContentLoader className="bg-background" minHeightClass="min-h-[50vh]" />}>
       <ShopPageContent />
     </Suspense>
   );

@@ -74,14 +74,8 @@ export function BundleCardBlock({
               buyNow.onClick();
             }}
           >
-            {buyNow.loading ? (
-              <>
-                <Spinner data-icon="inline-start" />
-                Adding
-              </>
-            ) : (
-              buyNow.label
-            )}
+            {buyNow.loading && <Spinner data-icon="inline-start" />}
+            {buyNow.label}
           </Button>
         </div>
       ) : null}

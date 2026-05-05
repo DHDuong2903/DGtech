@@ -117,51 +117,50 @@ export default function AdminTaxsPage() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto flex w-full min-h-0 max-h-[calc(100dvh-4.5rem)] max-w-4xl flex-col">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl font-bold tracking-tight">Taxs</h1>
+          <Button type="button" size="sm" className="h-9" onClick={handleSave} disabled={saving || !isDirty}>
+            {saving ? (
+              <>
+                <Spinner className="size-3" data-icon="inline-start" />
+                Saving
+              </>
+            ) : (
+              "Save settings"
+            )}
+          </Button>
+        </div>
+
         {error && (
-          <Alert variant="destructive" className="mb-2 shrink-0 py-2">
+          <Alert variant="destructive" className="py-2">
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
 
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4">
-          <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h1 className="text-base font-bold tracking-tight sm:text-lg">Taxs</h1>
-            <Button type="button" size="sm" className="h-8 shrink-0" onClick={handleSave} disabled={saving || !isDirty}>
-              {saving ? (
-                <>
-                  <Spinner className="size-3" data-icon="inline-start" />
-                  Saving
-                </>
-              ) : (
-                "Save settings"
-              )}
-            </Button>
-          </div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+          <Card className="w-full p-4 lg:w-[60%] lg:shrink-0">
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">Tax settings</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Configure VAT rates and how prices are displayed
+                </p>
+              </div>
+              <div className="space-y-6 pt-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="en-vat"
+                    checked={draft.enableTax}
+                    onCheckedChange={(v) => setDraft((s) => ({ ...s, enableTax: v === true }))}
+                  />
+                  <Label htmlFor="en-vat" className="cursor-pointer text-sm font-medium leading-none">
+                    Enable VAT
+                  </Label>
+                </div>
 
-          <p className="text-muted-foreground mb-2 flex items-start gap-1.5 text-[11px] leading-snug sm:mb-3 sm:text-xs">
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-600" aria-hidden />
-            <span>
-              Changing VAT or price display may require updating catalog prices. Past orders keep stored amounts.
-            </span>
-          </p>
-
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 sm:items-start">
-            <div className="space-y-2 sm:space-y-3">
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  id="en-vat"
-                  checked={draft.enableTax}
-                  onCheckedChange={(v) => setDraft((s) => ({ ...s, enableTax: v === true }))}
-                />
-                <Label htmlFor="en-vat" className="cursor-pointer text-sm font-medium leading-none">
-                  Enable VAT (line items only, not shipping)
-                </Label>
-              </label>
-
-              <div className="flex flex-wrap items-end gap-2 sm:gap-3">
-                <div className="min-w-0">
-                  <Label htmlFor="tax-rate-pct" className="text-foreground mb-1.5 block text-sm font-medium">
+                <div className="space-y-2">
+                  <Label htmlFor="tax-rate-pct" className="text-foreground text-sm font-medium block">
                     Rate (%)
                   </Label>
                   <Input
@@ -171,7 +170,7 @@ export default function AdminTaxsPage() {
                     max={100}
                     step={1}
                     disabled={!vatEnabled}
-                    className="mt-0 h-9 w-22 tabular-nums"
+                    className="w-32 tabular-nums"
                     value={Math.round(Number(draft.taxRate) * 100)}
                     onChange={(e) =>
                       setDraft((s) => ({
@@ -181,64 +180,64 @@ export default function AdminTaxsPage() {
                     }
                   />
                 </div>
-                <p className="text-muted-foreground max-w-48 pb-0.5 text-[10px] leading-tight sm:max-w-none sm:text-xs">
-                  VN: often 8% or 10%
-                </p>
-              </div>
 
-              <div>
-                <p className="text-foreground mb-2 text-sm font-medium">Price display</p>
-                <RadioGroup
-                  className="grid gap-2"
-                  disabled={!vatEnabled}
-                  value={draft.taxIncluded ? "included" : "excluded"}
-                  onValueChange={(v) => setDraft((s) => ({ ...s, taxIncluded: v === "included" }))}
-                >
-                  <div className="bg-muted/30 flex min-h-11 items-center gap-2.5 rounded-md border border-border/60 px-3 py-2 sm:min-h-12">
-                    <RadioGroupItem value="included" id="price-inc" className="shrink-0" />
-                    <Label htmlFor="price-inc" className="cursor-pointer text-sm font-normal leading-snug">
-                      Includes VAT
-                    </Label>
-                  </div>
-                  <div className="bg-muted/30 flex min-h-11 items-center gap-2.5 rounded-md border border-border/60 px-3 py-2 sm:min-h-12">
-                    <RadioGroupItem value="excluded" id="price-exc" className="shrink-0" />
-                    <Label htmlFor="price-exc" className="cursor-pointer text-sm font-normal leading-snug">
-                      Excludes VAT (add at checkout)
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-
-            <div className="bg-muted/20 flex min-h-0 flex-col justify-between gap-2 rounded-md border p-2.5 sm:min-h-28">
-              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide sm:text-xs">
-                Example
-              </p>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between gap-2 tabular-nums">
-                  <span className="text-muted-foreground">List</span>
-                  <span>{formatCurrency(EXAMPLE_PRODUCT_GROSS_VND)}</span>
-                </div>
-                <div className="flex justify-between gap-2 tabular-nums">
-                  <span className="text-muted-foreground">VAT</span>
-                  <span>
-                    {draft.enableTax && draft.taxRate > 0
-                      ? formatCurrency(examplePreview.vatAmount)
-                      : formatCurrency(0)}
-                  </span>
-                </div>
-                <div className="border-border/60 flex justify-between gap-2 border-t pt-1 text-sm font-semibold tabular-nums">
-                  <span>Total</span>
-                  <span>{formatCurrency(examplePreview.orderTotal)}</span>
+                <div className="space-y-3">
+                  <p className="text-foreground text-sm font-medium">Price display</p>
+                  <RadioGroup
+                    className="grid gap-3"
+                    disabled={!vatEnabled}
+                    value={draft.taxIncluded ? "included" : "excluded"}
+                    onValueChange={(v) => setDraft((s) => ({ ...s, taxIncluded: v === "included" }))}
+                  >
+                    <div className="bg-muted/30 flex items-center gap-3 rounded-md border border-border/60 px-4 py-3">
+                      <RadioGroupItem value="included" id="price-inc" className="shrink-0" />
+                      <Label htmlFor="price-inc" className="cursor-pointer text-sm font-normal">
+                        Includes VAT
+                      </Label>
+                    </div>
+                    <div className="bg-muted/30 flex items-center gap-3 rounded-md border border-border/60 px-4 py-3">
+                      <RadioGroupItem value="excluded" id="price-exc" className="shrink-0" />
+                      <Label htmlFor="price-exc" className="cursor-pointer text-sm font-normal">
+                        Excludes VAT (add at checkout)
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </div>
             </div>
+          </Card>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-4 lg:w-[40%]">
+            <Card className="p-4">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight">Preview Order</h2>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    Example calculation for {formatCurrency(EXAMPLE_PRODUCT_GROSS_VND)}
+                  </p>
+                </div>
+                <div className="space-y-3 text-sm pt-2">
+                  <div className="flex justify-between gap-2 tabular-nums">
+                    <span className="text-muted-foreground">List price</span>
+                    <span>{formatCurrency(EXAMPLE_PRODUCT_GROSS_VND)}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 tabular-nums">
+                    <span className="text-muted-foreground">VAT</span>
+                    <span>
+                      {draft.enableTax && draft.taxRate > 0
+                        ? formatCurrency(examplePreview.vatAmount)
+                        : formatCurrency(0)}
+                    </span>
+                  </div>
+                  <div className="border-border border-t pt-3 flex justify-between gap-2 text-base font-semibold tabular-nums">
+                    <span>Total</span>
+                    <span>{formatCurrency(examplePreview.orderTotal)}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
-
-          <p className="text-muted-foreground border-border/50 mt-2 border-t pt-2 text-[10px] leading-snug sm:mt-3 sm:text-xs">
-            Discounts: VAT on items first, then voucher off the order total.
-          </p>
-        </Card>
+        </div>
       </div>
     </AdminLayout>
   );

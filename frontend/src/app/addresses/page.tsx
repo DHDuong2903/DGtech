@@ -13,14 +13,7 @@ import { Button } from "@/src/components/ui/button";
 import { Spinner } from "@/src/components/ui/spinner";
 import { Badge } from "@/src/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 import { VnAddressFormFields, type VnAddressDraft } from "@/src/components/public/address/VnAddressFormFields";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
@@ -180,9 +173,9 @@ export default function AddressesPage() {
 
   return (
     <div className="bg-background">
-      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
+      <div className={cn("mx-auto max-w-7xl py-3", STOREFRONT_H_PADDING)}>
         {addresses.length > 0 && (
-          <div className="mb-4 flex justify-end">
+          <div className="mb-3 flex justify-end">
             <Button
               type="button"
               size="sm"
@@ -222,78 +215,75 @@ export default function AddressesPage() {
               You can save up to {MAX_USER_ADDRESSES} delivery addresses ({addresses.length}/{MAX_USER_ADDRESSES} used).
             </p>
             <div className="overflow-hidden rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {addresses.map((a) => (
-                  <TableRow key={a.addressId}>
-                    <TableCell>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-foreground font-medium">{accountDisplayName}</span>
-                        {a.isDefault ? (
-                          <Badge
-                            variant="secondary"
-                            className="border-orange-500/35 bg-orange-500/12 text-orange-700 shadow-none dark:bg-orange-500/18 dark:text-orange-300 shrink-0 border text-xs font-medium"
-                          >
-                            Default
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{a.phone}</TableCell>
-                    <TableCell>
-                      <div className="max-w-md space-y-0.5">
-                        <p className="text-foreground text-sm leading-snug">{a.addressLine}</p>
-                        <p className="text-muted-foreground text-sm leading-snug">
-                          {a.wardName} - {a.provinceName}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-0.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-muted-foreground hover:text-foreground"
-                          onClick={() => openEdit(a)}
-                        >
-                          <Pencil className="size-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleteTargetId(a.addressId)}
-                        >
-                          <Trash2 className="size-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {addresses.map((a) => (
+                    <TableRow key={a.addressId}>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-foreground font-medium">{accountDisplayName}</span>
+                          {a.isDefault ? (
+                            <Badge
+                              variant="secondary"
+                              className="border-orange-500/35 bg-orange-500/12 text-orange-700 shadow-none dark:bg-orange-500/18 dark:text-orange-300 shrink-0 border text-xs font-medium"
+                            >
+                              Default
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{a.phone}</TableCell>
+                      <TableCell>
+                        <div className="max-w-md space-y-0.5">
+                          <p className="text-foreground text-sm leading-snug">{a.addressLine}</p>
+                          <p className="text-muted-foreground text-sm leading-snug">
+                            {a.wardName} - {a.provinceName}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-0.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => openEdit(a)}
+                          >
+                            <Pencil className="size-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => setDeleteTargetId(a.addressId)}
+                          >
+                            <Trash2 className="size-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent
-          showCloseButton
-          className="max-h-[90vh] gap-3 overflow-y-auto p-4 sm:max-w-md sm:p-4"
-        >
+        <DialogContent showCloseButton className="max-h-[90vh] gap-3 overflow-y-auto p-4 sm:max-w-md sm:p-4">
           <DialogHeader className="space-y-1 pb-0">
             <DialogTitle className="text-base">{editingId ? "Edit address" : "Add address"}</DialogTitle>
           </DialogHeader>

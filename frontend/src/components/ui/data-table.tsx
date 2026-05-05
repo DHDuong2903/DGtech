@@ -16,14 +16,8 @@ import { cn } from "@/src/lib/utils";
 
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table";
+import { Search } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 
 export interface DataTableBulkContext<TData> {
   table: TanstackTable<TData>;
@@ -80,9 +74,7 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns,
-    ...(getRowId
-      ? { getRowId: (originalRow: TData, index: number) => getRowId(originalRow, index) }
-      : {}),
+    ...(getRowId ? { getRowId: (originalRow: TData, index: number) => getRowId(originalRow, index) } : {}),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -131,12 +123,15 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
             {filterColumn && (
-              <Input
-                placeholder={filterPlaceholder}
-                value={(filterColumn.getFilterValue() as string) ?? ""}
-                onChange={(event) => filterColumn.setFilterValue(event.target.value)}
-                className="max-w-sm"
-              />
+              <div className="relative max-w-sm w-full">
+                <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  placeholder={filterPlaceholder}
+                  value={(filterColumn.getFilterValue() as string) ?? ""}
+                  onChange={(event) => filterColumn.setFilterValue(event.target.value)}
+                  className="pl-9 w-full"
+                />
+              </div>
             )}
             {toolbarEnd}
           </div>
@@ -167,10 +162,8 @@ export function DataTable<TData, TValue>({
                           Remove ({bulkCtx.selectedRows.length})
                         </Button>
                       </div>
-                    ) : (
-                      header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())
+                    ) : header.isPlaceholder ? null : (
+                      flexRender(header.column.columnDef.header, header.getContext())
                     )}
                   </TableHead>
                 ))}
@@ -182,9 +175,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                   ))}
                 </TableRow>
               ))
@@ -208,9 +199,7 @@ export function DataTable<TData, TValue>({
             <span className="flex items-center gap-1">
               <span>{table.getFilteredRowModel().rows.length}</span> {noun}
               {enableRowSelection && table.getFilteredSelectedRowModel().rows.length > 0 && (
-                <span className="ml-1 opacity-70">
-                  ({table.getFilteredSelectedRowModel().rows.length} selected)
-                </span>
+                <span className="ml-1 opacity-70">({table.getFilteredSelectedRowModel().rows.length} selected)</span>
               )}
             </span>
           </div>

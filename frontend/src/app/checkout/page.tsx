@@ -226,7 +226,10 @@ function CheckoutContent() {
     if (!appliedVoucher?.voucherId) return 0;
     return checkoutVouchers.find((v) => v.voucherId === appliedVoucher.voucherId)?.estimatedSavings ?? 0;
   }, [appliedVoucher?.voucherId, checkoutVouchers]);
-  const displayTotal = Math.max(0, (selectedShipOption?.totalWithTax ?? selectedShipOption?.totalPrice ?? subtotalItems) - appliedVoucherEstimate);
+  const displayTotal = Math.max(
+    0,
+    (selectedShipOption?.totalWithTax ?? selectedShipOption?.totalPrice ?? subtotalItems) - appliedVoucherEstimate,
+  );
 
   const totalItems = useMemo(() => {
     return checkoutItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -362,12 +365,12 @@ function CheckoutContent() {
   };
 
   const needShippingQuote = !!provinceForQuote && selectedItems.length > 0;
-  const shippingQuoteReady =
-    !needShippingQuote || (!!shipQuote && !shipQuoteLoading && !shipQuoteError);
+  const shippingQuoteReady = !needShippingQuote || (!!shipQuote && !shipQuoteLoading && !shipQuoteError);
   const voucherCalcReady = !appliedVoucher?.voucherId || !checkoutVouchersLoading;
   const taxCalcReady = !needShippingQuote || selectedShipOption?.totalWithTax != null || !displayTaxEnabled;
 
-  const canSubmitSaved = shipMode === "saved" && !!selectedAddressId && shippingQuoteReady && voucherCalcReady && taxCalcReady;
+  const canSubmitSaved =
+    shipMode === "saved" && !!selectedAddressId && shippingQuoteReady && voucherCalcReady && taxCalcReady;
   const canSubmitNew =
     shipMode === "new" &&
     !!draft.phone.trim() &&
@@ -400,14 +403,14 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-background py-4">
+    <div className="min-h-[calc(100vh-200px)] bg-background py-3">
       <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="lg:col-span-2">
-            <Card className="p-4 shadow-none">
-              <form id="checkout-form" onSubmit={handleSubmit} className="space-y-4">
+            <Card className="p-3 shadow-none">
+              <form id="checkout-form" onSubmit={handleSubmit} className="space-y-3">
                 <div>
-                  <h2 className="text-md font-bold mb-4">Delivery location</h2>
+                  <h2 className="text-md font-bold mb-3">Delivery location</h2>
                   {addresses.length > 0 ? (
                     <div className="space-y-4">
                       <RadioGroup
@@ -417,11 +420,15 @@ function CheckoutContent() {
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="saved" id="mode-saved" />
-                          <Label htmlFor="mode-saved" className="font-medium cursor-pointer">Saved address</Label>
+                          <Label htmlFor="mode-saved" className="font-medium cursor-pointer">
+                            Saved address
+                          </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="new" id="mode-new" />
-                          <Label htmlFor="mode-new" className="font-medium cursor-pointer">New address</Label>
+                          <Label htmlFor="mode-new" className="font-medium cursor-pointer">
+                            New address
+                          </Label>
                         </div>
                       </RadioGroup>
 
@@ -438,21 +445,21 @@ function CheckoutContent() {
                                 htmlFor={`addr-${a.addressId}`}
                                 className={cn(
                                   "flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm transition-colors",
-                                  selectedAddressId === a.addressId ? "border-orange-500 bg-orange-500/5" : "border-border",
+                                  selectedAddressId === a.addressId
+                                    ? "border-orange-500 bg-orange-500/5"
+                                    : "border-border",
                                 )}
                               >
-                                <RadioGroupItem
-                                  value={a.addressId}
-                                  id={`addr-${a.addressId}`}
-                                  className="mt-1"
-                                />
+                                <RadioGroupItem value={a.addressId} id={`addr-${a.addressId}`} className="mt-1" />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-foreground font-medium truncate">
                                       {orderDisplayName} · {a.phone}
                                     </span>
                                     {a.isDefault && (
-                                      <span className="text-orange-600 text-[10px] font-semibold px-1.5 py-0.5 bg-orange-50 rounded">Default</span>
+                                      <span className="text-orange-600 text-[10px] font-semibold px-1.5 py-0.5 bg-orange-50 rounded">
+                                        Default
+                                      </span>
                                     )}
                                   </div>
                                   <span className="text-muted-foreground mt-0.5 block text-xs leading-snug">
@@ -534,9 +541,7 @@ function CheckoutContent() {
                             <RadioGroupItem value={opt.code} id={`ship-${opt.code}`} className="mt-1" />
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-medium leading-snug">
-                                  {opt.name}
-                                </span>
+                                <span className="font-medium leading-snug">{opt.name}</span>
                                 <span className="font-bold text-orange-600 shrink-0">
                                   {shipQuote.displayMode === "included"
                                     ? formatCurrency(opt.baseZoneFee)
@@ -544,7 +549,9 @@ function CheckoutContent() {
                                 </span>
                               </div>
                               {opt.customerEtaNote ? (
-                                <p className="text-muted-foreground mt-1 text-[12px] leading-tight">{opt.customerEtaNote}</p>
+                                <p className="text-muted-foreground mt-1 text-[12px] leading-tight">
+                                  {opt.customerEtaNote}
+                                </p>
                               ) : null}
                             </div>
                           </label>
@@ -585,58 +592,53 @@ function CheckoutContent() {
                       : null;
 
                   return (
-                  <div
-                    key={item.cartItemId}
-                    className={bundleLines ? "w-full" : "flex justify-between gap-3"}
-                  >
-                    {bundleLines ? (
-                      <CheckoutSidebarBundleRow item={item} bundleLines={bundleLines} />
-                    ) : (
-                      <>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 gap-3">
-                            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
-                              {item.product.imageUrl ? (
-                                <Image
-                                  src={item.product.imageUrl}
-                                  alt={item.product.name}
-                                  fill
-                                  sizes="56px"
-                                  className="object-contain"
-                                />
-                              ) : (
-                                <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
-                              )}
-                            </div>
-                            <div className="flex min-w-0 flex-col justify-center">
-                              <p className="truncate text-sm font-medium leading-tight">{item.product.name}</p>
-                              {item.variant &&
-                                !item.variant.isDefault &&
-                                item.variant.attributes && (
-                                <p className="text-muted-foreground mt-0.5 text-xs">
-                                  {Object.entries(item.variant.attributes)
-                                    .map(([k, v]) => `${v}`)
-                                    .join(" / ")}
-                                </p>
-                              )}
-                              <p className="text-muted-foreground mt-0.5 text-xs">x {item.quantity}</p>
-                              {item.appliedCampaign?.name ? (
-                                <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
-                                  <BadgePercent className="h-3 w-3 shrink-0 text-orange-600" aria-hidden />
-                                  <span className="truncate">{item.appliedCampaign.name}</span>
-                                </p>
-                              ) : null}
+                    <div key={item.cartItemId} className={bundleLines ? "w-full" : "flex justify-between gap-3"}>
+                      {bundleLines ? (
+                        <CheckoutSidebarBundleRow item={item} bundleLines={bundleLines} />
+                      ) : (
+                        <>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 gap-3">
+                              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
+                                {item.product.imageUrl ? (
+                                  <Image
+                                    src={item.product.imageUrl}
+                                    alt={item.product.name}
+                                    fill
+                                    sizes="56px"
+                                    className="object-contain"
+                                  />
+                                ) : (
+                                  <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
+                                )}
+                              </div>
+                              <div className="flex min-w-0 flex-col justify-center">
+                                <p className="truncate text-sm font-medium leading-tight">{item.product.name}</p>
+                                {item.variant && !item.variant.isDefault && item.variant.attributes && (
+                                  <p className="text-muted-foreground mt-0.5 text-xs">
+                                    {Object.entries(item.variant.attributes)
+                                      .map(([k, v]) => `${v}`)
+                                      .join(" / ")}
+                                  </p>
+                                )}
+                                <p className="text-muted-foreground mt-0.5 text-xs">x {item.quantity}</p>
+                                {item.appliedCampaign?.name ? (
+                                  <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
+                                    <BadgePercent className="h-3 w-3 shrink-0 text-orange-600" aria-hidden />
+                                    <span className="truncate">{item.appliedCampaign.name}</span>
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex shrink-0 flex-col justify-center text-right">
-                          <p className="text-sm font-bold text-orange-600">
-                            {formatCurrency(cartItemUnitPrice(item) * item.quantity)}
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                          <div className="flex shrink-0 flex-col justify-center text-right">
+                            <p className="text-sm font-bold text-orange-600">
+                              {formatCurrency(cartItemUnitPrice(item) * item.quantity)}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -656,7 +658,9 @@ function CheckoutContent() {
                       Calculating
                     </span>
                   ) : shipQuoteError ? (
-                    <span className="text-destructive max-w-[55%] text-right text-xs font-medium">{shipQuoteError}</span>
+                    <span className="text-destructive max-w-[55%] text-right text-xs font-medium">
+                      {shipQuoteError}
+                    </span>
                   ) : shipQuote?.displayMode === "included" ? (
                     <span className="text-muted-foreground max-w-[58%] text-right text-xs font-medium">
                       Included in product price
@@ -664,9 +668,7 @@ function CheckoutContent() {
                   ) : displayShippingFee !== null &&
                     displayShippingFee <= 0 &&
                     selectedShipOption?.freeShippingApplied ? (
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      Free (threshold met)
-                    </span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free (threshold met)</span>
                   ) : displayShippingFee !== null && displayShippingFee <= 0 ? (
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free</span>
                   ) : displayShippingFee !== null ? (
@@ -687,13 +689,16 @@ function CheckoutContent() {
                     <span className="font-semibold text-emerald-600">- {formatCurrency(appliedVoucherEstimate)}</span>
                   </div>
                 ) : null}
-                {shipQuote?.displayMode === "included" && !shipQuoteLoading && !shipQuoteError && selectedShipOption && (
-                  <p className="text-muted-foreground text-[10px] leading-snug">
-                    {selectedShipOption.baseZoneFee > 0
-                      ? `Reference fee (${shipQuote.zoneName ?? "—"} — ${selectedShipOption.name}): ${formatCurrency(selectedShipOption.baseZoneFee)}; not added to total.`
-                      : "Shipping fee is included; total equals subtotal."}
-                  </p>
-                )}
+                {shipQuote?.displayMode === "included" &&
+                  !shipQuoteLoading &&
+                  !shipQuoteError &&
+                  selectedShipOption && (
+                    <p className="text-muted-foreground text-[10px] leading-snug">
+                      {selectedShipOption.baseZoneFee > 0
+                        ? `Reference fee (${shipQuote.zoneName ?? "—"} — ${selectedShipOption.name}): ${formatCurrency(selectedShipOption.baseZoneFee)}; not added to total.`
+                        : "Shipping fee is included; total equals subtotal."}
+                    </p>
+                  )}
                 <div className="flex justify-between items-center border-t pt-3 mb-4">
                   <span className="text-lg font-bold">Total:</span>
                   <span className="text-xl font-bold text-orange-600">{formatCurrency(displayTotal)}</span>
@@ -704,9 +709,7 @@ function CheckoutContent() {
                   type="submit"
                   size="sm"
                   className="w-full py-5 text-sm font-semibold"
-                  disabled={
-                    orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)
-                  }
+                  disabled={orderLoading || (shipMode === "saved" ? !canSubmitSaved : !canSubmitNew)}
                 >
                   {orderLoading ? (
                     <>

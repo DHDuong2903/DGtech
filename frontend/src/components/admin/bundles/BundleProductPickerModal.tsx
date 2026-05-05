@@ -11,18 +11,11 @@ import {
 } from "@/src/components/admin/discount-campaigns/discountCampaignProductUi";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
-import { Sofa } from "lucide-react";
+import { Sofa, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
 import { AdminSpinner, AdminContentLoader } from "@/src/components/admin/AdminLoading";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
@@ -72,8 +65,12 @@ export function BundleProductPickerModal({
   const debouncedSearchRef = useRef("");
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { detailRef.current = detailById; }, [detailById]);
-  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => {
+    detailRef.current = detailById;
+  }, [detailById]);
+  useEffect(() => {
+    debouncedSearchRef.current = debouncedSearch;
+  }, [debouncedSearch]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -96,7 +93,7 @@ export function BundleProductPickerModal({
     setDraftAll({ ...initialVariantAllByProduct });
     setSearch("");
     setDebouncedSearch("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const fetchNextPage = useCallback(async () => {
@@ -150,7 +147,7 @@ export function BundleProductPickerModal({
   useEffect(() => {
     if (!open) return;
     void fetchNextPage();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, debouncedSearch]);
 
   useEffect(() => {
@@ -165,19 +162,27 @@ export function BundleProductPickerModal({
           void fetchNextPage();
         }
       },
-      { root: null, rootMargin: "0px", threshold: 0 }
+      { root: null, rootMargin: "0px", threshold: 0 },
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, hasMore]);
 
   const setProductSelection = useCallback(async (productId: string, selected: boolean) => {
     if (!selected) {
       setDraftIds((ids) => ids.filter((id) => id !== productId));
-      setDraftVar((m) => { const n = { ...m }; delete n[productId]; return n; });
-      setDraftAll((m) => { const n = { ...m }; delete n[productId]; return n; });
+      setDraftVar((m) => {
+        const n = { ...m };
+        delete n[productId];
+        return n;
+      });
+      setDraftAll((m) => {
+        const n = { ...m };
+        delete n[productId];
+        return n;
+      });
       return;
     }
 
@@ -209,7 +214,11 @@ export function BundleProductPickerModal({
       const next = has ? cur.filter((id) => id !== variantId) : [...cur, variantId];
       if (next.length === 0) {
         setDraftIds((ids) => ids.filter((id) => id !== productId));
-        setDraftAll((dm) => { const o = { ...dm }; delete o[productId]; return o; });
+        setDraftAll((dm) => {
+          const o = { ...dm };
+          delete o[productId];
+          return o;
+        });
         const rest = { ...m };
         delete rest[productId];
         return rest;
@@ -262,13 +271,16 @@ export function BundleProductPickerModal({
           <DialogTitle>Select products</DialogTitle>
         </DialogHeader>
 
-        <Input
-          placeholder="Search by name…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="shrink-0 max-w-xs"
-          aria-label="Search products"
-        />
+        <div className="relative max-w-xs shrink-0">
+          <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="Search by name…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 w-full"
+            aria-label="Search products"
+          />
+        </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-md border">
           <Table>

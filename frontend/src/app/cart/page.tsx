@@ -150,11 +150,11 @@ function CartPageContent() {
 
   return (
     <div className="bg-background">
-      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
+      <div className={cn("mx-auto max-w-7xl py-3", STOREFRONT_H_PADDING)}>
         {(!cart?.items || cart.items.length === 0) && <CartEmptyState />}
 
         {cart?.items && cart.items.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-start">
             <div className="lg:col-span-2">
               <CartItemList
                 items={cart.items}
