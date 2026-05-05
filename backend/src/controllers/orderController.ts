@@ -549,6 +549,8 @@ export const getOrders = async (req: any, res: any) => {
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
+      distinct: true,
+      col: "orderId",
     });
 
     res.status(200).json({
@@ -738,6 +740,8 @@ export const getAllOrders = async (req: any, res: any) => {
       order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
+      distinct: true,
+      col: "orderId",
     });
 
     res.status(200).json({

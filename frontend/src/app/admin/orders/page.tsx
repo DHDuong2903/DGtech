@@ -158,12 +158,16 @@ const AdminOrdersPage = () => {
               }}
             />
 
-            <div className="text-muted-foreground flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <p>
-                Page {adminPagination?.page ?? page} of {totalPages} ({adminPagination?.total ?? 0}{" "}
-                orders)
-              </p>
-              <div className="flex gap-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-muted-foreground flex flex-1 flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
+                <span>
+                  Page {adminPagination?.page ?? page} of {totalPages}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span>{adminPagination?.total ?? 0}</span> orders
+                </span>
+              </div>
+              <div className="flex items-center gap-2 sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"

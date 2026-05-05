@@ -4,26 +4,14 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { productsApi } from "@/src/apis/productApi";
 import type { Product } from "@/src/types";
 import type { DiscountKind } from "@/src/types/discountCampaignType";
-import {
-  attrsLabel,
-  formatMoney,
-  variantList,
-  variantUnitPrice,
-} from "./discountCampaignProductUi";
+import { attrsLabel, formatMoney, variantList, variantUnitPrice } from "./discountCampaignProductUi";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
-import { Sofa } from "lucide-react";
+import { Sofa, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
 import { AdminSpinner, AdminContentLoader } from "@/src/components/admin/AdminLoading";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
@@ -81,8 +69,12 @@ export function DiscountCampaignRuleProductPickerModal({
   const debouncedSearchRef = useRef("");
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { detailRef.current = detailById; }, [detailById]);
-  useEffect(() => { debouncedSearchRef.current = debouncedSearch; }, [debouncedSearch]);
+  useEffect(() => {
+    detailRef.current = detailById;
+  }, [detailById]);
+  useEffect(() => {
+    debouncedSearchRef.current = debouncedSearch;
+  }, [debouncedSearch]);
 
   // Debounce search input
   useEffect(() => {
@@ -108,7 +100,7 @@ export function DiscountCampaignRuleProductPickerModal({
     setDraftAll({ ...initialVariantAllByProduct });
     setSearch("");
     setDebouncedSearch("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // ---------- Core fetch ----------
@@ -166,8 +158,8 @@ export function DiscountCampaignRuleProductPickerModal({
   useEffect(() => {
     if (!open) return;
     void fetchNextPage();
-  // fetchNextPage is stable (empty deps), debouncedSearch controls the reset above
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // fetchNextPage is stable (empty deps), debouncedSearch controls the reset above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, debouncedSearch]);
 
   // ---------- Infinite scroll via IntersectionObserver ----------
@@ -186,21 +178,29 @@ export function DiscountCampaignRuleProductPickerModal({
           void fetchNextPage();
         }
       },
-      { root: null, rootMargin: "0px", threshold: 0 }
+      { root: null, rootMargin: "0px", threshold: 0 },
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  // Re-attach observer whenever open/hasMore changes (so we catch newly revealed sentinel)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Re-attach observer whenever open/hasMore changes (so we catch newly revealed sentinel)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, hasMore]);
 
   // ---------- Selection helpers ----------
   const setProductSelection = useCallback(async (productId: string, selected: boolean) => {
     if (!selected) {
       setDraftIds((ids) => ids.filter((id) => id !== productId));
-      setDraftVar((m) => { const n = { ...m }; delete n[productId]; return n; });
-      setDraftAll((m) => { const n = { ...m }; delete n[productId]; return n; });
+      setDraftVar((m) => {
+        const n = { ...m };
+        delete n[productId];
+        return n;
+      });
+      setDraftAll((m) => {
+        const n = { ...m };
+        delete n[productId];
+        return n;
+      });
       return;
     }
 
@@ -234,7 +234,11 @@ export function DiscountCampaignRuleProductPickerModal({
       const next = has ? cur.filter((id) => id !== variantId) : [...cur, variantId];
       if (next.length === 0) {
         setDraftIds((ids) => ids.filter((id) => id !== productId));
-        setDraftAll((dm) => { const o = { ...dm }; delete o[productId]; return o; });
+        setDraftAll((dm) => {
+          const o = { ...dm };
+          delete o[productId];
+          return o;
+        });
         const rest = { ...m };
         delete rest[productId];
         return rest;
@@ -288,13 +292,16 @@ export function DiscountCampaignRuleProductPickerModal({
         </DialogHeader>
 
         {/* Search bar */}
-        <Input
-          placeholder="Search by name…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="shrink-0 max-w-xs"
-          aria-label="Search products"
-        />
+        <div className="relative max-w-xs shrink-0">
+          <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="Search by name…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 w-full"
+            aria-label="Search products"
+          />
+        </div>
 
         {/* Scrollable product list */}
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-md border">

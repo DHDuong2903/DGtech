@@ -2,26 +2,13 @@
 
 import { useEffect, useState, useMemo } from "react";
 import type { Category } from "@/src/types";
-import { Tag } from "lucide-react";
+import { Tag, Search } from "lucide-react";
 import { useProductStore } from "@/src/stores";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { Input } from "@/src/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/src/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 
 type Props = {
   open: boolean;
@@ -69,13 +56,16 @@ export function DiscountCampaignCategoryPickerModal({
         <DialogHeader className="shrink-0 space-y-0 p-0">
           <DialogTitle>Select categories</DialogTitle>
         </DialogHeader>
-        <Input
-          placeholder="Search by name…"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="shrink-0 max-w-xs"
-          aria-label="Search categories"
-        />
+        <div className="relative max-w-xs shrink-0">
+          <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="Search by name…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-full"
+            aria-label="Search categories"
+          />
+        </div>
         <div className="min-h-0 max-h-[min(50vh,420px)] overflow-auto rounded-md border">
           <Table>
             <TableHeader className="bg-background sticky top-0 z-20 shadow-[0_1px_0_hsl(var(--border))]">
@@ -95,30 +85,30 @@ export function DiscountCampaignCategoryPickerModal({
               ) : (
                 filteredCategories.map((c) => {
                   const qty = products.filter((p) => p.categoryId === c.categoryId).length;
-                return (
-                  <TableRow key={c.categoryId}>
-                    <TableCell className="w-10">
-                      <Checkbox
-                        checked={draft.includes(c.categoryId)}
-                        onCheckedChange={() => toggle(c.categoryId)}
-                        aria-label={c.name}
-                      />
-                    </TableCell>
-                    <TableCell className="max-w-0 whitespace-normal">
-                      <div className="flex min-w-0 items-center gap-2 pr-4">
-                        <div className="bg-muted relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border">
-                          <Tag className="text-muted-foreground h-4 w-4" />
+                  return (
+                    <TableRow key={c.categoryId}>
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={draft.includes(c.categoryId)}
+                          onCheckedChange={() => toggle(c.categoryId)}
+                          aria-label={c.name}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-0 whitespace-normal">
+                        <div className="flex min-w-0 items-center gap-2 pr-4">
+                          <div className="bg-muted relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border">
+                            <Tag className="text-muted-foreground h-4 w-4" />
+                          </div>
+                          <span className="min-w-0 truncate font-semibold leading-tight">{c.name}</span>
                         </div>
-                        <span className="min-w-0 truncate font-semibold leading-tight">{c.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-28 pr-4 text-right text-xs tabular-nums font-semibold text-foreground">
-                      {qty}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
+                      </TableCell>
+                      <TableCell className="w-28 pr-4 text-right text-xs tabular-nums font-semibold text-foreground">
+                        {qty}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>

@@ -86,6 +86,7 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   /** When null, PDP uses the cheapest real variant (same anchor price as cards). Set when shopper picks options. */
   const [userSelectedVariantId, setUserSelectedVariantId] = useState<string | null>(null);
+  const [addBusy, setAddBusy] = useState(false);
   const [buyNowBusy, setBuyNowBusy] = useState(false);
   const [bundles, setBundles] = useState<StorefrontBundleForPdp[]>([]);
   const [bundleBuyBusyId, setBundleBuyBusyId] = useState<string | null>(null);
@@ -101,11 +102,14 @@ const ProductDetailPage = () => {
   useEffect(() => {
     if (!productId) return;
     let cancelled = false;
-    void bundleApi.getStorefrontByProduct(productId).then((b) => {
-      if (!cancelled) setBundles(b);
-    }).catch(() => {
-      if (!cancelled) setBundles([]);
-    });
+    void bundleApi
+      .getStorefrontByProduct(productId)
+      .then((b) => {
+        if (!cancelled) setBundles(b);
+      })
+      .catch(() => {
+        if (!cancelled) setBundles([]);
+      });
     return () => {
       cancelled = true;
     };
@@ -156,10 +160,13 @@ const ProductDetailPage = () => {
       return;
     }
 
+    setAddBusy(true);
     try {
       await addToCart(product.productId, quantity, selectedVariant?.variantId);
     } catch (error) {
       console.error("Add to cart error:", error);
+    } finally {
+      setAddBusy(false);
     }
   };
 
@@ -182,8 +189,7 @@ const ProductDetailPage = () => {
         cart = useCartStore.getState().cart;
       }
       const match = cart?.items?.find(
-        (it) =>
-          it.productId === product.productId && String(it.variantId ?? "") === String(variantId ?? ""),
+        (it) => it.productId === product.productId && String(it.variantId ?? "") === String(variantId ?? ""),
       );
       if (match) {
         await updateCartItem(match.cartItemId, quantity, { suppressSuccessToast: true });
@@ -195,8 +201,7 @@ const ProductDetailPage = () => {
       }
       const updated = useCartStore.getState().cart;
       const line = updated?.items?.find(
-        (it) =>
-          it.productId === product.productId && String(it.variantId ?? "") === String(variantId ?? ""),
+        (it) => it.productId === product.productId && String(it.variantId ?? "") === String(variantId ?? ""),
       );
       if (!line) {
         toast.error("Could not update your cart. Try again.");
@@ -242,8 +247,7 @@ const ProductDetailPage = () => {
           cart = useCartStore.getState().cart;
         }
         const match = cart?.items?.find(
-          (it) =>
-            sameBundle(it) && (it.itemType === "BUNDLE" || Boolean(it.bundleSnapshot)),
+          (it) => sameBundle(it) && (it.itemType === "BUNDLE" || Boolean(it.bundleSnapshot)),
         );
         if (match) {
           await updateCartItem(match.cartItemId, 1, {
@@ -260,8 +264,7 @@ const ProductDetailPage = () => {
         await fetchCart();
         const updated = useCartStore.getState().cart;
         const line = updated?.items?.find(
-          (it) =>
-            sameBundle(it) && (it.itemType === "BUNDLE" || Boolean(it.bundleSnapshot)),
+          (it) => sameBundle(it) && (it.itemType === "BUNDLE" || Boolean(it.bundleSnapshot)),
         );
         if (!line) {
           toast.error("Could not update your cart. Try again.");
@@ -308,11 +311,11 @@ const ProductDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
+      <div className={cn("mx-auto max-w-7xl py-3", STOREFRONT_H_PADDING)}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex cursor-pointer items-center gap-2 text-sm transition-colors"
+          className="text-muted-foreground hover:text-foreground mb-3 inline-flex cursor-pointer items-center gap-2 text-sm transition-colors"
         >
           <ArrowLeft className="h-5 w-5 shrink-0" />
           Back
@@ -321,7 +324,7 @@ const ProductDetailPage = () => {
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,min(48vw,30rem))_minmax(0,1fr)] lg:gap-5">
           <ProductImage imageUrl={product.imageUrl} name={product.name} />
 
-          <div className="flex min-w-0 flex-col gap-5 py-1 lg:py-3">
+          <div className="flex min-w-0 flex-col gap-3 py-1 lg:py-1">
             <ProductInfo
               name={product.name}
               price={displayPrice}
@@ -342,7 +345,8 @@ const ProductDetailPage = () => {
               <ProductActions
                 quantity={quantity}
                 maxStock={displayStock}
-                isLoading={cartLoading}
+                isAddLoading={addBusy}
+                globalDisabled={cartLoading}
                 isBuyNowLoading={buyNowBusy}
                 hasVariants={hasRealVariants}
                 isVariantSelected={isVariantSelected}
@@ -366,11 +370,11 @@ const ProductDetailPage = () => {
           </div>
         </div>
 
-        <div className="mt-4 sm:mt-5">
+        <div className="mt-3 sm:mt-3">
           <ProductDetailReviews reviews={reviews} isLoggedIn={!!user} onSubmit={handleSubmitReviewWrapper} />
         </div>
 
-        <div className="mt-4 sm:mt-4">
+        <div className="mt-3 sm:mt-3">
           <RelatedProducts
             products={relatedProducts}
             onViewMore={product?.category ? () => router.push(`/shop?category=${product.categoryId}`) : undefined}

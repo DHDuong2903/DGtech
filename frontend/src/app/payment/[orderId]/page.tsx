@@ -140,7 +140,7 @@ export default function PaymentPage() {
   const isPaid = payment.status === "PAID";
 
   return (
-    <div className="min-h-screen bg-background py-8">
+    <div className="min-h-screen bg-background py-3">
       <div className={cn("mx-auto max-w-4xl", STOREFRONT_H_PADDING)}>
         <PaymentHeader
           orderId={orderId}
