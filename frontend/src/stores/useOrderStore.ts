@@ -102,10 +102,10 @@ export const useOrderStore = create<OrderState>()(
           console.error("Error fetching orders:", err);
           const error = err as ApiError;
           set({
-            error: error.message || "Lỗi khi tải danh sách đơn hàng",
+            error: error.message || "Error loading orders list",
             loading: false,
           });
-          toast.error(error.message || "Lỗi khi tải danh sách đơn hàng");
+          toast.error(error.message || "Error loading orders list");
         }
       },
 
@@ -118,10 +118,10 @@ export const useOrderStore = create<OrderState>()(
           console.error("Error fetching order:", err);
           const error = err as ApiError;
           set({
-            error: error.message || "Lỗi khi tải thông tin đơn hàng",
+            error: error.message || "Error loading order details",
             loading: false,
           });
-          toast.error(error.message || "Lỗi khi tải thông tin đơn hàng");
+          toast.error(error.message || "Error loading order details");
         }
       },
 
@@ -130,13 +130,13 @@ export const useOrderStore = create<OrderState>()(
         try {
           const response = await orderApi.createOrder(data);
           set({ currentOrder: response.order, loading: false });
-          toast.success(response.message || "Đặt hàng thành công!");
+          toast.success(response.message || "Order placed successfully!");
           return response.order;
         } catch (err: unknown) {
           console.error("Error creating order:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi tạo đơn hàng";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error creating order";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
           return null;
@@ -160,12 +160,12 @@ export const useOrderStore = create<OrderState>()(
             loading: false,
           });
 
-          toast.success(response.message || "Đã hủy đơn hàng thành công");
+          toast.success(response.message || "Order cancelled successfully");
         } catch (err: unknown) {
           console.error("Error cancelling order:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi hủy đơn hàng";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error cancelling order";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }
@@ -185,10 +185,10 @@ export const useOrderStore = create<OrderState>()(
           console.error("Error fetching all orders:", err);
           const error = err as ApiError;
           set({
-            error: error.message || "Lỗi khi tải danh sách đơn hàng",
+            error: error.message || "Error loading orders list",
             loading: false,
           });
-          toast.error(error.message || "Lỗi khi tải danh sách đơn hàng");
+          toast.error(error.message || "Error loading orders list");
         }
       },
 
@@ -202,10 +202,10 @@ export const useOrderStore = create<OrderState>()(
           const error = err as ApiError;
           set({
             adminOrderDetail: null,
-            error: error.message || "Lỗi khi tải đơn hàng",
+            error: error.message || "Error loading order details",
             loading: false,
           });
-          toast.error(error.message || "Lỗi khi tải đơn hàng");
+          toast.error(error.message || "Error loading order details");
         }
       },
 
@@ -228,12 +228,12 @@ export const useOrderStore = create<OrderState>()(
             loading: false,
           });
 
-          toast.success(response.message || "Cập nhật trạng thái thành công");
+          toast.success(response.message || "Status updated successfully");
         } catch (err: unknown) {
           console.error("Error updating order status:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi cập nhật trạng thái";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error updating status";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }
@@ -254,12 +254,12 @@ export const useOrderStore = create<OrderState>()(
             adminOrderDetail: nextDetail,
             loading: false,
           });
-          toast.success(response.message || "Đã xác nhận thanh toán");
+          toast.success(response.message || "Payment confirmed");
         } catch (err: unknown) {
           console.error("Error confirming payment:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi xác nhận thanh toán";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error confirming payment";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }
@@ -280,12 +280,12 @@ export const useOrderStore = create<OrderState>()(
             adminOrderDetail: nextDetail,
             loading: false,
           });
-          toast.success(response.message || "Đã lưu");
+          toast.success(response.message || "Saved successfully");
         } catch (err: unknown) {
           console.error("Error patching admin order:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi lưu";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error while saving";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }
@@ -307,12 +307,12 @@ export const useOrderStore = create<OrderState>()(
               loading: false,
             });
           }
-          toast.success(response.message || "Đã xóa đơn hàng");
+          toast.success(response.message || "Order deleted");
         } catch (err: unknown) {
           console.error("Error deleting order:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi xóa đơn hàng";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error deleting order";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }
@@ -338,12 +338,12 @@ export const useOrderStore = create<OrderState>()(
               loading: false,
             });
           }
-          toast.success(`Đã xóa ${orderIds.length} đơn hàng`);
+          toast.success(`Deleted ${orderIds.length} orders`);
         } catch (err: unknown) {
           console.error("Error deleting orders:", err);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const error = err as any;
-          const errorMessage = error?.response?.data?.error || error?.message || "Lỗi khi xóa đơn hàng";
+          const errorMessage = error?.response?.data?.error || error?.message || "Error deleting orders";
           set({ error: errorMessage, loading: false });
           toast.error(errorMessage);
         }

@@ -7,8 +7,8 @@ import { Footer } from "./public";
 export const ConditionalFooter = () => {
   const pathname = usePathname();
 
-  // Không hiển thị footer ở admin routes
-  if (pathname?.startsWith("/admin")) {
+  // Không hiển thị footer ở admin hoặc payment routes
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/payment")) {
     return null;
   }
 

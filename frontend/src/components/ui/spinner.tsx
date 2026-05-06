@@ -18,8 +18,8 @@ function Spinner({ className, "data-icon": dataIcon, ...props }: SpinnerProps) {
       data-icon={dataIcon}
       className={cn(
         "size-4 shrink-0 animate-spin",
-        dataIcon === "inline-start" && "-ml-0.5",
-        dataIcon === "inline-end" && "-mr-0.5",
+        dataIcon === "inline-start" && "",
+        dataIcon === "inline-end" && "",
         className
       )}
       {...props}

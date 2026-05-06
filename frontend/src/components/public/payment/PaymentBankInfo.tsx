@@ -28,88 +28,97 @@ export const PaymentBankInfo = ({
   onCheckStatus,
 }: PaymentBankInfoProps) => {
   return (
-    <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Or transfer manually</h2>
-
-      <div className="space-y-4">
-        {/* Bank */}
-        <div>
-          <label className="text-muted-foreground text-sm">Bank</label>
-          <div className="bg-muted mt-1 flex items-center justify-between rounded-lg p-3">
-            <span className="font-medium">{bankCode}</span>
+    <Card className="overflow-hidden gap-0 p-0 shadow-none border-border">
+      <div className="border-b bg-muted/30 p-3">
+        <h2 className="text-foreground font-semibold">Transfer manually</h2>
+      </div>
+      <div className="p-4 space-y-4">
+        {/* Bank & Account Number */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-muted-foreground text-sm font-medium">Bank</label>
+            <div className="bg-muted mt-1 flex h-10 items-center justify-between rounded-lg px-3">
+              <span className="font-semibold text-sm">{bankCode}</span>
+            </div>
           </div>
-        </div>
-
-        {/* Account Number */}
-        <div>
-          <label className="text-muted-foreground text-sm">Account number</label>
-          <div className="bg-muted mt-1 flex items-center justify-between rounded-lg p-3">
-            <span className="font-medium">{accountNumber}</span>
-            <button
-              onClick={() => onCopy(accountNumber!, "account number")}
-              className="text-orange-600 hover:text-orange-700"
-            >
-              {copied === "account number" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </button>
+          <div>
+            <label className="text-muted-foreground text-sm font-medium">Account number</label>
+            <div className="bg-muted mt-1 flex h-10 items-center justify-between rounded-lg px-3">
+              <span className="font-semibold text-sm tabular-nums">{accountNumber}</span>
+              <button
+                onClick={() => onCopy(accountNumber!, "account number")}
+                className="text-orange-600 hover:text-orange-700 transition-colors p-1 cursor-pointer"
+                title="Copy account number"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Account Name */}
         <div>
-          <label className="text-muted-foreground text-sm">Account name</label>
-          <div className="bg-muted mt-1 rounded-lg p-3">
-            <span className="font-medium">{accountName}</span>
+          <label className="text-muted-foreground text-sm font-medium">Account name</label>
+          <div className="bg-muted mt-1 flex h-10 items-center rounded-lg px-3">
+            <span className="font-semibold text-sm uppercase">{accountName}</span>
           </div>
         </div>
 
         {/* Amount */}
         <div>
-          <label className="text-muted-foreground text-sm">Amount</label>
-          <div className="bg-muted mt-1 flex items-center justify-between rounded-lg p-3">
-            <span className="font-medium text-orange-600 text-lg">{formatCurrency(amount)}</span>
+          <label className="text-muted-foreground text-sm font-medium">Amount</label>
+          <div className="bg-muted mt-1 flex h-10 items-center justify-between rounded-lg px-3">
+            <span className="font-semibold text-sm text-orange-600 tabular-nums">
+              {formatCurrency(amount)}
+            </span>
             <button
               onClick={() => onCopy(amount.toString(), "amount")}
-              className="text-orange-600 hover:text-orange-700"
+              className="text-orange-600 hover:text-orange-700 transition-colors p-1 cursor-pointer"
+              title="Copy amount"
             >
-              {copied === "amount" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              <Copy className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Content */}
         <div>
-          <label className="text-muted-foreground text-sm">Transfer reference</label>
-          <div className="flex items-center justify-between bg-orange-50 border border-orange-200 p-3 rounded-lg mt-1">
-            <span className="font-medium text-orange-600">{transactionContent}</span>
+          <label className="text-muted-foreground text-sm font-medium">Transfer reference</label>
+          <div className="bg-muted mt-1 flex h-10 items-center justify-between rounded-lg px-3">
+            <span className="font-semibold text-sm text-orange-600 tracking-wide">{transactionContent}</span>
             <button
               onClick={() => onCopy(transactionContent!, "transfer reference")}
-              className="text-orange-600 hover:text-orange-700"
+              className="text-orange-600 hover:text-orange-700 transition-colors p-1 cursor-pointer"
+              title="Copy reference"
             >
-              {copied === "transfer reference" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              <Copy className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-xs text-orange-600 mt-2">
-            ⚠️ Enter the reference exactly so we can match your payment automatically
+          <p className="text-[11px] text-orange-600 mt-2 font-medium flex items-center gap-1.5 leading-relaxed">
+            Enter the reference exactly to ensure your payment is matched automatically.
           </p>
         </div>
+
+        {/* Check Status Button */}
+        <Button
+          onClick={onCheckStatus}
+          disabled={checking}
+          className="w-full h-11 mt-2 font-semibold"
+          variant="outline"
+        >
+          {checking ? (
+            <>
+              <Spinner data-icon="inline-start" />
+              Verifying payment...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" />
+              Check payment status
+            </>
+          )}
+        </Button>
       </div>
-
-      {/* Check Status Button */}
-      <Button onClick={onCheckStatus} disabled={checking} className="w-full mt-6" variant="outline">
-        {checking ? (
-          <>
-            <Spinner data-icon="inline-start" />
-            Checking status
-          </>
-        ) : (
-          <>
-            <RefreshCw className="h-4 w-4" />
-            Check payment status
-          </>
-        )}
-      </Button>
-
-      <p className="text-muted-foreground mt-3 text-center text-xs">We check automatically every 10 seconds</p>
     </Card>
   );
 };

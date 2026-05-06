@@ -125,7 +125,7 @@ export const useCartStore = create<CartState>()(
             const errorMessage =
               (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error ||
               (err as { message?: string })?.message ||
-              "Không thể thêm sản phẩm vào giỏ hàng";
+              "Could not add product to cart";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }
@@ -185,7 +185,7 @@ export const useCartStore = create<CartState>()(
             const errorMessage =
               (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
               error.message ||
-              "Lỗi khi cập nhật sản phẩm trong giỏ hàng";
+              "Error updating product in cart";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
             if (throwOnError) throw err;
@@ -207,7 +207,7 @@ export const useCartStore = create<CartState>()(
           } catch (err) {
             console.error("Error removing from cart:", err);
             const error = err as ApiError;
-            const errorMessage = error.message || "Không thể xóa sản phẩm khỏi giỏ hàng";
+            const errorMessage = error.message || "Could not remove product from cart";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }
@@ -268,7 +268,7 @@ export const useCartStore = create<CartState>()(
           } catch (err) {
             console.error("Error clearing cart:", err);
             const error = err as ApiError;
-            const errorMessage = error.message || "Không thể làm trống giỏ hàng";
+            const errorMessage = error.message || "Could not clear cart";
             set({ error: errorMessage, loading: false });
             toast.error(errorMessage);
           }

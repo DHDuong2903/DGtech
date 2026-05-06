@@ -108,6 +108,7 @@ function CheckoutContent() {
   const [shippingMethodCode, setShippingMethodCode] = useState<string>("standard");
   const [checkoutVouchers, setCheckoutVouchers] = useState<EligibleVoucher[]>([]);
   const [checkoutVouchersLoading, setCheckoutVouchersLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const selectedItemsParam = searchParams.get("items");
   const selectedItems = useMemo(() => {
@@ -169,7 +170,7 @@ function CheckoutContent() {
           setShipQuote(null);
           const msg =
             (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-            "Không tính được phí giao hàng";
+            "Could not calculate shipping fees";
           setShipQuoteError(msg);
         }
       } finally {
@@ -240,7 +241,7 @@ function CheckoutContent() {
     if (u) return u;
     const c = clerkUser?.username?.trim() || clerkUser?.firstName?.trim();
     if (c) return c;
-    return "Khách hàng";
+    return "Customer";
   }, [appUser?.username, clerkUser?.username, clerkUser?.firstName]);
 
   useEffect(() => {
@@ -313,6 +314,7 @@ function CheckoutContent() {
         shippingMethodCode: shippingMethodCode || "standard",
       });
       if (order) {
+        setIsRedirecting(true);
         try {
           await fetchCart();
         } catch (error) {
@@ -350,6 +352,7 @@ function CheckoutContent() {
     });
 
     if (order) {
+      setIsRedirecting(true);
       try {
         await fetchCart();
       } catch (error) {
@@ -381,7 +384,7 @@ function CheckoutContent() {
     voucherCalcReady &&
     taxCalcReady;
 
-  if (!isLoaded || cartLoading || addrLoading) {
+  if (!isLoaded || cartLoading || addrLoading || isRedirecting) {
     return <PageContentLoader className="bg-background" minHeightClass="min-h-screen" />;
   }
 
@@ -582,13 +585,13 @@ function CheckoutContent() {
                   const bundleLines: BundleLineRow[] | null =
                     isBundleCartItem(item) && item.bundleSnapshot?.lines?.length
                       ? item.bundleSnapshot.lines.map((ln) => ({
-                          id: ln.variantId,
-                          imageUrl: ln.imageUrl,
-                          name: ln.productName ?? "Product",
-                          attributes: ln.attributes ?? null,
-                          quantity: ln.quantity,
-                          href: ln.storefrontProductUrl ?? null,
-                        }))
+                        id: ln.variantId,
+                        imageUrl: ln.imageUrl,
+                        name: ln.productName ?? "Product",
+                        attributes: ln.attributes ?? null,
+                        quantity: ln.quantity,
+                        href: ln.storefrontProductUrl ?? null,
+                      }))
                       : null;
 
                   return (

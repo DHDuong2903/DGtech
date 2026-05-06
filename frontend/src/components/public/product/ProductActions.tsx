@@ -66,7 +66,7 @@ export const ProductActions = ({
           disabled={isAddToCartDisabled}
         >
           {isAddLoading && <Spinner data-icon="inline-start" />}
-          {!isAddLoading && <ShoppingCart className="mr-1.5 h-4 w-4 shrink-0" />}
+          {!isAddLoading && <ShoppingCart className="h-4 w-4 shrink-0" />}
           <span className="truncate">{hasVariants && !isVariantSelected ? "Select options" : "Add to cart"}</span>
         </Button>
       </div>
