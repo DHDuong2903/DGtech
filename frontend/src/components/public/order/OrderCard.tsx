@@ -3,6 +3,7 @@ import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Spinner } from "@/src/components/ui/spinner";
 import Image from "next/image";
+import Link from "next/link";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import {
   formatCurrency,
@@ -27,7 +28,9 @@ export const OrderCard = ({ order, onViewDetail, onBuyAgain, onCancel, isBuyingA
   const canBuyAgain = order.status === "COMPLETED";
   const isCancelled = order.status === "CANCELLED";
 
-  const paymentStatusLabel = isCancelled ? "Cancelled" : getPaymentStatusLabel(order.paymentMethod, order.status, order.payment);
+  const paymentStatusLabel = isCancelled
+    ? "Cancelled"
+    : getPaymentStatusLabel(order.paymentMethod, order.status, order.payment);
   const paymentStatusColor = isCancelled
     ? "border-red-500/30 bg-red-500/15 text-red-950 dark:text-red-300"
     : getPaymentStatusColor(order.paymentMethod, order.status, order.payment);
@@ -80,7 +83,7 @@ export const OrderCard = ({ order, onViewDetail, onBuyAgain, onCancel, isBuyingA
       </div>
 
       <div className="border-t bg-muted/10 p-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className={cn("grid gap-3", canBuyAgain || (canCancel && onCancel) ? "grid-cols-2" : "grid-cols-1")}>
           <Button variant="outline" size="sm" className="w-full" onClick={() => onViewDetail(order.orderId)}>
             Detail
           </Button>
@@ -96,17 +99,12 @@ export const OrderCard = ({ order, onViewDetail, onBuyAgain, onCancel, isBuyingA
               )}
             </Button>
           )}
+          {canCancel && onCancel && (
+            <Button variant="destructive" size="sm" className="w-full" onClick={() => onCancel(order.orderId)}>
+              Cancel order
+            </Button>
+          )}
         </div>
-        {canCancel && onCancel && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 mt-3 w-full"
-            onClick={() => onCancel(order.orderId)}
-          >
-            Cancel
-          </Button>
-        )}
       </div>
     </Card>
   );

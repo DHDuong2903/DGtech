@@ -28,7 +28,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
 
   const fetchPayment = useCallback(async () => {
@@ -84,22 +84,40 @@ export default function PaymentPage() {
     }
   }, [isLoaded, isSignedIn, orderId, fetchPayment]);
 
-  // Countdown timer (3 minutes)
+  // Countdown timer based on createdAt (30 minutes duration)
   useEffect(() => {
-    if (!payment || payment.status === "PAID" || timeLeft <= 0) return;
+    if (!payment || payment.status === "PAID") return;
+
+    const EXPIRE_DURATION = 30 * 60; // 30 minutes in seconds
+    const createdAtTime = new Date(payment.createdAt).getTime();
+
+    const calculateTimeLeft = () => {
+      const now = Date.now();
+      const diff = Math.floor((createdAtTime + EXPIRE_DURATION * 1000 - now) / 1000);
+      return diff > 0 ? diff : 0;
+    };
+
+    // Initial sync
+    const initialTimeLeft = calculateTimeLeft();
+    setTimeLeft(initialTimeLeft);
+    if (initialTimeLeft <= 0) {
+      setIsExpired(true);
+      return;
+    } else {
+      setIsExpired(false);
+    }
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          setIsExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const remaining = calculateTimeLeft();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        setIsExpired(true);
+        clearInterval(timer);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [payment, timeLeft]);
+  }, [payment]);
 
   // Auto cancel order when expired
   useEffect(() => {
@@ -119,15 +137,15 @@ export default function PaymentPage() {
   }, [isExpired, orderId, payment?.status]);
 
   // Auto refresh payment status every 10 seconds
-  useEffect(() => {
-    if (!payment || payment.status === "PAID" || isExpired) return;
+  // useEffect(() => {
+  //   if (!payment || payment.status === "PAID" || isExpired) return;
 
-    const interval = setInterval(() => {
-      checkPaymentStatus();
-    }, 10000);
+  //   const interval = setInterval(() => {
+  //     checkPaymentStatus();
+  //   }, 10000);
 
-    return () => clearInterval(interval);
-  }, [payment, isExpired, checkPaymentStatus]);
+  //   return () => clearInterval(interval);
+  // }, [payment, isExpired, checkPaymentStatus]);
 
   if (!isLoaded || loading) {
     return <PaymentLoadingState />;
@@ -146,7 +164,7 @@ export default function PaymentPage() {
           orderId={orderId}
           isPaid={isPaid}
           isExpired={isExpired}
-          timeLeft={timeLeft}
+          timeLeft={timeLeft ?? 0}
           onBackToOrder={() => router.push(`/orders/${orderId}`)}
         />
 

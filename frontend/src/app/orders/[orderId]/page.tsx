@@ -287,12 +287,14 @@ export default function OrderDetailPage() {
                 </div>
 
                 <div className="space-y-2 pt-0">
+                  {currentOrder.paymentMethod === "BANK_TRANSFER" &&
+                    currentOrder.payment?.status !== "PAID" &&
+                    currentOrder.status !== "CANCELLED" && (
+                      <Link href={`/payment/${currentOrder.orderId}`} className="block">
+                        <Button className="w-full bg-orange-600 hover:bg-orange-700">Continue Payment</Button>
+                      </Link>
+                    )}
                   {currentOrder.status === "COMPLETED" && <Button className="w-full">Buy again</Button>}
-                  {canCancel && (
-                    <Button variant="destructive" className="w-full" onClick={() => setShowCancelModal(true)}>
-                      Cancel order
-                    </Button>
-                  )}
                   <Link href="/orders" className="block">
                     <Button variant="outline" className="w-full">
                       Back to orders
