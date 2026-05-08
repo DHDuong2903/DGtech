@@ -545,12 +545,12 @@ export const getAdminInventory = async (req: any, res: any) => {
 
 export const getFeaturedProducts = async (req: any, res: any) => {
   try {
-    const { limit = 8 } = req.query;
+    const { limit = 10 } = req.query;
 
     const products = await Product.findAll({
       where: { status: "ACTIVE" },
       include: productIncludeOptions,
-      order: [["createdAt", "DESC"]],
+      order: [Product.sequelize.fn("RANDOM")],
       limit: parseInt(limit),
     });
 

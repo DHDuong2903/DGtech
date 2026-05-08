@@ -4,32 +4,45 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Product } from "@/src/types";
 import { productsApi } from "@/src/apis";
-import { ProductCard } from "../product";
-import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
+import { cn } from "@/src/lib/utils";
+import { Product } from "@/src/types";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
+import { ProductCard } from "../product";
 
-export const FeaturedProducts = () => {
+const SECTION_LIMIT = 10;
+const FETCH_LIMIT = 40;
+
+export const DiscountProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    const fetchFeaturedProducts = async () => {
+
+    const fetchDiscountProducts = async () => {
       try {
         setLoading(true);
-        const data = await productsApi.getFeatured(10);
-        if (isMounted) setProducts(data);
+        const response = await productsApi.getAll({ page: 1, limit: FETCH_LIMIT });
+        const discounted = (response.data || [])
+          .filter((product) => {
+            const sale = Number(product.price);
+            const compare = Number(product.compareAtPrice);
+            return Number.isFinite(sale) && Number.isFinite(compare) && compare > sale;
+          })
+          .slice(0, SECTION_LIMIT);
+
+        if (isMounted) setProducts(discounted);
       } catch (error) {
-        console.error("Error fetching featured products:", error);
+        console.error("Error fetching discount products:", error);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    fetchFeaturedProducts();
+    fetchDiscountProducts();
+
     return () => {
       isMounted = false;
     };
@@ -54,7 +67,7 @@ export const FeaturedProducts = () => {
       <div className={cn("mx-auto max-w-7xl", STOREFRONT_H_PADDING)}>
         <div className="mb-3 flex items-center justify-between sm:mb-4">
           <div>
-            <h2 className="text-foreground text-xl font-medium tracking-tight sm:text-xl">Featured products</h2>
+            <h2 className="text-foreground text-xl font-medium tracking-tight sm:text-xl">Discount products</h2>
           </div>
           <Link
             href="/shop"

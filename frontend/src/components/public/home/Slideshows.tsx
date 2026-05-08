@@ -66,9 +66,9 @@ export const Slideshows = () => {
           loop: true,
         }}
       >
-        <CarouselContent>
+        <CarouselContent className="ml-0">
           {slides.map((slide, index) => (
-            <CarouselItem key={slide.id}>
+            <CarouselItem key={slide.id} className="pl-0">
               <div className="relative h-[500px] w-full overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
