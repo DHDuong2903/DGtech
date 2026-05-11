@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Product } from "@/src/types";
 import { formatCurrency, toMoneyNumber } from "@/src/utils";
 import { ProductImageFallback } from "./ProductImageFallback";
+import Image from "next/image";
 
 interface ProductCardProps {
   product: Product;
@@ -30,11 +31,12 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
       {/* Image */}
       <div className="bg-muted relative aspect-square overflow-hidden">
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <ProductImageFallback className="h-full w-full" iconClassName="h-12 w-12 sm:h-14 sm:w-14" />

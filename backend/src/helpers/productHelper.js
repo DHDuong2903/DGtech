@@ -13,12 +13,12 @@ export const getProductWithCategory = async (Product, productId) => {
       {
         model: ProductVariant,
         as: "variants",
-      }
-    ]
+      },
+    ],
   });
 };
 
-// San pham pho bien
+// San pham pho bien - optimized attributes to reduce data transfer
 export const productIncludeOptions = [
   {
     model: Category,
@@ -28,7 +28,8 @@ export const productIncludeOptions = [
   {
     model: ProductVariant,
     as: "variants",
-  }
+    attributes: ["variantId", "price", "stock", "attributes", "isDefault"],
+  },
 ];
 
 /**

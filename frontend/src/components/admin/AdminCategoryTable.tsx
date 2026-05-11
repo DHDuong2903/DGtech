@@ -52,7 +52,7 @@ export function createAdminCategoryColumns(handlers: {
         const d = row.original.description?.trim();
         return (
           <span className="text-muted-foreground line-clamp-2 max-w-md" title={d || undefined}>
-            {d || "—"}
+            {d || ""}
           </span>
         );
       },
@@ -69,7 +69,7 @@ export function createAdminCategoryColumns(handlers: {
               month: "short",
               day: "numeric",
             })
-          : "—";
+          : "";
       },
     },
     {

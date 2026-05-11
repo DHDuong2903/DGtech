@@ -93,9 +93,9 @@ function formatYmdButtonLabel(ymd: string): string {
 }
 
 function attrsLabel(attrs: Record<string, string> | null | undefined): string {
-  if (!attrs || typeof attrs !== "object") return "—";
+  if (!attrs || typeof attrs !== "object") return "";
   const e = Object.entries(attrs);
-  if (!e.length) return "—";
+  if (!e.length) return "";
   return e.map(([k, v]) => `${k}: ${v}`).join(", ");
 }
 

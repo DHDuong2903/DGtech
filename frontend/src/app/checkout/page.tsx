@@ -259,12 +259,21 @@ function CheckoutContent() {
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     let cancelled = false;
+
+    // PERFORMANCE: Parallelize independent data fetches
     (async () => {
       try {
         setAddrLoading(true);
-        const { addresses: list } = await addressApi.list();
+
+        // Fetch addresses and provinces in parallel (independent calls)
+        const [{ addresses: list }, provinceList] = await Promise.all([
+          addressApi.list(),
+          Promise.resolve(VN_PROVINCES), // Already in memory, but consistent with parallel pattern
+        ]);
+
         if (cancelled) return;
-        setProvinces(VN_PROVINCES);
+
+        setProvinces(provinceList);
         setAddresses(list);
         if (list.length > 0) {
           const def = list.find((a) => a.isDefault) ?? list[0];
@@ -276,6 +285,7 @@ function CheckoutContent() {
       } catch (e) {
         console.error(e);
         setAddresses([]);
+        setProvinces(VN_PROVINCES);
         setShipMode("new");
       } finally {
         if (!cancelled) setAddrLoading(false);
@@ -585,13 +595,13 @@ function CheckoutContent() {
                   const bundleLines: BundleLineRow[] | null =
                     isBundleCartItem(item) && item.bundleSnapshot?.lines?.length
                       ? item.bundleSnapshot.lines.map((ln) => ({
-                        id: ln.variantId,
-                        imageUrl: ln.imageUrl,
-                        name: ln.productName ?? "Product",
-                        attributes: ln.attributes ?? null,
-                        quantity: ln.quantity,
-                        href: ln.storefrontProductUrl ?? null,
-                      }))
+                          id: ln.variantId,
+                          imageUrl: ln.imageUrl,
+                          name: ln.productName ?? "Product",
+                          attributes: ln.attributes ?? null,
+                          quantity: ln.quantity,
+                          href: ln.storefrontProductUrl ?? null,
+                        }))
                       : null;
 
                   return (

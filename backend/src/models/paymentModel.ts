@@ -59,6 +59,7 @@ export const Payment = sequelize.define(
   {
     tableName: "payments",
     timestamps: true,
+    indexes: [{ fields: ["orderId"] }, { fields: ["status"] }, { fields: ["transactionId"] }],
   }
 );
 

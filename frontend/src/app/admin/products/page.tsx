@@ -14,8 +14,10 @@ import { createAdminProductColumns } from "../../../components/admin/AdminProduc
 import { ADMIN_LIST_DATA_TABLE_PROPS } from "@/src/constant";
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
 import { useProductStore, useCategoryStore } from "../../../stores";
+import { useDebounce } from "../../../hooks/useDebounce";
 import type { Product } from "../../../types";
 import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
 import { Spinner } from "@/src/components/ui/spinner";
 import {
   Dialog,
@@ -49,6 +51,12 @@ const ProductsPage = () => {
   const clearTableSelectionRef = useRef<(() => void) | null>(null);
 
   const [appliedFilters, setAppliedFilters] = useState(defaultAdminProductFilters);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
+
+  useEffect(() => {
+    setAppliedFilters((prev) => ({ ...prev, q: debouncedSearch }));
+  }, [debouncedSearch]);
 
   const refreshProducts = useCallback(() => {
     fetchProducts(buildAdminProductQueryParams(appliedFilters), { adminCatalog: true });
@@ -184,11 +192,22 @@ const ProductsPage = () => {
             columns={columns}
             data={products}
             getRowId={(row) => row.productId}
-            filterColumnId="name"
+            filterColumnId={undefined} // Disable client-side filtering
             filterPlaceholder="Search by name…"
             noun="products"
             toolbarEnd={
-              <AdminProductFilters categories={categories} applied={appliedFilters} onApply={setAppliedFilters} />
+              <div className="flex flex-1 items-center gap-2">
+                <div className="relative w-full max-w-sm">
+                  <Package className="text-muted-foreground absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    placeholder="Search by name…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <AdminProductFilters categories={categories} applied={appliedFilters} onApply={setAppliedFilters} />
+              </div>
             }
             onBulkDelete={({ selectedData, clearSelection }) => {
               clearTableSelectionRef.current = clearSelection;

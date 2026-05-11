@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ADMIN_LIST_DATA_TABLE_PROPS, ORDER_STATUS_FILTER_OPTIONS } from "@/src/constant";
 import { useOrderStore } from "../../../stores";
+import { useDebounce } from "../../../hooks/useDebounce";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
 import { AdminOrderFilters } from "../../../components/admin/AdminOrderFilters";
@@ -27,6 +28,13 @@ const AdminOrdersPage = () => {
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const debouncedSearch = useDebounce(searchDraft, 600);
+
+  useEffect(() => {
+    setAppliedSearch(debouncedSearch);
+    setPage(1);
+  }, [debouncedSearch]);
+
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Order[] | null>(null);
   const [deleteWorking, setDeleteWorking] = useState(false);

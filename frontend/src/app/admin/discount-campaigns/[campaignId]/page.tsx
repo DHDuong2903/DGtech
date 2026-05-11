@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AdminLayout } from "@/src/components/admin/AdminLayout";
 import { AdminContentLoader } from "@/src/components/admin/AdminLoading";
-import { DiscountCampaignForm } from "@/src/components/admin/discount-campaigns/DiscountCampaignForm";
+import dynamic from "next/dynamic";
+const DiscountCampaignForm = dynamic(() => import("@/src/components/admin/discount-campaigns/DiscountCampaignForm").then(mod => mod.DiscountCampaignForm), {
+  ssr: false,
+  loading: () => <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
+});
 import { discountCampaignsApi } from "@/src/apis/discountCampaignsApi";
 import { useDiscountCampaignStore } from "@/src/stores";
 import type { DiscountCampaign, DiscountCampaignFormPayload } from "@/src/types";

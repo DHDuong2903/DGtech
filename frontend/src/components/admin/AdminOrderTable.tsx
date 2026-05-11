@@ -54,7 +54,7 @@ export function createAdminOrderColumns(handlers: { onDelete: (order: Order) => 
       header: "Customer",
       cell: ({ row }) => {
         const o = row.original;
-        const label = o.user?.username?.trim() || o.user?.email?.trim() || "—";
+        const label = o.user?.username?.trim() || o.user?.email?.trim() || "";
         return (
           <div>
             <p className="text-sm font-medium">{label}</p>

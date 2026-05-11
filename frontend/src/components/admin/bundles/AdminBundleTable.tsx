@@ -18,7 +18,7 @@ import type { Bundle } from "@/src/types/bundleType";
 function discountLabel(b: Bundle) {
   if (b.discountKind === "PERCENT") return `${b.discountValue}%`;
   if (b.discountKind === "FIXED_AMOUNT") return `${b.discountValue.toFixed(2)} off`;
-  return "—";
+  return "";
 }
 
 export function createAdminBundleColumns(handlers: {

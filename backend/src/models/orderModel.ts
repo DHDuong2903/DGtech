@@ -135,5 +135,6 @@ export const Order = sequelize.define(
   {
     timestamps: true,
     tableName: "orders",
-  },
+    indexes: [{ fields: ["clerkId"] }, { fields: ["status"] }, { fields: ["phone"] }],
+  }
 );

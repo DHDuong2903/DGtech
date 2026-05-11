@@ -44,5 +44,6 @@ export const ProductVariant = sequelize.define(
   {
     timestamps: true,
     tableName: "product_variants",
+    indexes: [{ fields: ["productId"] }],
   }
 );
