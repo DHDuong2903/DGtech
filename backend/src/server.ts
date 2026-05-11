@@ -2,6 +2,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import compression from "compression";
 import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./libs/db.js";
@@ -47,8 +48,11 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    maxAge: 86400, // 24 hours
   }),
 );
+
+app.use(compression());
 
 app.use("/api/webhooks", webhookRoute);
 app.use(express.json());

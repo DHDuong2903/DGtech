@@ -215,7 +215,7 @@ export function BundleSelectedProductsTable({
                             }
                           />
                         ) : (
-                          "—"
+                          ""
                         )}
                       </TableCell>
                       <TableCell />

@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/src/components/admin/AdminLayout";
-import { BundleForm } from "@/src/components/admin/bundles/BundleForm";
+import dynamic from "next/dynamic";
+const BundleForm = dynamic(() => import("@/src/components/admin/bundles/BundleForm").then(mod => mod.BundleForm), {
+  ssr: false,
+  loading: () => <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
+});
 import { useBundleStore } from "@/src/stores";
 import type { BundleFormPayload } from "@/src/types";
 

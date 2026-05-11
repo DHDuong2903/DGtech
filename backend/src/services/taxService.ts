@@ -1,6 +1,34 @@
 // @ts-nocheck
 import { TaxSetting } from "../models/associationsModel.js";
 
+export function serializeTaxSettings(row: any) {
+  return {
+    enableTax: !!row.enableTax,
+    taxRate: Number(row.taxRate ?? 0.1),
+    taxIncluded: row.taxIncluded !== false,
+  };
+}
+
+export async function adminGetTaxConfig() {
+  const row = await getTaxSettings();
+  return serializeTaxSettings(row);
+}
+
+export async function adminUpdateTaxConfig(s: Record<string, unknown>) {
+  if (!s || typeof s !== "object") {
+    throw Object.assign(new Error("settings payload is required"), { status: 400 });
+  }
+  const row = await getTaxSettings();
+  const patch: any = {};
+  if (typeof s.enableTax === "boolean") patch.enableTax = s.enableTax;
+  if (s.taxRate != null) {
+    patch.taxRate = normalizeTaxRate(Number(s.taxRate));
+  }
+  if (typeof s.taxIncluded === "boolean") patch.taxIncluded = s.taxIncluded;
+  await row.update(patch);
+  return serializeTaxSettings(row);
+}
+
 function roundMoney(n: number) {
   return Math.round(Number(n) * 100) / 100;
 }

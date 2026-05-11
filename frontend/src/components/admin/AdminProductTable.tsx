@@ -71,7 +71,7 @@ export function createAdminProductColumns(handlers: {
       accessorFn: (row) => row.category?.name ?? "",
       id: "categoryName",
       header: "Category",
-      cell: ({ row }) => <Badge variant="outline">{row.original.category?.name ?? "—"}</Badge>,
+      cell: ({ row }) => <Badge variant="outline">{row.original.category?.name ?? ""}</Badge>,
     },
     {
       accessorKey: "price",

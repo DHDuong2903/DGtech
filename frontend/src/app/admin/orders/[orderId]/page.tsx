@@ -90,7 +90,7 @@ const formatShippingAddress = (
     clerkId?: string | null;
   },
 ) => {
-  if (!address?.trim()) return "—";
+  if (!address?.trim()) return "";
 
   const username = order.user?.username?.trim().toLowerCase();
   const email = order.user?.email?.trim().toLowerCase();
@@ -304,9 +304,9 @@ export default function AdminOrderDetailPage() {
 
             <AdminSection title="Customer information">
               <div className="space-y-3">
-                <DetailRow label="Name">{order.user?.username?.trim() || "—"}</DetailRow>
-                <DetailRow label="Email">{order.user?.email?.trim() || "—"}</DetailRow>
-                <DetailRow label="Phone">{order.phone?.trim() || "—"}</DetailRow>
+                <DetailRow label="Name">{order.user?.username?.trim() || ""}</DetailRow>
+                <DetailRow label="Email">{order.user?.email?.trim() || ""}</DetailRow>
+                <DetailRow label="Phone">{order.phone?.trim() || ""}</DetailRow>
                 <DetailRow label="Address">
                   <span className="leading-relaxed">{formatShippingAddress(order.shippingAddress, order)}</span>
                 </DetailRow>

@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AdminLayout } from "@/src/components/admin/AdminLayout";
 import { AdminContentLoader } from "@/src/components/admin/AdminLoading";
-import { BundleForm } from "@/src/components/admin/bundles/BundleForm";
+import dynamic from "next/dynamic";
+const BundleForm = dynamic(() => import("@/src/components/admin/bundles/BundleForm").then(mod => mod.BundleForm), {
+  ssr: false,
+  loading: () => <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
+});
 import { bundleApi } from "@/src/apis/bundleApi";
 import { useBundleStore } from "@/src/stores";
 import type { Bundle, BundleFormPayload } from "@/src/types";

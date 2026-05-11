@@ -22,9 +22,9 @@ export const sequelize = new Sequelize(databaseUrl, {
   },
   logging: false,
   pool: {
-    max: 5,
-    min: 0,
-    acquire: 60000,
+    max: 15,
+    min: 2,
+    acquire: 30000,
     idle: 10000,
   },
 });

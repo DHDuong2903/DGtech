@@ -20,6 +20,7 @@
   "dependencies": {
     "@clerk/express": "^1.7.46",
     "cloudinary": "^1.41.3",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dgtech": "file:..",
     "dotenv": "^17.2.3",
@@ -28,11 +29,13 @@
     "multer-storage-cloudinary": "^4.0.0",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
+    "redis": "^5.12.1",
     "sequelize": "^6.37.7",
     "sequelize-cli": "^6.6.5",
     "svix": "^1.81.0"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",

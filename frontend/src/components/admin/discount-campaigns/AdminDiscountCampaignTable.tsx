@@ -66,13 +66,13 @@ function discountLabel(c: DiscountCampaign) {
   }
   if (c.discountKind === "PERCENT") return `${c.discountValue}%`;
   if (c.discountKind === "FIXED_AMOUNT") return `${c.discountValue.toFixed(2)} off`;
-  return "—";
+  return "";
 }
 
 function formatPeriod(startIso: string, endIso: string | null): string {
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "numeric", year: "numeric" };
   const start = new Date(startIso);
-  if (Number.isNaN(start.getTime())) return "—";
+  if (Number.isNaN(start.getTime())) return "";
   const startStr = start.toLocaleDateString("vi-VN", opts);
   if (!endIso) return startStr;
   const end = new Date(endIso);

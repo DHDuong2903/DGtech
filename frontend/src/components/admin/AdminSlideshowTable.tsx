@@ -79,7 +79,7 @@ export function createAdminSlideshowColumns(handlers: {
               month: "short",
               day: "numeric",
             })
-          : "—";
+          : "";
       },
     },
     {

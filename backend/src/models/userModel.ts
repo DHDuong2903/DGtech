@@ -38,6 +38,7 @@ export const User = sequelize.define(
   {
     timestamps: true,
     tableName: "users",
+    indexes: [{ fields: ["role"] }, { fields: ["tier"] }],
   }
 );
 

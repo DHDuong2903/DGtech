@@ -1,15 +1,12 @@
 // @ts-nocheck
-import { listProvinces, listWardsForProvince } from "../helpers/vnAddressHelper.js";
+import { getProvinces, getWardsByProvince } from "../services/geoVnService.js";
 
 export const getVnProvinces = async (_req: any, res: any) => {
   try {
-    return res.status(200).json({
-      provinces: listProvinces(),
-      meta: { provinceCount: 34, source: "backend/src/data/vn/*.json (sync with provinces.open-api.vn v2)" },
-    });
-  } catch (e) {
+    return res.status(200).json(getProvinces());
+  } catch (e: any) {
     console.error("getVnProvinces", e);
-    return res.status(500).json({ error: "Lỗi khi tải danh sách tỉnh" });
+    return res.status(500).json({ error: "Error loading provinces" });
   }
 };
 
@@ -17,15 +14,11 @@ export const getVnWardsByProvince = async (req: any, res: any) => {
   try {
     const { provinceCode } = req.params;
     if (!provinceCode) {
-      return res.status(400).json({ error: "Thiếu mã tỉnh" });
+      return res.status(400).json({ error: "Missing province code" });
     }
-    const wards = listWardsForProvince(provinceCode);
-    if (wards.length === 0) {
-      return res.status(404).json({ error: "Không tìm thấy phường/xã cho mã tỉnh này" });
-    }
-    return res.status(200).json({ wards, provinceCode });
-  } catch (e) {
+    return res.status(200).json(getWardsByProvince(provinceCode));
+  } catch (e: any) {
     console.error("getVnWardsByProvince", e);
-    return res.status(500).json({ error: "Lỗi khi tải phường/xã" });
+    return res.status(e.status || 500).json({ error: e.message || "Error loading wards" });
   }
 };

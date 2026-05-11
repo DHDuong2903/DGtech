@@ -17,6 +17,7 @@ export type AdminProductFilterValues = {
   status: string;
   minPrice: string;
   maxPrice: string;
+  q: string;
 };
 
 export const defaultAdminProductFilters: AdminProductFilterValues = {
@@ -24,6 +25,7 @@ export const defaultAdminProductFilters: AdminProductFilterValues = {
   status: "all",
   minPrice: "",
   maxPrice: "",
+  q: "",
 };
 
 export function countAppliedAdminProductFilters(applied: AdminProductFilterValues): number {
@@ -32,6 +34,7 @@ export function countAppliedAdminProductFilters(applied: AdminProductFilterValue
   if (applied.status !== "all") n++;
   if (applied.minPrice.trim() !== "") n++;
   if (applied.maxPrice.trim() !== "") n++;
+  if (applied.q.trim() !== "") n++;
   return n;
 }
 
@@ -44,6 +47,7 @@ export function buildAdminProductQueryParams(
   status?: "ACTIVE" | "DRAFT";
   minPrice?: number;
   maxPrice?: number;
+  q?: string;
 } {
   const params: {
     page: number;
@@ -52,6 +56,7 @@ export function buildAdminProductQueryParams(
     status?: "ACTIVE" | "DRAFT";
     minPrice?: number;
     maxPrice?: number;
+    q?: string;
   } = { page: 1, limit: 1000 };
 
   if (f.categoryId !== "all") {
@@ -70,6 +75,9 @@ export function buildAdminProductQueryParams(
   if (max !== "") {
     const v = parseFloat(max);
     if (!Number.isNaN(v)) params.maxPrice = v;
+  }
+  if (f.q.trim() !== "") {
+    params.q = f.q.trim();
   }
   return params;
 }

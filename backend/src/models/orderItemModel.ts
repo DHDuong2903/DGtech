@@ -37,6 +37,7 @@ export const OrderItem = sequelize.define(
   {
     timestamps: true,
     tableName: "order_items",
+    indexes: [{ fields: ["orderId"] }, { fields: ["productId"] }, { fields: ["variantId"] }],
   }
 );
 

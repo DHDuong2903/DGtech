@@ -49,6 +49,7 @@ export const Product = sequelize.define(
   {
     timestamps: true,
     tableName: "products",
+    indexes: [{ fields: ["categoryId"] }, { fields: ["status"] }],
   }
 );
 

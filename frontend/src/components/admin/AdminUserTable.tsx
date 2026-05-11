@@ -18,7 +18,7 @@ import { cn } from "@/src/lib/utils";
 
 function TierBadge({ tier }: { tier: User["tier"] }) {
   if (!tier) {
-    return <span className="text-muted-foreground text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm"></span>;
   }
   const styles: Record<NonNullable<User["tier"]>, string> = {
     bronze: "font-normal border-orange-700/20 bg-orange-50 text-orange-800 dark:bg-orange-950/30 dark:text-orange-200",
@@ -77,7 +77,7 @@ export function createAdminUserColumns(handlers: {
     {
       accessorKey: "username",
       header: "Username",
-      cell: ({ row }) => row.original.username || "—",
+      cell: ({ row }) => row.original.username || "",
     },
     {
       accessorKey: "email",
@@ -88,7 +88,7 @@ export function createAdminUserColumns(handlers: {
       header: "Phone",
       cell: ({ row }) => {
         const { phone, defaultAddressPhone } = row.original;
-        return phone || defaultAddressPhone || "—";
+        return phone || defaultAddressPhone || "";
       },
     },
     {
@@ -96,7 +96,7 @@ export function createAdminUserColumns(handlers: {
       header: "Address",
       cell: ({ row }) => {
         const a = row.original.addressSummary;
-        if (!a) return "—";
+        if (!a) return "";
         return (
           <span className="block max-w-[min(280px,30vw)] truncate text-sm" title={a}>
             {a}
@@ -116,7 +116,7 @@ export function createAdminUserColumns(handlers: {
             month: "short",
             day: "numeric",
           })
-          : "—";
+          : "";
       },
     },
     {
