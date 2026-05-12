@@ -11,6 +11,7 @@ export * from "./userAddressType";
 export * from "./discountCampaignType";
 export * from "./bundleType";
 export * from "./voucherType";
+export * from "./stockReceiptType";
 
 // API Response Types
 export interface ApiResponse<T> {

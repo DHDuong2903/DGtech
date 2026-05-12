@@ -1,5 +1,18 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgePercent, Images, Layers, LayoutDashboard, Package, ReceiptText, Sofa, Tag, Ticket, Truck, Users } from "lucide-react";
+import {
+  BadgePercent,
+  Images,
+  Layers,
+  LayoutDashboard,
+  Package,
+  ReceiptText,
+  Sofa,
+  Tag,
+  Ticket,
+  Truck,
+  Users,
+  Warehouse,
+} from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Admin layout
@@ -25,6 +38,7 @@ export const ADMIN_SIDEBAR_NAV_ITEMS: AdminSidebarNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
   { id: "orders", label: "Orders", icon: Package, href: "/admin/orders" },
   { id: "products", label: "Products", icon: Sofa, href: "/admin/products" },
+  { id: "stock-receipts", label: "Stock receipts", icon: Warehouse, href: "/admin/stock-receipts" },
   { id: "categories", label: "Categories", icon: Tag, href: "/admin/categories" },
   { id: "users", label: "Users", icon: Users, href: "/admin/users" },
   { id: "slideshows", label: "Slideshows", icon: Images, href: "/admin/slideshows" },
@@ -54,6 +68,7 @@ export const API_ROUTE = {
   BUNDLES: "/bundles",
   VOUCHERS: "/vouchers",
   TAXS: "/taxs",
+  STOCK_RECEIPTS: "/stock-receipts",
 } as const;
 
 // ---------------------------------------------------------------------------

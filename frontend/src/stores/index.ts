@@ -9,3 +9,4 @@ export { useSlideshowStore } from "./useSlideshowStore";
 export { useDiscountCampaignStore } from "./useDiscountCampaignStore";
 export { useBundleStore } from "./useBundleStore";
 export { useVoucherStore } from "./useVoucherStore";
+export { useStockReceiptStore } from "./useStockReceiptStore";

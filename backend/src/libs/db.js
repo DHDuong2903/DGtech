@@ -5,9 +5,7 @@ dotenv.config({ silent: true });
 
 const databaseUrl = process.env.DATABASE_URL || "";
 
-const useSsl =
-  process.env.NODE_ENV === "production" ||
-  /neon\.tech|sslmode=require|amazonaws\.com/i.test(databaseUrl);
+const useSsl = process.env.NODE_ENV === "production" || /neon\.tech|sslmode=require|amazonaws\.com/i.test(databaseUrl);
 
 export const sequelize = new Sequelize(databaseUrl, {
   dialect: "postgres",
