@@ -177,7 +177,7 @@ function DashboardBlock({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <Card className="overflow-hidden rounded-xl border bg-card shadow-sm py-0">
       <div className="flex flex-col gap-4 p-4">
         <div className="flex flex-row flex-wrap items-center justify-between gap-4">
           <div className="text-base font-semibold leading-none tracking-tight">{title}</div>
@@ -632,7 +632,7 @@ export const DashboardContent = () => {
                     Top sản phẩm theo doanh thu dòng (kỳ đã chọn)
                   </p>
                   {topProductsByRevenue.length === 0 ? (
-                    <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-6 text-center text-sm">
+                    <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-center text-sm">
                       Không có đơn trong kỳ.
                     </div>
                   ) : (
