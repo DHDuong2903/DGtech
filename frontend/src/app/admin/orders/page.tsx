@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ADMIN_LIST_DATA_TABLE_PROPS, ORDER_STATUS_FILTER_OPTIONS } from "@/src/constant";
 import { useOrderStore } from "../../../stores";
 import { useDebounce } from "../../../hooks/useDebounce";
@@ -11,7 +12,14 @@ import { createAdminOrderColumns } from "../../../components/admin/AdminOrderTab
 import { DeleteConfirmModal } from "../../../components/admin/DeleteConfirmModal";
 import { Button } from "@/src/components/ui/button";
 import { Spinner } from "@/src/components/ui/spinner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
 import { DataTable } from "@/src/components/ui/data-table";
 import { Package, Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,10 +29,22 @@ import { getStatusLabel } from "../../../utils";
 /** Per-page row count: same as other admin DataTables (`ADMIN_LIST_DATA_TABLE_PROPS.pageSize`). */
 const PAGE_SIZE = ADMIN_LIST_DATA_TABLE_PROPS.pageSize;
 
-const AdminOrdersPage = () => {
+function isOrderStatusFilterValue(s: string): s is (typeof ORDER_STATUS_FILTER_OPTIONS)[number] {
+  return (ORDER_STATUS_FILTER_OPTIONS as readonly string[]).includes(s);
+}
+
+function AdminOrdersPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { adminOrders: orders, adminPagination, loading, fetchAllOrders, deleteAdminOrder, deleteAdminOrders } =
     useOrderStore();
-  const [filter, setFilter] = useState<string>("ALL");
+
+  const [filter, setFilter] = useState<string>(() => {
+    const s = searchParams.get("status");
+    if (s && isOrderStatusFilterValue(s)) return s;
+    return "ALL";
+  });
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -34,6 +54,13 @@ const AdminOrdersPage = () => {
     setAppliedSearch(debouncedSearch);
     setPage(1);
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    const next = s && isOrderStatusFilterValue(s) ? s : "ALL";
+    setFilter((prev) => (prev === next ? prev : next));
+    setPage(1);
+  }, [searchParams]);
 
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [bulkDeleteTargets, setBulkDeleteTargets] = useState<Order[] | null>(null);
@@ -53,6 +80,16 @@ const AdminOrdersPage = () => {
   const runSearch = () => {
     setPage(1);
     setAppliedSearch(searchDraft);
+  };
+
+  const applyStatusFilter = (status: string) => {
+    setFilter(status);
+    setPage(1);
+    const params = new URLSearchParams(searchParams.toString());
+    if (status === "ALL") params.delete("status");
+    else params.set("status", status);
+    const q = params.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
   };
 
   const handleDeleteConfirm = async () => {
@@ -129,10 +166,7 @@ const AdminOrdersPage = () => {
               key={status}
               variant={filter === status ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                setFilter(status);
-                setPage(1);
-              }}
+              onClick={() => applyStatusFilter(status)}
             >
               {status === "ALL" ? "All" : getStatusLabel(status as Order["status"])}
             </Button>
@@ -242,6 +276,18 @@ const AdminOrdersPage = () => {
       </Dialog>
     </AdminLayout>
   );
-};
+}
 
-export default AdminOrdersPage;
+export default function AdminOrdersPage() {
+  return (
+    <Suspense
+      fallback={
+        <AdminLayout>
+          <AdminContentLoader minHeightClass="min-h-[320px]" />
+        </AdminLayout>
+      }
+    >
+      <AdminOrdersPageInner />
+    </Suspense>
+  );
+}
