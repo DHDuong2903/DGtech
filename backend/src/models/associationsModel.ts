@@ -25,6 +25,9 @@ import { BundlePurchase } from "./bundlePurchaseModel.js";
 import { Voucher } from "./voucherModel.js";
 import { UserVoucherRedemption } from "./userVoucherRedemptionModel.js";
 import { TaxSetting } from "./taxSettingModel.js";
+import { StockReceipt } from "./stockReceiptModel.js";
+import { StockReceiptLine } from "./stockReceiptLineModel.js";
+import { InventoryMovement } from "./inventoryMovementModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -143,6 +146,17 @@ UserVoucherRedemption.belongsTo(User, { foreignKey: "clerkId", as: "user" });
 Order.hasMany(UserVoucherRedemption, { foreignKey: "orderId", as: "voucherRedemptions" });
 UserVoucherRedemption.belongsTo(Order, { foreignKey: "orderId", as: "order" });
 
+StockReceipt.hasMany(StockReceiptLine, { foreignKey: "receiptId", as: "lines", onDelete: "CASCADE" });
+StockReceiptLine.belongsTo(StockReceipt, { foreignKey: "receiptId", as: "receipt" });
+StockReceiptLine.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
+ProductVariant.hasMany(StockReceiptLine, { foreignKey: "variantId", as: "stockReceiptLines" });
+
+InventoryMovement.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
+ProductVariant.hasMany(InventoryMovement, { foreignKey: "variantId", as: "inventoryMovements" });
+InventoryMovement.belongsTo(Product, { foreignKey: "productId", as: "product" });
+StockReceipt.hasMany(InventoryMovement, { foreignKey: "refReceiptId", as: "inventoryMovements" });
+InventoryMovement.belongsTo(StockReceipt, { foreignKey: "refReceiptId", as: "refReceipt" });
+
 export {
   Category,
   Product,
@@ -170,4 +184,7 @@ export {
   Voucher,
   UserVoucherRedemption,
   TaxSetting,
+  StockReceipt,
+  StockReceiptLine,
+  InventoryMovement,
 };

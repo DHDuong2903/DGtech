@@ -25,12 +25,15 @@ export type RuleProductPickerConfirm = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  discountKind: DiscountKind;
-  discountValue: number;
+  /** Unused by the picker UI; optional for reuse outside discount campaigns. */
+  discountKind?: DiscountKind;
+  discountValue?: number;
   initialProductIds: string[];
   initialVariantByProduct: Record<string, string[]>;
   initialVariantAllByProduct: Record<string, string[]>;
   onConfirm: (result: RuleProductPickerConfirm) => void;
+  /** Overrides the default dialog title. */
+  dialogTitle?: string;
 };
 
 /**
@@ -48,6 +51,7 @@ export function DiscountCampaignRuleProductPickerModal({
   initialVariantByProduct,
   initialVariantAllByProduct,
   onConfirm,
+  dialogTitle = "Select products",
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Product[]>([]);
@@ -288,7 +292,7 @@ export function DiscountCampaignRuleProductPickerModal({
         className="flex max-h-[min(90dvh,880px)] w-[min(100%,calc(100vw-2rem))] max-w-[min(92vw,720px)] flex-col gap-3 overflow-hidden p-4 sm:max-w-[min(92vw,720px)]"
       >
         <DialogHeader className="shrink-0 space-y-0 p-0">
-          <DialogTitle>Select products</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
 
         {/* Search bar */}
