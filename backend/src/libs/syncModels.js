@@ -95,5 +95,6 @@ export const syncModels = async () => {
     console.log("Models da duoc dong bo voi database");
   } catch (error) {
     console.error("Loi khi dong bo syncModels:", error);
+    throw error;
   }
 };
