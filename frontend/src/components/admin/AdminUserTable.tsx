@@ -71,7 +71,7 @@ export function createAdminUserColumns(handlers: {
     },
     {
       accessorKey: "tier",
-      header: "Tier",
+      header: "Membership tier",
       cell: ({ row }) => <TierBadge tier={row.original.tier} />,
     },
     {

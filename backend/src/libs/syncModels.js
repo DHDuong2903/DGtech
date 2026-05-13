@@ -92,6 +92,21 @@ export const syncModels = async () => {
     await sequelize.query(`
       ALTER TABLE IF EXISTS "orders" DROP COLUMN IF EXISTS "applyTaxToShippingSnapshot";
     `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "rank_settings" (
+        "id" INTEGER PRIMARY KEY,
+        "bronzeMax" DECIMAL(12, 2) NOT NULL DEFAULT 5000000,
+        "silverMax" DECIMAL(12, 2) NOT NULL DEFAULT 20000000,
+        "cancelPenaltyUnit" DECIMAL(12, 2) NOT NULL DEFAULT 500000,
+        "createdAt" TIMESTAMPTZ NOT NULL,
+        "updatedAt" TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await sequelize.query(`
+      INSERT INTO "rank_settings" ("id","bronzeMax","silverMax","cancelPenaltyUnit","createdAt","updatedAt")
+      VALUES (1,5000000,20000000,500000,NOW(),NOW())
+      ON CONFLICT ("id") DO NOTHING;
+    `);
     console.log("Models da duoc dong bo voi database");
   } catch (error) {
     console.error("Loi khi dong bo syncModels:", error);

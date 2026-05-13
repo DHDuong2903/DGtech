@@ -1,10 +1,12 @@
 // @ts-nocheck
 import {
   getMe as getMeSvc,
+  getMyRank as getMyRankSvc,
   getAllUsers as getAllUsersSvc,
   updateUserRole as updateUserRoleSvc,
   deleteUser as deleteUserSvc,
 } from "../services/userService.js";
+import { adminGetRankConfig as adminGetRankConfigSvc, adminUpdateRankConfig as adminUpdateRankConfigSvc } from "../services/rankSettingService.js";
 
 export const getMe = async (req: any, res: any) => {
   try {
@@ -26,6 +28,16 @@ export const getAllUsers = async (req: any, res: any) => {
   }
 };
 
+export const getMyRank = async (req: any, res: any) => {
+  try {
+    const rank = await getMyRankSvc(req.auth.userId);
+    return res.status(200).json({ message: "GetMyRank success", rank });
+  } catch (e: any) {
+    console.error("Loi khi lay rank user:", e);
+    return res.status(e.status || 500).json({ message: e.message || "Loi he thong" });
+  }
+};
+
 export const updateUserRole = async (req: any, res: any) => {
   try {
     const user = await updateUserRoleSvc(req.params.clerkId, req.body.role);
@@ -43,5 +55,25 @@ export const deleteUser = async (req: any, res: any) => {
   } catch (e: any) {
     console.error("Error deleting user:", e);
     return res.status(e.status || 500).json({ message: e.message || "Internal server error" });
+  }
+};
+
+export const adminGetRankConfig = async (_req: any, res: any) => {
+  try {
+    const settings = await adminGetRankConfigSvc();
+    return res.status(200).json({ settings });
+  } catch (e: any) {
+    console.error("adminGetRankConfig:", e);
+    return res.status(e.status || 500).json({ error: e.message || "Could not load rank settings" });
+  }
+};
+
+export const adminPutRankConfig = async (req: any, res: any) => {
+  try {
+    const settings = await adminUpdateRankConfigSvc(req.body?.settings);
+    return res.status(200).json({ settings });
+  } catch (e: any) {
+    console.error("adminPutRankConfig:", e);
+    return res.status(e.status || 500).json({ error: e.message || "Could not save rank settings" });
   }
 };
