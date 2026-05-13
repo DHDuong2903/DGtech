@@ -60,7 +60,8 @@ export const Navbar = () => {
   const metadataRankRaw = user?.publicMetadata?.rank;
   const metadataRank =
     typeof metadataRankRaw === "string" && metadataRankRaw.trim().length > 0 ? metadataRankRaw.trim() : null;
-  const menuRankLabel = metadataRank || (rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : null);
+  const menuRankLabel =
+    metadataRank || (rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : null);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -104,15 +105,10 @@ export const Navbar = () => {
   return (
     <header className="bg-background border-b border-border">
       <div className={cn("mx-auto flex h-16 max-w-7xl items-center", STOREFRONT_H_PADDING)}>
-        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="DGTech home">
-          <Image
-            src="/logodg.png"
-            alt=""
-            width={44}
-            height={44}
-            className="h-9 w-9 object-contain sm:h-10 sm:w-10"
-            priority
-          />
+        <Link href="/" className="flex shrink-0 items-center gap-1" aria-label="DGTech home">
+          <div className="relative h-9 w-9 sm:h-10 sm:w-10 shrink-0">
+            <Image src="/logodg.png" alt="" fill className="object-contain" priority />
+          </div>
           <span className="bg-linear-to-r from-orange-600 to-orange-400 bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
             DGtech
           </span>
