@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Store } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Star, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { Badge } from "@/src/components/ui/badge";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { useAuth } from "@/src/hooks";
 import { useCartStore } from "@/src/stores";
@@ -15,6 +16,8 @@ import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { ThemeToggle } from "@/src/components/ThemeToggle";
 import { NavbarCategories } from "@/src/components/public/layout/NavbarCategories";
+import { usersApi } from "@/src/apis/userApi";
+import type { UserRank } from "@/src/types";
 
 const navUnderline =
   "group relative inline-flex items-center gap-1.5 text-sm text-foreground/80 transition-colors hover:text-foreground " +
@@ -35,19 +38,58 @@ function cartQuantityTotal(cart: Cart) {
   return cart.items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
+function rankBadgeClass(rankLabel: string) {
+  const tier = rankLabel.trim().toLowerCase();
+  if (tier === "gold") {
+    return "font-normal border-yellow-500/40 bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-200";
+  }
+  if (tier === "silver") {
+    return "font-normal border-slate-400/30 bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200";
+  }
+  return "font-normal border-orange-700/20 bg-orange-50 text-orange-800 dark:bg-orange-950/30 dark:text-orange-200";
+}
+
 export const Navbar = () => {
   const router = useRouter();
   const { isAdmin, isLoading } = useAuth();
   const { cart, fetchCart } = useCartStore();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
   const [navSearch, setNavSearch] = useState("");
+  const [rank, setRank] = useState<UserRank | null>(null);
   const cartQty = cart ? cartQuantityTotal(cart) : 0;
+  const metadataRankRaw = user?.publicMetadata?.rank;
+  const metadataRank =
+    typeof metadataRankRaw === "string" && metadataRankRaw.trim().length > 0 ? metadataRankRaw.trim() : null;
+  const menuRankLabel = metadataRank || (rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : null);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       fetchCart();
     }
   }, [fetchCart, isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!isLoaded || !isSignedIn) {
+      return () => {
+        active = false;
+      };
+    }
+
+    usersApi
+      .getMyRank()
+      .then((data) => {
+        if (active) setRank(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load rank badge:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isLoaded, isSignedIn]);
 
   const handleNavSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,17 +189,29 @@ export const Navbar = () => {
             </SignInButton>
           </SignedOut>
           <SignedIn>
-            <UserButton>
-              <UserButton.MenuItems>
-                <UserButton.Action label="manageAccount" />
-                <UserButton.Link
-                  label="Manage addresses"
-                  href="/addresses"
-                  labelIcon={<MapPin className="h-4 w-4" aria-hidden />}
-                />
-                <UserButton.Action label="signOut" />
-              </UserButton.MenuItems>
-            </UserButton>
+            <div className="flex items-center gap-2">
+              {menuRankLabel && (
+                <Badge variant="outline" className={cn("hidden sm:inline-flex", rankBadgeClass(menuRankLabel))}>
+                  {menuRankLabel}
+                </Badge>
+              )}
+              <UserButton>
+                <UserButton.MenuItems>
+                  <UserButton.Action label="manageAccount" />
+                  <UserButton.Link
+                    label="Membership tier"
+                    href="/membership"
+                    labelIcon={<Star className="h-4 w-4" aria-hidden />}
+                  />
+                  <UserButton.Link
+                    label="Manage addresses"
+                    href="/addresses"
+                    labelIcon={<MapPin className="h-4 w-4" aria-hidden />}
+                  />
+                  <UserButton.Action label="signOut" />
+                </UserButton.MenuItems>
+              </UserButton>
+            </div>
           </SignedIn>
         </div>
       </div>

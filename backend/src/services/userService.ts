@@ -2,6 +2,28 @@
 import { Op } from "sequelize";
 import { User } from "../models/userModel.js";
 import { UserAddress } from "../models/userAddressModel.js";
+import { Order } from "../models/orderModel.js";
+import { getRankSettings, serializeRankSettings } from "./rankSettingService.js";
+
+const SUCCESS_ORDER_STATUSES = ["DELIVERED", "COMPLETED"] as const;
+
+function resolveRank(score: number, cfg: { bronzeMax: number; silverMax: number }): "bronze" | "silver" | "gold" {
+  if (score >= cfg.silverMax) return "gold";
+  if (score >= cfg.bronzeMax) return "silver";
+  return "bronze";
+}
+
+function resolveNextRank(rank: "bronze" | "silver" | "gold"): "silver" | "gold" | null {
+  if (rank === "bronze") return "silver";
+  if (rank === "silver") return "gold";
+  return null;
+}
+
+function resolveThreshold(rank: "bronze" | "silver" | "gold", cfg: { bronzeMax: number; silverMax: number }): number {
+  if (rank === "silver") return cfg.bronzeMax;
+  if (rank === "gold") return cfg.silverMax;
+  return 0;
+}
 
 /** One query for all clerkIds, then pick default (else oldest) per user */
 export async function loadPrimaryAddressByClerkId(clerkIds: string[]) {
@@ -49,6 +71,48 @@ export function userToAdminListPayload(userInstance: any, primaryAddr: any | nul
   };
 }
 
+async function buildTierByClerkId(clerkIds: string[]) {
+  const map = new Map<string, "bronze" | "silver" | "gold">();
+  const unique = [...new Set(clerkIds.filter(Boolean))];
+  if (!unique.length) return map;
+
+  const settings = serializeRankSettings(await getRankSettings());
+
+  const [successRows, cancelRows] = await Promise.all([
+    Order.findAll({
+      where: { clerkId: { [Op.in]: unique }, status: { [Op.in]: SUCCESS_ORDER_STATUSES as unknown as string[] } },
+      attributes: ["clerkId", [Order.sequelize.fn("SUM", Order.sequelize.col("totalPrice")), "successValue"]],
+      group: ["clerkId"],
+      raw: true,
+    }),
+    Order.findAll({
+      where: { clerkId: { [Op.in]: unique }, status: "CANCELLED" },
+      attributes: ["clerkId", [Order.sequelize.fn("COUNT", Order.sequelize.col("orderId")), "cancelOrderCount"]],
+      group: ["clerkId"],
+      raw: true,
+    }),
+  ]);
+
+  const successById = new Map<string, number>();
+  const cancelById = new Map<string, number>();
+
+  for (const row of successRows as any[]) {
+    successById.set(String(row.clerkId), Number(row.successValue || 0));
+  }
+  for (const row of cancelRows as any[]) {
+    cancelById.set(String(row.clerkId), Number(row.cancelOrderCount || 0));
+  }
+
+  for (const clerkId of unique) {
+    const successValue = successById.get(clerkId) || 0;
+    const cancelCount = cancelById.get(clerkId) || 0;
+    const score = Math.max(0, successValue - cancelCount * settings.cancelPenaltyUnit);
+    map.set(clerkId, resolveRank(score, settings));
+  }
+
+  return map;
+}
+
 export async function getMe(clerkId: string) {
   const user = await User.findOne({ where: { clerkId } });
   if (!user) {
@@ -57,11 +121,57 @@ export async function getMe(clerkId: string) {
   return user;
 }
 
+export async function getMyRank(clerkId: string) {
+  const rankSettingRow = await getRankSettings();
+  const settings = serializeRankSettings(rankSettingRow);
+
+  const [successAgg, cancelCount] = await Promise.all([
+    Order.sum("totalPrice", { where: { clerkId, status: { [Op.in]: SUCCESS_ORDER_STATUSES as unknown as string[] } } }),
+    Order.count({ where: { clerkId, status: "CANCELLED" } }),
+  ]);
+
+  const successValue = Number(successAgg || 0);
+  const penaltyValue = Number(cancelCount || 0) * settings.cancelPenaltyUnit;
+  const score = Math.max(0, successValue - penaltyValue);
+  const currentRank = resolveRank(score, settings);
+  const nextRank = resolveNextRank(currentRank);
+
+  const currentThreshold = resolveThreshold(currentRank, settings);
+  const nextThreshold = nextRank ? resolveThreshold(nextRank, settings) : null;
+  const remainingToNext = nextThreshold ? Math.max(0, nextThreshold - score) : 0;
+  const range = nextThreshold ? nextThreshold - currentThreshold : 0;
+  const normalized = range > 0 ? ((score - currentThreshold) / range) * 100 : 100;
+  const progressPercent = Math.max(0, Math.min(100, Math.round(normalized)));
+
+  return {
+    currentRank,
+    nextRank,
+    score,
+    successValue,
+    cancelOrderCount: Number(cancelCount || 0),
+    cancelPenaltyUnit: settings.cancelPenaltyUnit,
+    penaltyValue,
+    remainingToNext,
+    progressPercent,
+    thresholds: {
+      bronzeMax: settings.bronzeMax,
+      silverMax: settings.silverMax,
+    },
+  };
+}
+
 export async function getAllUsers() {
   const users = await User.findAll({ order: [["createdAt", "DESC"]] });
-  const addrByClerk = await loadPrimaryAddressByClerkId(users.map((u: any) => u.clerkId));
+  const clerkIds = users.map((u: any) => u.clerkId);
+  const [addrByClerk, tierByClerk] = await Promise.all([
+    loadPrimaryAddressByClerkId(clerkIds),
+    buildTierByClerkId(clerkIds),
+  ]);
   return {
-    users: users.map((u: any) => userToAdminListPayload(u, addrByClerk.get(u.clerkId))),
+    users: users.map((u: any) => ({
+      ...userToAdminListPayload(u, addrByClerk.get(u.clerkId)),
+      tier: tierByClerk.get(u.clerkId) || "bronze",
+    })),
     total: users.length,
   };
 }
@@ -76,8 +186,14 @@ export async function updateUserRole(clerkId: string, role: string) {
   }
   await user.update({ role });
   await user.reload();
-  const addrByClerk = await loadPrimaryAddressByClerkId([user.clerkId]);
-  return userToAdminListPayload(user, addrByClerk.get(user.clerkId));
+  const [addrByClerk, tierByClerk] = await Promise.all([
+    loadPrimaryAddressByClerkId([user.clerkId]),
+    buildTierByClerkId([user.clerkId]),
+  ]);
+  return {
+    ...userToAdminListPayload(user, addrByClerk.get(user.clerkId)),
+    tier: tierByClerk.get(user.clerkId) || "bronze",
+  };
 }
 
 export async function deleteUser(clerkId: string) {

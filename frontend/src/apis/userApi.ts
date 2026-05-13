@@ -1,7 +1,7 @@
 // Users API Service
 import { API_ROUTE } from "../constant";
 import axiosInstance from "../lib/axios";
-import type { User, ApiResponse } from "../types";
+import type { User, ApiResponse, UserRank, RankSettings } from "../types";
 
 export const usersApi = {
   getByClerkId: async (clerkId: string): Promise<User> => {
@@ -30,6 +30,39 @@ export const usersApi = {
       return data;
     } catch (error) {
       console.error("Error fetching all users:", error);
+      throw error;
+    }
+  },
+
+  getMyRank: async (): Promise<UserRank> => {
+    try {
+      const { data } = await axiosInstance.get<{ message: string; rank: UserRank }>(`${API_ROUTE.USERS}/me/rank`);
+      return data.rank;
+    } catch (error) {
+      console.error("Error fetching my rank:", error);
+      throw error;
+    }
+  },
+
+  adminGetRankConfig: async (): Promise<{ settings: RankSettings }> => {
+    try {
+      const { data } = await axiosInstance.get<{ settings: RankSettings }>(`${API_ROUTE.USERS}/admin/rank-config`);
+      return data;
+    } catch (error) {
+      console.error("Error fetching rank settings:", error);
+      throw error;
+    }
+  },
+
+  adminPutRankConfig: async (payload: { settings: RankSettings }): Promise<{ settings: RankSettings }> => {
+    try {
+      const { data } = await axiosInstance.put<{ settings: RankSettings }>(
+        `${API_ROUTE.USERS}/admin/rank-config`,
+        payload,
+      );
+      return data;
+    } catch (error) {
+      console.error("Error updating rank settings:", error);
       throw error;
     }
   },

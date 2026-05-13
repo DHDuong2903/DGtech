@@ -21,3 +21,27 @@ export interface UserFormData {
   email: string;
   phone?: string;
 }
+
+export type UserRankTier = "bronze" | "silver" | "gold";
+
+export interface UserRank {
+  currentRank: UserRankTier;
+  nextRank: Exclude<UserRankTier, "bronze"> | null;
+  score: number;
+  successValue: number;
+  cancelOrderCount: number;
+  cancelPenaltyUnit: number;
+  penaltyValue: number;
+  remainingToNext: number;
+  progressPercent: number;
+  thresholds: {
+    bronzeMax: number;
+    silverMax: number;
+  };
+}
+
+export interface RankSettings {
+  bronzeMax: number;
+  silverMax: number;
+  cancelPenaltyUnit: number;
+}
