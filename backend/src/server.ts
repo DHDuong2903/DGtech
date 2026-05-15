@@ -24,6 +24,7 @@ import bundleRoute from "./routes/bundleRoute.js";
 import voucherRoute from "./routes/voucherRoute.js";
 import taxRoute from "./routes/taxRoute.js";
 import stockReceiptRoute from "./routes/stockReceiptRoute.js";
+import aiChatRoute from "./routes/aiChatRoute.js";
 
 dotenv.config();
 const app = express();
@@ -73,6 +74,7 @@ app.use("/api/bundles", bundleRoute);
 app.use("/api/vouchers", voucherRoute);
 app.use("/api/taxs", taxRoute);
 app.use("/api/stock-receipts", stockReceiptRoute);
+app.use("/api/ai", aiChatRoute);
 
 // JSON errors for /api (multer/Cloudinary used to call next(err) → HTML `<pre>[object Object]</pre>`)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

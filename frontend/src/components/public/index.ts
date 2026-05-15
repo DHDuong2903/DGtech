@@ -12,3 +12,6 @@ export * from "./layout";
 
 // Home components
 export * from "./home";
+
+// Floating AI Widget
+export { FloatingAIWidget } from "./FloatingAIWidget";

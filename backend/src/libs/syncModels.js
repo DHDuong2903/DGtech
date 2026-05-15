@@ -17,6 +17,8 @@ import { DiscountCampaignVariantPrice } from "../models/discountCampaignVariantP
 import { Voucher } from "../models/voucherModel.js";
 import { UserVoucherRedemption } from "../models/userVoucherRedemptionModel.js";
 import { TaxSetting } from "../models/taxSettingModel.js";
+import { AiConversation } from "../models/aiConversationModel.js";
+import { AiConversationMessage } from "../models/aiConversationMessageModel.js";
 
 // Import associations
 import "../models/associationsModel.js";
@@ -106,6 +108,39 @@ export const syncModels = async () => {
       INSERT INTO "rank_settings" ("id","bronzeMax","silverMax","cancelPenaltyUnit","createdAt","updatedAt")
       VALUES (1,5000000,20000000,500000,NOW(),NOW())
       ON CONFLICT ("id") DO NOTHING;
+    `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "ai_conversations" (
+        "conversationId" UUID PRIMARY KEY,
+        "clerkId" VARCHAR(255),
+        "guestSessionId" VARCHAR(128),
+        "title" VARCHAR(160) NOT NULL DEFAULT 'New chat',
+        "status" VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+        "createdAt" TIMESTAMPTZ NOT NULL,
+        "updatedAt" TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "ai_conversation_messages" (
+        "messageId" UUID PRIMARY KEY,
+        "conversationId" UUID NOT NULL,
+        "role" VARCHAR(32) NOT NULL,
+        "content" TEXT NOT NULL,
+        "intent" VARCHAR(64),
+        "model" VARCHAR(128),
+        "metadata" JSONB NOT NULL DEFAULT '{}'::jsonb,
+        "createdAt" TIMESTAMPTZ NOT NULL,
+        "updatedAt" TIMESTAMPTZ NOT NULL
+      );
+    `);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "ai_conversations_clerkId_idx" ON "ai_conversations" ("clerkId");
+    `);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "ai_conversations_guestSessionId_idx" ON "ai_conversations" ("guestSessionId");
+    `);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "ai_conversation_messages_conversationId_idx" ON "ai_conversation_messages" ("conversationId");
     `);
     console.log("Models da duoc dong bo voi database");
   } catch (error) {

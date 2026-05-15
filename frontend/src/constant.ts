@@ -69,6 +69,7 @@ export const API_ROUTE = {
   VOUCHERS: "/vouchers",
   TAXS: "/taxs",
   STOCK_RECEIPTS: "/stock-receipts",
+  AI: "/ai",
 } as const;
 
 // ---------------------------------------------------------------------------
