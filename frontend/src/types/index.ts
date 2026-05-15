@@ -12,6 +12,7 @@ export * from "./discountCampaignType";
 export * from "./bundleType";
 export * from "./voucherType";
 export * from "./stockReceiptType";
+export * from "./aiChatType";
 
 // API Response Types
 export interface ApiResponse<T> {

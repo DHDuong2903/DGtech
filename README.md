@@ -53,3 +53,98 @@ Truy cập: [http://localhost:3000](http://localhost:3000)
 - Frontend: Next.js, TypeScript, Clerk, TailwindCSS, Radix UI, Zustand, Axios
 - Backend: Node.js, Express, PostgreSQL, Sequelize, Cloudinary
 
+STAGE 0 — Generic LLM Chatbot
+
+Flow:
+
+User
+↓
+Gemini
+↓
+Response
+Đặc điểm:
+nói tự nhiên
+generic
+hallucinate mạnh
+không biết business thật
+Ví dụ:
+"DGTech chủ yếu bán điện tử..."
+
+dù DB không confirm.
+
+STAGE 1 — Conversation-aware AI
+
+Bạn thêm:
+
+history
+context continuity
+AI bắt đầu:
+nhớ câu trước
+refer entity
+giữ mạch hội thoại
+STAGE 2 — Catalog-grounded AI
+
+Bạn thêm:
+
+DB retrieval
+product/category grounding
+structured catalog context
+Đây là bước:
+AI có “mắt”
+Flow:
+Question
+↓
+catalog retrieval
+↓
+context injection
+↓
+Gemini
+AI bắt đầu:
+biết sản phẩm thật
+biết stock thật
+biết giá thật
+STAGE 3 — Relational thinking
+
+Bạn bắt đầu xử lý:
+
+variants
+product relations
+entity references
+Đây là lúc:
+"Cái sofa kia..."
+
+bắt đầu meaningful.
+
+STAGE 4 — Multi-domain retrieval
+
+Bạn thêm:
+
+shipping
+payment
+voucher
+order workflow
+Đây là bước:
+AI không còn product-only.
+STAGE 5 — Intent-routed business assistant
+
+Bạn thêm:
+
+intent classification
+domain routing
+membership grounding
+policy context
+guardrails
+Đây là level hiện tại.
+Kiến trúc hiện tại thực chất là:
+User message
+↓
+Intent classifier
+↓
+Domain router
+↓
+Context retrieval
+↓
+Guardrails
+↓
+LLM generation
+Đây là architecture AI production thật sự.

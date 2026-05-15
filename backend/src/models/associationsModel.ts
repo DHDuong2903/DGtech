@@ -28,6 +28,8 @@ import { TaxSetting } from "./taxSettingModel.js";
 import { StockReceipt } from "./stockReceiptModel.js";
 import { StockReceiptLine } from "./stockReceiptLineModel.js";
 import { InventoryMovement } from "./inventoryMovementModel.js";
+import { AiConversation } from "./aiConversationModel.js";
+import { AiConversationMessage } from "./aiConversationMessageModel.js";
 
 // Quan he giua Category va Product
 Category.hasMany(Product, { foreignKey: "categoryId", as: "products" });
@@ -64,6 +66,9 @@ CartItem.belongsTo(ProductVariant, { foreignKey: "variantId", as: "variant" });
 // Quan he giua User va Order
 User.hasMany(Order, { foreignKey: "clerkId", as: "orders" });
 Order.belongsTo(User, { foreignKey: "clerkId", as: "user" });
+
+User.hasMany(AiConversation, { foreignKey: "clerkId", as: "aiConversations" });
+AiConversation.belongsTo(User, { foreignKey: "clerkId", as: "user" });
 
 // User saved addresses (VN structured; not Clerk)
 User.hasMany(UserAddress, { foreignKey: "clerkId", as: "addresses", onDelete: "CASCADE" });
@@ -157,6 +162,13 @@ InventoryMovement.belongsTo(Product, { foreignKey: "productId", as: "product" })
 StockReceipt.hasMany(InventoryMovement, { foreignKey: "refReceiptId", as: "inventoryMovements" });
 InventoryMovement.belongsTo(StockReceipt, { foreignKey: "refReceiptId", as: "refReceipt" });
 
+AiConversation.hasMany(AiConversationMessage, {
+  foreignKey: "conversationId",
+  as: "messages",
+  onDelete: "CASCADE",
+});
+AiConversationMessage.belongsTo(AiConversation, { foreignKey: "conversationId", as: "conversation" });
+
 export {
   Category,
   Product,
@@ -187,4 +199,6 @@ export {
   StockReceipt,
   StockReceiptLine,
   InventoryMovement,
+  AiConversation,
+  AiConversationMessage,
 };
