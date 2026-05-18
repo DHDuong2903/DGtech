@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowUp, History, MessageCirclePlus, X } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/src/components/ui/button";
@@ -39,7 +40,7 @@ function introMessage(): AiConversationMessage {
     messageId: "intro",
     conversationId: "intro",
     role: "assistant",
-    content: "Xin chao, toi la DGTech AI Assistant. Toi co the ho tro ban ve san pham, don hang va mua sam.",
+    content: "Xin chào! Tôi là DGTech AI, tôi có thể giúp gì cho bạn hôm nay?",
     createdAt: now,
     updatedAt: now,
   };
@@ -47,6 +48,11 @@ function introMessage(): AiConversationMessage {
 
 export const FloatingAIWidget = () => {
   const { isSignedIn } = useUser();
+  const pathname = usePathname();
+
+  // Hide chatbot from ALL admin pages (including dashboard)
+  const isAdminPage = pathname && (pathname === "/admin" || pathname.startsWith("/admin/"));
+
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [conversations, setConversations] = useState<AiConversationListItem[]>([]);
@@ -248,6 +254,10 @@ export const FloatingAIWidget = () => {
     }
   }, [displayedMessages, isSending]);
 
+  if (isAdminPage) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-4">
       {isOpen && (
@@ -259,13 +269,13 @@ export const FloatingAIWidget = () => {
               </div>
               <div className="flex items-center gap-1">
                 {showHistorySidebar && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn("h-8 w-8 cursor-pointer", isHistoryOpen && "bg-muted text-foreground")}
-                  onClick={() => setIsHistoryOpen((prev) => !prev)}
-                  aria-label="Toggle history"
-                >
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={cn("h-8 w-8 cursor-pointer", isHistoryOpen && "bg-muted text-foreground")}
+                    onClick={() => setIsHistoryOpen((prev) => !prev)}
+                    aria-label="Toggle history"
+                  >
                     <History className="h-4 w-4" />
                   </Button>
                 )}
@@ -348,7 +358,7 @@ export const FloatingAIWidget = () => {
                     >
                       <div
                         className={cn(
-                          "max-w-60 rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                          "max-w-60 break-words whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed",
                           message.role === "user" ? "bg-orange-500 text-white" : "bg-muted text-foreground",
                         )}
                       >
@@ -381,7 +391,7 @@ export const FloatingAIWidget = () => {
                 <Button
                   size="sm"
                   onClick={() => void handleSendMessage()}
-                  disabled={isSending}
+                  disabled={isSending || !input.trim()}
                   className="h-9 w-9 rounded-full bg-orange-500 p-0 hover:bg-orange-600 disabled:bg-orange-300"
                   aria-label="Send message"
                 >
