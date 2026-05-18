@@ -77,6 +77,25 @@ function parseRetryAfterSeconds(message: string) {
   return Number.isFinite(parsed) ? Math.ceil(parsed) : undefined;
 }
 
+function normalizeReplyFormatting(reply: string) {
+  let out = String(reply || "").replace(/\r\n/g, "\n").trim();
+
+  out = out.replace(/\*\*(.*?)\*\*/g, "$1");
+  out = out.replace(/__(.*?)__/g, "$1");
+  out = out.replace(/[ \t]+\n/g, "\n");
+  out = out.replace(/\n{3,}/g, "\n\n");
+  out = out.replace(/\s+(?=(?:- |\d+\.\s))/g, "\n");
+
+  if (!out.includes("\n")) {
+    const sentences = out.split(/(?<=[.!?])\s+/).filter(Boolean);
+    if (sentences.length >= 3) {
+      out = sentences.join("\n");
+    }
+  }
+
+  return out.trim();
+}
+
 export async function generateChatReply(
   message: unknown,
   history: unknown,
@@ -108,7 +127,10 @@ export async function generateChatReply(
   );
 
   console.log("[AI Chat] Step 3/6: Building website context from catalog data");
-  const catalogContext = await buildCatalogContext(normalizedMessage, { recentUserMessages });
+  const catalogContext = await buildCatalogContext(normalizedMessage, {
+    recentUserMessages,
+    userId: options?.userId,
+  });
   const websiteKnowledgeContext = await buildWebsiteKnowledgeContext(normalizedMessage, {
     recentUserMessages,
     userId: options?.userId,
@@ -126,6 +148,24 @@ export async function generateChatReply(
     "If you do not know a specific store policy or order detail, say so clearly and avoid inventing facts.",
     "Do not claim to have performed actions in external systems.",
     "Treat the provided website knowledge context as source of truth for store capabilities, payment rules, shipping behavior, tax settings, and general store guidance.",
+    "Never expose internal field names, database table names, schema names, raw identifiers, or implementation details to customers.",
+    "Rewrite technical context into natural Vietnamese suitable for customers.",
+    "",
+    "=== RESPONSE FORMATTING RULES ===",
+    "Format your response for maximum clarity and readability:",
+    "- Do not use markdown bold and do not wrap any data with **",
+    "- Use bullet points with dashes (-) instead of one dense paragraph",
+    "- Separate ideas with line breaks for better readability",
+    "- Use numbered lists (1. 2. 3.) for steps or rankings",
+    "- Use section headers with descriptive labels when organizing information",
+    "- Keep paragraphs short - maximum 2-3 sentences per paragraph",
+    "- Avoid long one-block answers; split content into short sections or bullet points",
+    "Example of good formatting:",
+    "  'Dịch vụ giao hàng của chúng tôi:'",
+    "  '- Giao hàng tiêu chuẩn: 3-5 ngày (miễn phí từ 500K)'",
+    "  '- Giao hàng nhanh: 1-2 ngày (phí tính theo địa điểm)'",
+    "  '- Giao hàng Express: Cùng ngày (cho TP.HCM, Hà Nội)'",
+    "",
     catalogContext.shouldUseCatalogContext
       ? "When website catalog context is provided, treat it as the source of truth for product availability, pricing, and categories."
       : "No website catalog context was provided for this question, so avoid claiming exact product availability unless the user already gave that information.",
@@ -208,7 +248,7 @@ export async function generateChatReply(
     });
   }
 
-  const reply = extractReply(payload);
+  const reply = normalizeReplyFormatting(extractReply(payload));
   console.log(
     `[AI Chat] Gemini response finishReason=${payload.candidates?.[0]?.finishReason || "unknown"}, replyLength=${reply.length}, totalTokens=${payload.usageMetadata?.totalTokenCount ?? "n/a"}`,
   );
