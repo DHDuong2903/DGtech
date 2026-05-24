@@ -13,6 +13,7 @@ import {
   User,
 } from "../models/associationsModel.js";
 import { cacheBumpVersion, cacheDelete, cacheGetJson, cacheSetJson } from "../libs/cache.js";
+import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
 
 function roundMoney(n: number) {
   return Math.round(Number(n) * 100) / 100;
@@ -130,8 +131,10 @@ function pricingModeOf(campaign: any): "price_list" | "price_rule" {
 }
 
 const ACTIVE_CAMPAIGNS_CACHE_KEY = "discountCampaigns:active:v1";
+const ACTIVE_CAMPAIGNS_STALE_CACHE_KEY = "discountCampaigns:active:stale:v1";
 const USER_TIER_CACHE_PREFIX = "userTier:v1:";
 const ACTIVE_CAMPAIGNS_CACHE_TTL_MS = 120000;
+const ACTIVE_CAMPAIGNS_STALE_CACHE_TTL_MS = 15 * 60 * 1000;
 const USER_TIER_CACHE_TTL_MS = 600000;
 
 async function loadActiveCampaignsOrdered(at: Date): Promise<any[]> {
@@ -140,48 +143,67 @@ async function loadActiveCampaignsOrdered(at: Date): Promise<any[]> {
     return cached;
   }
 
-  const rows = await DiscountCampaign.findAll({
-    where: {
-      isEnabled: true,
-      startsAt: { [Op.lte]: at },
-      [Op.or]: [{ endsAt: null }, { endsAt: { [Op.gte]: at } }],
-    },
-    include: [
-      {
-        model: Product,
-        as: "products",
-        attributes: ["productId"],
-        through: { attributes: [] },
-        required: false,
-      },
-      {
-        model: Category,
-        as: "categories",
-        attributes: ["categoryId"],
-        through: { attributes: [] },
-        required: false,
-      },
-      {
-        model: DiscountCampaignVariantPrice,
-        as: "variantPrices",
-        attributes: ["variantId", "price"],
-        required: false,
-      },
-    ],
-    order: [
-      ["priority", "ASC"],
-      ["updatedAt", "DESC"],
-    ],
-  });
+  try {
+    const rows = await withDbRetry(
+      () =>
+        DiscountCampaign.findAll({
+          where: {
+            isEnabled: true,
+            startsAt: { [Op.lte]: at },
+            [Op.or]: [{ endsAt: null }, { endsAt: { [Op.gte]: at } }],
+          },
+          include: [
+            {
+              model: Product,
+              as: "products",
+              attributes: ["productId"],
+              through: { attributes: [] },
+              required: false,
+            },
+            {
+              model: Category,
+              as: "categories",
+              attributes: ["categoryId"],
+              through: { attributes: [] },
+              required: false,
+            },
+            {
+              model: DiscountCampaignVariantPrice,
+              as: "variantPrices",
+              attributes: ["variantId", "price"],
+              required: false,
+            },
+          ],
+          order: [
+            ["priority", "ASC"],
+            ["updatedAt", "DESC"],
+          ],
+        }),
+      { label: "loadActiveCampaignsOrdered" },
+    );
 
-  const plainRows = rows.map((r) => r.get({ plain: true }));
-  await cacheSetJson(ACTIVE_CAMPAIGNS_CACHE_KEY, plainRows, ACTIVE_CAMPAIGNS_CACHE_TTL_MS);
-  return plainRows;
+    const plainRows = rows.map((r) => r.get({ plain: true }));
+    await Promise.all([
+      cacheSetJson(ACTIVE_CAMPAIGNS_CACHE_KEY, plainRows, ACTIVE_CAMPAIGNS_CACHE_TTL_MS),
+      cacheSetJson(ACTIVE_CAMPAIGNS_STALE_CACHE_KEY, plainRows, ACTIVE_CAMPAIGNS_STALE_CACHE_TTL_MS),
+    ]);
+    return plainRows;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      const stale = await cacheGetJson<any[]>(ACTIVE_CAMPAIGNS_STALE_CACHE_KEY);
+      if (stale !== null) {
+        console.warn("loadActiveCampaignsOrdered: serving stale cache after DB error");
+        return stale;
+      }
+    }
+    throw error;
+  }
 }
 
 /** Invalidate in-process campaign cache (e.g. after admin mutates campaigns). */
 export function invalidateDiscountCampaignCache() {
   void cacheDelete(ACTIVE_CAMPAIGNS_CACHE_KEY);
+  void cacheDelete(ACTIVE_CAMPAIGNS_STALE_CACHE_KEY);
   void cacheBumpVersion("storefront-products");
 }
 
@@ -201,13 +223,21 @@ export async function getStorefrontUserTier(clerkId: string | null | undefined):
     return cached;
   }
 
-  const u = await User.findByPk(clerkId, { attributes: ["tier"] });
-  const t = u?.tier;
-  const result = t === "silver" || t === "gold" || t === "bronze" ? t : "bronze";
-
-  await cacheSetJson(cacheKey, result, USER_TIER_CACHE_TTL_MS);
-
-  return result;
+  try {
+    const u = await withDbRetry(() => User.findByPk(clerkId, { attributes: ["tier"] }), {
+      label: "getStorefrontUserTier",
+    });
+    const t = u?.tier;
+    const result = t === "silver" || t === "gold" || t === "bronze" ? t : "bronze";
+    await cacheSetJson(cacheKey, result, USER_TIER_CACHE_TTL_MS);
+    return result;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      console.warn(`getStorefrontUserTier(${clerkId}): fallback to bronze after DB error`);
+      return "bronze";
+    }
+    throw error;
+  }
 }
 
 export function resolveVariantAgainstCampaigns(

@@ -10,9 +10,10 @@ interface CategoryState {
   categories: Category[];
   loading: boolean;
   error: string | null;
+  lastLoadedAt: number | null;
 
   // Actions
-  fetchCategories: () => Promise<void>;
+  fetchCategories: (options?: { force?: boolean }) => Promise<void>;
   createCategory: (data: CategoryFormData) => Promise<{ success: boolean; data?: Category; error?: string }>;
   updateCategory: (
     id: number,
@@ -31,13 +32,21 @@ export const useCategoryStore = create<CategoryState>()(
       categories: [],
       loading: false,
       error: null,
+      lastLoadedAt: null,
 
       // Fetch all categories
-      fetchCategories: async () => {
+      fetchCategories: async (options) => {
+        const force = options?.force === true;
+        const state = useCategoryStore.getState();
+        const cacheFresh =
+          state.lastLoadedAt != null && Date.now() - state.lastLoadedAt < 5 * 60 * 1000 && state.categories.length > 0;
+        if (!force && (state.loading || cacheFresh)) {
+          return;
+        }
         set({ loading: true, error: null });
         try {
           const categories = await categoriesApi.getAll();
-          set({ categories, loading: false });
+          set({ categories, loading: false, lastLoadedAt: Date.now() });
         } catch (err) {
           console.error("Error fetching categories:", err);
           const error = err as ApiError;
@@ -52,6 +61,7 @@ export const useCategoryStore = create<CategoryState>()(
           set((state) => ({
             categories: [...state.categories, newCategory],
             error: null,
+            lastLoadedAt: Date.now(),
           }));
           toast.success("Category created");
           return { success: true, data: newCategory };
@@ -72,6 +82,7 @@ export const useCategoryStore = create<CategoryState>()(
           set((state) => ({
             categories: state.categories.map((cat) => (cat.categoryId === id ? updatedCategory : cat)),
             error: null,
+            lastLoadedAt: Date.now(),
           }));
           toast.success("Category updated");
           return { success: true, data: updatedCategory };
@@ -92,6 +103,7 @@ export const useCategoryStore = create<CategoryState>()(
           set((state) => ({
             categories: state.categories.filter((cat) => cat.categoryId !== id),
             error: null,
+            lastLoadedAt: Date.now(),
           }));
           toast.success("Category deleted");
           return { success: true };
@@ -112,6 +124,7 @@ export const useCategoryStore = create<CategoryState>()(
           set((state) => ({
             categories: state.categories.filter((cat) => !ids.includes(cat.categoryId)),
             error: null,
+            lastLoadedAt: Date.now(),
           }));
           toast.success(
             ids.length === 1 ? "Category deleted" : `Deleted ${ids.length} categories`

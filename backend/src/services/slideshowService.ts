@@ -1,8 +1,10 @@
 // @ts-nocheck
 import { Op } from "sequelize";
 import { sequelize } from "../libs/db.js";
+import { cacheDelete, cacheGetJson, cacheSetJson } from "../libs/cache.js";
 import { Slideshow } from "../models/slideshowModel.js";
 import { randomUUID } from "crypto";
+import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
 
 const MAX_SLIDES = 10;
 const TITLE_MAX = 160;
@@ -10,6 +12,10 @@ const DESC_MAX = 600;
 const CTA_TEXT_MAX = 80;
 const LINK_MAX = 2048;
 const NAME_MAX = 160;
+const ACTIVE_SLIDES_CACHE_KEY = "storefront:slideshows:active";
+const ACTIVE_SLIDES_STALE_CACHE_KEY = "storefront:slideshows:active:stale";
+const ACTIVE_SLIDES_CACHE_TTL_MS = 5 * 60 * 1000;
+const ACTIVE_SLIDES_STALE_TTL_MS = 60 * 60 * 1000;
 
 function normalizeCta(raw: unknown): { text: string; link: string } | null {
   if (!raw || typeof raw !== "object") return null;
@@ -60,15 +66,39 @@ async function deactivateAllOthers(transaction: any) {
 }
 
 export async function getActiveSlides() {
-  const row = await Slideshow.findOne({ where: { isActive: true } });
-  if (!row || !Array.isArray(row.slides)) return [];
-  return row.slides;
+  const cached = await cacheGetJson<any[]>(ACTIVE_SLIDES_CACHE_KEY);
+  if (cached) return cached;
+
+  try {
+    const row = await withDbRetry(() => Slideshow.findOne({ where: { isActive: true } }), {
+      label: "getActiveSlides",
+    });
+    const slides = !row || !Array.isArray(row.slides) ? [] : row.slides;
+    await Promise.all([
+      cacheSetJson(ACTIVE_SLIDES_CACHE_KEY, slides, ACTIVE_SLIDES_CACHE_TTL_MS),
+      cacheSetJson(ACTIVE_SLIDES_STALE_CACHE_KEY, slides, ACTIVE_SLIDES_STALE_TTL_MS),
+    ]);
+    return slides;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      const stale = await cacheGetJson<any[]>(ACTIVE_SLIDES_STALE_CACHE_KEY);
+      if (stale) {
+        console.warn("getActiveSlides: serving stale cache after DB error");
+        return stale;
+      }
+    }
+    throw error;
+  }
 }
 
 export async function listSlideshows() {
-  return Slideshow.findAll({
-    order: [["isActive", "DESC"], ["updatedAt", "DESC"]],
-  });
+  return withDbRetry(
+    () =>
+      Slideshow.findAll({
+        order: [["isActive", "DESC"], ["updatedAt", "DESC"]],
+      }),
+    { label: "listSlideshows" },
+  );
 }
 
 export async function createSlideshow(name: string, slides: unknown, activate: boolean) {
@@ -82,10 +112,15 @@ export async function createSlideshow(name: string, slides: unknown, activate: b
   const norm = normalizeSlidesArray(slides ?? []);
   if (!norm.ok) throw Object.assign(new Error(norm.error), { status: 400 });
 
-  return sequelize.transaction(async (transaction) => {
+  const created = await sequelize.transaction(async (transaction) => {
     if (activate) await deactivateAllOthers(transaction);
     return Slideshow.create({ name, slides: norm.data, isActive: activate }, { transaction });
   });
+  await Promise.all([
+    cacheDelete(ACTIVE_SLIDES_CACHE_KEY),
+    cacheDelete(ACTIVE_SLIDES_STALE_CACHE_KEY),
+  ]);
+  return created;
 }
 
 export async function updateSlideshow(slideshowId: number, body: Record<string, unknown>) {
@@ -120,6 +155,10 @@ export async function updateSlideshow(slideshowId: number, body: Record<string, 
 
   await row.update(patch);
   await row.reload();
+  await Promise.all([
+    cacheDelete(ACTIVE_SLIDES_CACHE_KEY),
+    cacheDelete(ACTIVE_SLIDES_STALE_CACHE_KEY),
+  ]);
   return row;
 }
 
@@ -127,6 +166,10 @@ export async function deleteSlideshow(slideshowId: number) {
   const row = await Slideshow.findByPk(slideshowId);
   if (!row) throw Object.assign(new Error("Campaign not found"), { status: 404 });
   await row.destroy();
+  await Promise.all([
+    cacheDelete(ACTIVE_SLIDES_CACHE_KEY),
+    cacheDelete(ACTIVE_SLIDES_STALE_CACHE_KEY),
+  ]);
 }
 
 export async function activateSlideshow(slideshowId: number) {
@@ -142,6 +185,10 @@ export async function activateSlideshow(slideshowId: number) {
   const slideshows = await Slideshow.findAll({
     order: [["isActive", "DESC"], ["updatedAt", "DESC"]],
   });
+  await Promise.all([
+    cacheDelete(ACTIVE_SLIDES_CACHE_KEY),
+    cacheDelete(ACTIVE_SLIDES_STALE_CACHE_KEY),
+  ]);
   return { slideshow: row, slideshows };
 }
 
@@ -154,5 +201,9 @@ export async function deactivateSlideshow(slideshowId: number) {
   const slideshows = await Slideshow.findAll({
     order: [["isActive", "DESC"], ["updatedAt", "DESC"]],
   });
+  await Promise.all([
+    cacheDelete(ACTIVE_SLIDES_CACHE_KEY),
+    cacheDelete(ACTIVE_SLIDES_STALE_CACHE_KEY),
+  ]);
   return { slideshow: row, slideshows };
 }
