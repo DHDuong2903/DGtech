@@ -7,6 +7,7 @@ import {
   deleteUser as deleteUserSvc,
 } from "../services/userService.js";
 import { adminGetRankConfig as adminGetRankConfigSvc, adminUpdateRankConfig as adminUpdateRankConfigSvc } from "../services/rankSettingService.js";
+import { getHttpStatusForError, getPublicErrorMessage } from "../helpers/dbResilience.js";
 
 export const getMe = async (req: any, res: any) => {
   try {
@@ -14,7 +15,7 @@ export const getMe = async (req: any, res: any) => {
     return res.status(200).json({ message: "GetMe success", user });
   } catch (e: any) {
     console.error("Loi khi goi getMe:", e);
-    return res.status(e.status || 500).json({ message: e.message || "Loi he thong" });
+    return res.status(getHttpStatusForError(e)).json({ message: getPublicErrorMessage(e, "Loi he thong") });
   }
 };
 
@@ -24,7 +25,7 @@ export const getAllUsers = async (req: any, res: any) => {
     return res.status(200).json({ message: "Get all users success", ...result });
   } catch (e: any) {
     console.error("Loi khi lay danh sach users:", e);
-    return res.status(e.status || 500).json({ message: e.message || "Loi he thong" });
+    return res.status(getHttpStatusForError(e)).json({ message: getPublicErrorMessage(e, "Loi he thong") });
   }
 };
 
@@ -34,7 +35,7 @@ export const getMyRank = async (req: any, res: any) => {
     return res.status(200).json({ message: "GetMyRank success", rank });
   } catch (e: any) {
     console.error("Loi khi lay rank user:", e);
-    return res.status(e.status || 500).json({ message: e.message || "Loi he thong" });
+    return res.status(getHttpStatusForError(e)).json({ message: getPublicErrorMessage(e, "Loi he thong") });
   }
 };
 
@@ -44,7 +45,7 @@ export const updateUserRole = async (req: any, res: any) => {
     return res.status(200).json({ message: "Update user role success", user });
   } catch (e: any) {
     console.error("Loi khi cap nhat role:", e);
-    return res.status(e.status || 500).json({ message: e.message || "Loi he thong" });
+    return res.status(getHttpStatusForError(e)).json({ message: getPublicErrorMessage(e, "Loi he thong") });
   }
 };
 
@@ -54,7 +55,7 @@ export const deleteUser = async (req: any, res: any) => {
     return res.status(200).json({ message: "Delete user success" });
   } catch (e: any) {
     console.error("Error deleting user:", e);
-    return res.status(e.status || 500).json({ message: e.message || "Internal server error" });
+    return res.status(getHttpStatusForError(e)).json({ message: getPublicErrorMessage(e, "Internal server error") });
   }
 };
 
@@ -64,7 +65,7 @@ export const adminGetRankConfig = async (_req: any, res: any) => {
     return res.status(200).json({ settings });
   } catch (e: any) {
     console.error("adminGetRankConfig:", e);
-    return res.status(e.status || 500).json({ error: e.message || "Could not load rank settings" });
+    return res.status(getHttpStatusForError(e)).json({ error: getPublicErrorMessage(e, "Could not load rank settings") });
   }
 };
 
@@ -74,6 +75,6 @@ export const adminPutRankConfig = async (req: any, res: any) => {
     return res.status(200).json({ settings });
   } catch (e: any) {
     console.error("adminPutRankConfig:", e);
-    return res.status(e.status || 500).json({ error: e.message || "Could not save rank settings" });
+    return res.status(getHttpStatusForError(e)).json({ error: getPublicErrorMessage(e, "Could not save rank settings") });
   }
 };

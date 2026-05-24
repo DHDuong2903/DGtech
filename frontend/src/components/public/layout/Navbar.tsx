@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Star, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Badge } from "@/src/components/ui/badge";
@@ -56,6 +56,8 @@ export const Navbar = () => {
   const { isSignedIn, isLoaded, user } = useUser();
   const [navSearch, setNavSearch] = useState("");
   const [rank, setRank] = useState<UserRank | null>(null);
+  const cartFetchedForRef = useRef<string | null>(null);
+  const rankFetchedForRef = useRef<string | null>(null);
   const cartQty = cart ? cartQuantityTotal(cart) : 0;
   const metadataRankRaw = user?.publicMetadata?.rank;
   const metadataRank =
@@ -64,19 +66,37 @@ export const Navbar = () => {
     metadataRank || (rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : null);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      fetchCart();
+    if (!isLoaded || !user?.id) return;
+    if (!isSignedIn) {
+      cartFetchedForRef.current = null;
+      return;
     }
-  }, [fetchCart, isLoaded, isSignedIn]);
+    if (cartFetchedForRef.current === user.id) return;
+    cartFetchedForRef.current = user.id;
+    void fetchCart();
+  }, [fetchCart, isLoaded, isSignedIn, user?.id]);
 
   useEffect(() => {
     let active = true;
 
-    if (!isLoaded || !isSignedIn) {
+    if (!isLoaded || !isSignedIn || !user?.id) {
+      rankFetchedForRef.current = null;
       return () => {
         active = false;
       };
     }
+    if (metadataRank) {
+      rankFetchedForRef.current = user.id;
+      return () => {
+        active = false;
+      };
+    }
+    if (rankFetchedForRef.current === user.id) {
+      return () => {
+        active = false;
+      };
+    }
+    rankFetchedForRef.current = user.id;
 
     usersApi
       .getMyRank()
@@ -90,7 +110,7 @@ export const Navbar = () => {
     return () => {
       active = false;
     };
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, metadataRank, user?.id]);
 
   const handleNavSearch = (e: React.FormEvent) => {
     e.preventDefault();

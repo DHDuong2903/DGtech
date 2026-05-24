@@ -20,6 +20,7 @@ import { sumEligibleBundlePurchasesForUser } from "./bundlePurchaseService.js";
 import { Voucher, Cart as CartModel } from "../models/associationsModel.js";
 import { computeSubtotalFromLines, loadSelectedCartLines } from "./shippingService.js";
 import { listEligibleVouchersForUser } from "./voucherService.js";
+import { withDbRetry } from "../helpers/dbResilience.js";
 
 /** Build the full cart response payload (enriched items + applied voucher + free shipping) */
 export async function buildCartResponsePayload(data: Record<string, unknown>, clerkId?: string | null) {
@@ -121,12 +122,17 @@ export async function clearAppliedVoucher(clerkId: string) {
 }
 
 export async function getCart(clerkId: string) {
-  let cart = await getCartWithDetails(clerkId);
-  if (!cart) {
-    await Cart.create({ clerkId });
-    cart = await getCartWithDetails(clerkId);
-  }
-  return buildCartResponsePayload({ cart }, clerkId);
+  return withDbRetry(
+    async () => {
+      let cart = await getCartWithDetails(clerkId);
+      if (!cart) {
+        await Cart.create({ clerkId });
+        cart = await getCartWithDetails(clerkId);
+      }
+      return buildCartResponsePayload({ cart }, clerkId);
+    },
+    { label: "getCart", attempts: 2, baseDelayMs: 200 },
+  );
 }
 
 export async function addToCart(clerkId: string, body: Record<string, unknown>) {

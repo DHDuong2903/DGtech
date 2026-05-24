@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { User } from "../models/userModel.js";
 import type { NextFunction, Request, Response } from "express";
+import { getHttpStatusForError, getPublicErrorMessage } from "../helpers/dbResilience.js";
 
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -24,7 +25,9 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     next();
   } catch (error: any) {
     console.error("Admin check error:", error?.message);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Internal server error"),
+    });
   }
 };
 

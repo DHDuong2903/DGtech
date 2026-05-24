@@ -9,6 +9,7 @@ import {
   removeFromCart as removeFromCartSvc,
   clearCart as clearCartSvc,
 } from "../services/cartService.js";
+import { getHttpStatusForError, getPublicErrorMessage } from "../helpers/dbResilience.js";
 
 export const getEligibleVouchers = async (req: any, res: any) => {
   try {
@@ -21,7 +22,9 @@ export const getEligibleVouchers = async (req: any, res: any) => {
     return res.json(result);
   } catch (error: any) {
     console.error("getEligibleVouchers:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not load eligible vouchers" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not load eligible vouchers"),
+    });
   }
 };
 
@@ -34,7 +37,9 @@ export const applyVoucherToCart = async (req: any, res: any) => {
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("applyVoucherToCart:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not apply voucher" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not apply voucher"),
+    });
   }
 };
 
@@ -44,7 +49,9 @@ export const clearAppliedVoucher = async (req: any, res: any) => {
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("clearAppliedVoucher:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not clear applied voucher" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not clear applied voucher"),
+    });
   }
 };
 
@@ -52,9 +59,9 @@ export const getCart = async (req: any, res: any) => {
   try {
     const result = await getCartSvc(req.auth.userId);
     return res.status(200).json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in getCart", error);
-    return res.status(500).json({ error: "Could not retrieve cart" });
+    return res.status(getHttpStatusForError(error)).json({ error: getPublicErrorMessage(error, "Could not retrieve cart") });
   }
 };
 
@@ -64,7 +71,9 @@ export const addToCart = async (req: any, res: any) => {
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("Error in addToCart", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not add product to cart" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not add product to cart"),
+    });
   }
 };
 
@@ -74,7 +83,9 @@ export const updateCartItem = async (req: any, res: any) => {
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("Error in updateCartItem", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not update cart item" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not update cart item"),
+    });
   }
 };
 
@@ -84,7 +95,9 @@ export const removeFromCart = async (req: any, res: any) => {
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("Error in removeFromCart", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not remove cart item" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not remove cart item"),
+    });
   }
 };
 
@@ -94,6 +107,8 @@ export const clearCart = async (req: any, res: any) => {
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("Error in clearCart", error);
-    return res.status(error.status || 500).json({ error: error.message || "Could not clear cart" });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not clear cart"),
+    });
   }
 };

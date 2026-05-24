@@ -14,11 +14,13 @@ import {
 } from "./discountCampaignResolveService.js";
 import { cacheBumpVersion, cacheGetJson, cacheGetVersion, cacheSetJson } from "../libs/cache.js";
 import { uploadProductImageBuffer } from "../helpers/uploadProductImage.js";
+import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
 
 const STOREFRONT_PRODUCT_CACHE_NAMESPACE = "storefront-products";
 const STOREFRONT_PRODUCT_LIST_CACHE_TTL_MS = 60000;
 const STOREFRONT_PRODUCT_DETAIL_CACHE_TTL_MS = 60000;
 const STOREFRONT_FEATURED_CACHE_TTL_MS = 30000;
+const STOREFRONT_STALE_CACHE_TTL_MS = 15 * 60 * 1000;
 
 export function normalizeProductStatus(value: unknown): "ACTIVE" | "DRAFT" | null {
   if (value === undefined || value === null || value === "") return null;
@@ -29,8 +31,13 @@ export function normalizeProductStatus(value: unknown): "ACTIVE" | "DRAFT" | nul
 
 export async function isAdmin(clerkId: string | undefined): Promise<boolean> {
   if (!clerkId) return false;
-  const user = await User.findOne({ where: { clerkId } });
-  return user?.role === "admin";
+  try {
+    const user = await withDbRetry(() => User.findOne({ where: { clerkId } }), { label: "isAdmin" });
+    return user?.role === "admin";
+  } catch (error) {
+    if (isTransientDbError(error)) return false;
+    throw error;
+  }
 }
 
 export async function invalidateStorefrontProductCache() {
@@ -40,6 +47,17 @@ export async function invalidateStorefrontProductCache() {
 export async function buildStorefrontProductCacheKey(kind: string, payload: Record<string, unknown>) {
   const version = await cacheGetVersion(STOREFRONT_PRODUCT_CACHE_NAMESPACE);
   return `${STOREFRONT_PRODUCT_CACHE_NAMESPACE}:${kind}:v${version}:${JSON.stringify(payload)}`;
+}
+
+function buildStorefrontStaleCacheKey(cacheKey: string) {
+  return `${cacheKey}:stale`;
+}
+
+async function setStorefrontCachePayload(cacheKey: string, payload: unknown, ttlMs: number) {
+  await Promise.all([
+    cacheSetJson(cacheKey, payload, ttlMs),
+    cacheSetJson(buildStorefrontStaleCacheKey(cacheKey), payload, STOREFRONT_STALE_CACHE_TTL_MS),
+  ]);
 }
 
 export function serializeStorefrontProductSummary(row: any) {
@@ -309,27 +327,42 @@ export async function getProductById(productId: string, clerkId?: string) {
   const cached = await cacheGetJson<any>(cacheKey);
   if (cached) return cached;
 
-  const product = await Product.findByPk(productId, {
-    include: [
-      { model: Category, as: "category" },
-      { model: ProductVariant, as: "variants" },
-    ],
-  });
-  if (!product) throw Object.assign(new Error("San pham khong ton tai"), { status: 404 });
+  try {
+    const product = await withDbRetry(
+      () =>
+        Product.findByPk(productId, {
+          include: [
+            { model: Category, as: "category" },
+            { model: ProductVariant, as: "variants" },
+          ],
+        }),
+      { label: "getProductById" },
+    );
+    if (!product) throw Object.assign(new Error("San pham khong ton tai"), { status: 404 });
 
-  const adminUser = await isAdmin(clerkId);
-  if (product.status === "DRAFT" && !adminUser) {
-    throw Object.assign(new Error("Product not found"), { status: 404 });
+    const adminUser = await isAdmin(clerkId);
+    if (product.status === "DRAFT" && !adminUser) {
+      throw Object.assign(new Error("Product not found"), { status: 404 });
+    }
+
+    clearCompareAtPriceForMultiVariantProduct(product);
+    await applyCampaignPricingToProductForStorefront(product, tier);
+
+    const payload = { message: "Product retrieved successfully", product: product.get({ plain: true }) };
+    if (product.status !== "DRAFT") {
+      await setStorefrontCachePayload(cacheKey, payload, STOREFRONT_PRODUCT_DETAIL_CACHE_TTL_MS);
+    }
+    return payload;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      const stale = await cacheGetJson<any>(buildStorefrontStaleCacheKey(cacheKey));
+      if (stale) {
+        console.warn(`getProductById(${productId}): serving stale cache after DB error`);
+        return stale;
+      }
+    }
+    throw error;
   }
-
-  clearCompareAtPriceForMultiVariantProduct(product);
-  await applyCampaignPricingToProductForStorefront(product, tier);
-
-  const payload = { message: "Product retrieved successfully", product: product.get({ plain: true }) };
-  if (product.status !== "DRAFT") {
-    await cacheSetJson(cacheKey, payload, STOREFRONT_PRODUCT_DETAIL_CACHE_TTL_MS);
-  }
-  return payload;
 }
 
 export async function getAllProducts(query: Record<string, unknown>, clerkId?: string) {
@@ -351,23 +384,42 @@ export async function getAllProducts(query: Record<string, unknown>, clerkId?: s
   const where = buildProductListWhere(query);
   where.status = "ACTIVE";
 
-  const products = await Product.findAndCountAll({
-    where, include: productIncludeOptions, order: [[sortBy, order]],
-    limit: limitNum, offset, distinct: true, col: "productId",
-  });
+  try {
+    const totalItems = await withDbRetry(() => Product.count({ where }), { label: "getAllProducts.count" });
+    const rows = await withDbRetry(
+      () =>
+        Product.findAll({
+          where,
+          include: productIncludeOptions,
+          order: [[sortBy, order]],
+          limit: limitNum,
+          offset,
+        }),
+      { label: "getAllProducts.rows" },
+    );
 
-  products.rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
-  await applyCampaignPricingBatch(products.rows, tier);
+    rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
+    await applyCampaignPricingBatch(rows, tier);
 
-  const payload = {
-    message: "Product list retrieved successfully",
-    totalItems: products.count,
-    totalPages: Math.max(1, Math.ceil(products.count / limitNum)),
-    currentPage: pageNum,
-    data: products.rows.map((row) => serializeStorefrontProductSummary(row)),
-  };
-  await cacheSetJson(cacheKey, payload, STOREFRONT_PRODUCT_LIST_CACHE_TTL_MS);
-  return payload;
+    const payload = {
+      message: "Product list retrieved successfully",
+      totalItems,
+      totalPages: Math.max(1, Math.ceil(totalItems / limitNum)),
+      currentPage: pageNum,
+      data: rows.map((row) => serializeStorefrontProductSummary(row)),
+    };
+    await setStorefrontCachePayload(cacheKey, payload, STOREFRONT_PRODUCT_LIST_CACHE_TTL_MS);
+    return payload;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      const stale = await cacheGetJson<any>(buildStorefrontStaleCacheKey(cacheKey));
+      if (stale) {
+        console.warn("getAllProducts: serving stale cache after DB error");
+        return stale;
+      }
+    }
+    throw error;
+  }
 }
 
 export async function getAdminInventory(query: Record<string, unknown>) {
@@ -380,18 +432,26 @@ export async function getAdminInventory(query: Record<string, unknown>) {
   const statusFilter = normalizeProductStatus(query.status);
   if (statusFilter) where.status = statusFilter;
 
-  const products = await Product.findAndCountAll({
-    where, include: productIncludeOptions, order: [[sortBy, order]],
-    limit: limitNum, offset, distinct: true, col: "productId",
-  });
-  products.rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
+  const totalItems = await withDbRetry(() => Product.count({ where }), { label: "getAdminInventory.count" });
+  const rows = await withDbRetry(
+    () =>
+      Product.findAll({
+        where,
+        include: productIncludeOptions,
+        order: [[sortBy, order]],
+        limit: limitNum,
+        offset,
+      }),
+    { label: "getAdminInventory.rows" },
+  );
+  rows.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
 
   return {
     message: "Inventory retrieved successfully",
-    totalItems: products.count,
-    totalPages: Math.max(1, Math.ceil(products.count / limitNum)),
+    totalItems,
+    totalPages: Math.max(1, Math.ceil(totalItems / limitNum)),
     currentPage: pageNum,
-    data: products.rows,
+    data: rows,
   };
 }
 
@@ -402,19 +462,36 @@ export async function getFeaturedProducts(limit: number, clerkId?: string) {
   const cached = await cacheGetJson<any>(cacheKey);
   if (cached) return cached;
 
-  const products = await Product.findAll({
-    where: { status: "ACTIVE" },
-    include: productIncludeOptions,
-    order: [Product.sequelize.fn("RANDOM")],
-    limit: pageLimit,
-  });
-  products.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
-  await applyCampaignPricingBatch(products, tier);
+  try {
+    const candidateLimit = Math.min(100, Math.max(pageLimit * 4, pageLimit));
+    const candidates = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: { status: "ACTIVE" },
+          include: productIncludeOptions,
+          order: [["createdAt", "DESC"]],
+          limit: candidateLimit,
+        }),
+      { label: "getFeaturedProducts" },
+    );
+    const products = [...candidates].sort(() => Math.random() - 0.5).slice(0, pageLimit);
+    products.forEach((row) => clearCompareAtPriceForMultiVariantProduct(row));
+    await applyCampaignPricingBatch(products, tier);
 
-  const payload = {
-    message: "Featured products retrieved successfully",
-    products: products.map((row) => serializeStorefrontProductSummary(row)),
-  };
-  await cacheSetJson(cacheKey, payload, STOREFRONT_FEATURED_CACHE_TTL_MS);
-  return payload;
+    const payload = {
+      message: "Featured products retrieved successfully",
+      products: products.map((row) => serializeStorefrontProductSummary(row)),
+    };
+    await setStorefrontCachePayload(cacheKey, payload, STOREFRONT_FEATURED_CACHE_TTL_MS);
+    return payload;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      const stale = await cacheGetJson<any>(buildStorefrontStaleCacheKey(cacheKey));
+      if (stale) {
+        console.warn("getFeaturedProducts: serving stale cache after DB error");
+        return stale;
+      }
+    }
+    throw error;
+  }
 }

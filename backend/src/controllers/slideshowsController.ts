@@ -8,6 +8,7 @@ import {
   activateSlideshow as activateSlideshowSvc,
   deactivateSlideshow as deactivateSlideshowSvc,
 } from "../services/slideshowService.js";
+import { getHttpStatusForError, getPublicErrorMessage } from "../helpers/dbResilience.js";
 
 export const getActiveSlideshowSlides = async (req: any, res: any) => {
   try {
@@ -15,7 +16,10 @@ export const getActiveSlideshowSlides = async (req: any, res: any) => {
     return res.json({ slides });
   } catch (error: any) {
     console.error("getActiveSlideshowSlides:", error);
-    return res.status(500).json({ error: "Internal server error", details: error?.message });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Internal server error"),
+      details: error?.message,
+    });
   }
 };
 
@@ -25,7 +29,10 @@ export const listSlideshows = async (req: any, res: any) => {
     return res.json({ message: "OK", slideshows });
   } catch (error: any) {
     console.error("listSlideshows:", error);
-    return res.status(500).json({ error: "Internal server error", details: error?.message });
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Internal server error"),
+      details: error?.message,
+    });
   }
 };
 
@@ -37,7 +44,7 @@ export const createSlideshow = async (req: any, res: any) => {
     return res.status(201).json({ message: "Slideshow campaign created", slideshow });
   } catch (error: any) {
     console.error("createSlideshow:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Internal server error" });
+    return res.status(getHttpStatusForError(error)).json({ error: getPublicErrorMessage(error, "Internal server error") });
   }
 };
 
@@ -49,7 +56,7 @@ export const updateSlideshow = async (req: any, res: any) => {
     return res.json({ message: "Slideshow campaign updated", slideshow });
   } catch (error: any) {
     console.error("updateSlideshow:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Internal server error" });
+    return res.status(getHttpStatusForError(error)).json({ error: getPublicErrorMessage(error, "Internal server error") });
   }
 };
 
@@ -61,7 +68,7 @@ export const deleteSlideshow = async (req: any, res: any) => {
     return res.json({ message: "Slideshow campaign deleted" });
   } catch (error: any) {
     console.error("deleteSlideshow:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Internal server error" });
+    return res.status(getHttpStatusForError(error)).json({ error: getPublicErrorMessage(error, "Internal server error") });
   }
 };
 
@@ -73,7 +80,7 @@ export const activateSlideshow = async (req: any, res: any) => {
     return res.json({ message: "Campaign activated", slideshow, slideshows });
   } catch (error: any) {
     console.error("activateSlideshow:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Internal server error" });
+    return res.status(getHttpStatusForError(error)).json({ error: getPublicErrorMessage(error, "Internal server error") });
   }
 };
 
@@ -85,7 +92,7 @@ export const deactivateSlideshow = async (req: any, res: any) => {
     return res.json({ message: "Campaign deactivated", slideshow, slideshows });
   } catch (error: any) {
     console.error("deactivateSlideshow:", error);
-    return res.status(error.status || 500).json({ error: error.message || "Internal server error" });
+    return res.status(getHttpStatusForError(error)).json({ error: getPublicErrorMessage(error, "Internal server error") });
   }
 };
 
