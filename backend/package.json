@@ -11,7 +11,8 @@
     "db:migrate:development": "node migrate-development.cjs",
     "db:migrate:undo": "sequelize-cli db:migrate:undo --config sequelize.config.cjs",
     "validate:vn-zones": "node scripts/validate-province-zone-keys.mjs",
-    "seed:products": "tsx scripts/seed-products.mjs"
+    "seed:products": "tsx scripts/seed-products.mjs",
+    "eval:ai": "npm run build && node scripts/evaluate-ai-chatbot.mjs"
   },
   "keywords": [],
   "author": "",

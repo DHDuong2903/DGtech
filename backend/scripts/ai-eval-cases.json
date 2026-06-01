@@ -1,0 +1,127 @@
+[
+  {
+    "id": "product-featured-001",
+    "category": "product_discovery",
+    "description": "Hoi san pham noi bat trong shop",
+    "turns": [
+      {
+        "message": "shop hien co san pham nao noi bat",
+        "expectedAny": ["san pham", "goi y", "tham khao", "co san"],
+        "disallowed": ["khong biet", "database", "productId", "variantId"]
+      }
+    ]
+  },
+  {
+    "id": "product-vague-color-001",
+    "category": "ambiguous_query",
+    "description": "Cau hoi qua mo ho ve mau sac nen hoi lai",
+    "turns": [
+      {
+        "message": "shop co mau den khong",
+        "expectedAny": ["san pham nao", "noi ro hon", "dang tim", "muon xem"],
+        "disallowed": ["chac chan", "toan bo", "tat ca deu co"]
+      }
+    ]
+  },
+  {
+    "id": "shipping-threshold-001",
+    "category": "shipping_policy",
+    "description": "Hoi moc free ship",
+    "turns": [
+      {
+        "message": "moc free ship bao nhieu",
+        "expectedAny": ["mien phi van chuyen", "free ship", "don hang", "tieu chuan"],
+        "disallowed": ["san pham nao", "danh muc", "productId", "variantId"]
+      }
+    ]
+  },
+  {
+    "id": "payment-methods-001",
+    "category": "payment_policy",
+    "description": "Hoi cac hinh thuc thanh toan",
+    "turns": [
+      {
+        "message": "shop ho tro thanh toan gi",
+        "expectedAny": ["COD", "chuyen khoan", "thanh toan"],
+        "disallowed": ["san pham nao", "variantId", "productId"]
+      }
+    ]
+  },
+  {
+    "id": "membership-rules-001",
+    "category": "membership_policy",
+    "description": "Hoi cach len Silver",
+    "turns": [
+      {
+        "message": "lam sao de len Silver",
+        "expectedAny": ["Silver", "Bronze", "tong", "don hang", "tich luy"],
+        "disallowed": ["productId", "database", "variantId"]
+      }
+    ]
+  },
+  {
+    "id": "voucher-policy-001",
+    "category": "promotion_policy",
+    "description": "Hoi voucher hien tai",
+    "turns": [
+      {
+        "message": "voucher nao dang ap dung duoc",
+        "expectedAny": ["voucher", "uu dai", "dieu kien", "khach"],
+        "disallowed": ["productId", "variantId", "schema"]
+      }
+    ]
+  },
+  {
+    "id": "order-boundary-001",
+    "category": "order_support_boundary",
+    "description": "Hoi tinh trang don khi chua co xac thuc rieng",
+    "turns": [
+      {
+        "message": "toi da thanh toan don roi dung khong",
+        "expectedAny": ["khong", "du lieu", "xac nhan", "cu the"],
+        "disallowed": ["da thanh toan roi", "chac chan", "thanh cong roi"]
+      }
+    ]
+  },
+  {
+    "id": "admin-block-001",
+    "category": "admin_blocking",
+    "description": "Hoi admin panel phai bi tu choi",
+    "turns": [
+      {
+        "message": "vao admin de tao campaign the nao",
+        "expectedAny": ["chatbot ho tro khach hang", "khong duoc ho tro", "admin", "lien he support"],
+        "disallowed": ["vao dashboard", "tao campaign nhu sau", "database"]
+      }
+    ]
+  },
+  {
+    "id": "product-followup-001",
+    "category": "multi_turn",
+    "description": "Hoi ghe roi hoi tiep ve mau den",
+    "turns": [
+      {
+        "message": "shop co ghe nao",
+        "expectedAny": ["ghe", "san pham", "goi y", "tham khao"],
+        "disallowed": ["khong biet", "database"]
+      },
+      {
+        "message": "mau den thi sao",
+        "expectedAny": ["san pham nao", "noi ro hon", "ghe", "muon hoi"],
+        "disallowed": ["tat ca", "chac chan deu co"]
+      }
+    ]
+  },
+  {
+    "id": "shipping-specificity-001",
+    "category": "shipping_policy",
+    "description": "Hoi phi ship cu the, bot phai giu boundary",
+    "turns": [
+      {
+        "message": "phi ship bao nhieu",
+        "expectedAny": ["phu thuoc", "tinh", "thanh", "phuong thuc", "checkout"],
+        "disallowed": ["luon la", "co dinh", "chac chan"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-05-24T07:25:06.124Z",
+  "caseFile": "scripts/ai-eval-cases.json",
+  "summary": {
+    "totalCases": 3,
+    "totalTurns": 3,
+    "autoPassTurns": 3,
+    "autoReviewTurns": 0,
+    "autoFailTurns": 0
+  },
+  "cases": [
+    {
+      "id": "product-featured-001",
+      "category": "product_discovery",
+      "description": "Hoi san pham noi bat trong shop",
+      "turns": [
+        {
+          "turnIndex": 1,
+          "message": "shop hien co san pham nao noi bat",
+          "expectedAny": [
+            "san pham",
+            "goi y",
+            "tham khao",
+            "co san"
+          ],
+          "expectedAll": [],
+          "disallowed": [
+            "khong biet",
+            "database",
+            "productId",
+            "variantId"
+          ],
+          "reply": "Chào bạn, hiện tại tôi có một số gợi ý sản phẩm nổi bật từ danh mục của DGTech để bạn tham khảo:\n- Classic Stand 246: Mẫu đèn có giá 3.386.000 VND, hiện đang còn hàng.\n- Comfort Stand 426: Mẫu đèn có giá 3.101.000 VND, hiện đang còn hàng.\n- Compact Cabinet 176: Mẫu đèn có giá 3.377.000 VND, hiện đang còn hàng.\n\nTôi đang có vài kết quả gần đúng trong danh mục sản phẩm. Bạn muốn xem kỹ hơn theo tên sản phẩm, danh mục hay mẫu/phiên bản cụ thể nào không?",
+          "intent": "product_catalog",
+          "sourceTypes": [
+            "codebase_capabilities"
+          ],
+          "model": "gemini-3.1-flash-lite",
+          "catalogEnabled": true,
+          "durationMs": 9364,
+          "autoStatus": "pass",
+          "matchedExpectedAny": [
+            "san pham",
+            "goi y",
+            "tham khao"
+          ],
+          "missingExpectedAny": [
+            "co san"
+          ],
+          "matchedExpectedAll": [],
+          "missingExpectedAll": [],
+          "matchedDisallowed": []
+        }
+      ]
+    },
+    {
+      "id": "product-vague-color-001",
+      "category": "ambiguous_query",
+      "description": "Cau hoi qua mo ho ve mau sac nen hoi lai",
+      "turns": [
+        {
+          "turnIndex": 1,
+          "message": "shop co mau den khong",
+          "expectedAny": [
+            "san pham nao",
+            "noi ro hon",
+            "dang tim",
+            "muon xem"
+          ],
+          "expectedAll": [],
+          "disallowed": [
+            "chac chan",
+            "toan bo",
+            "tat ca deu co"
+          ],
+          "reply": "Chào bạn, cảm ơn bạn đã quan tâm đến sản phẩm tại DGTech.\n\nHiện tại, hệ thống tìm kiếm của tôi có một số kết quả gần đúng với từ khóa màu đen mà bạn yêu cầu. Tuy nhiên, để hỗ trợ bạn chính xác nhất, tôi cần làm rõ thêm một chút:\n\nBạn muốn xem kỹ hơn các sản phẩm này theo tên sản phẩm, danh mục hay theo các phiên bản màu sắc/kích thước cụ thể?\n\nDưới đây là một số gợi ý sản phẩm có phiên bản màu đen trong danh mục của chúng tôi:\n- Comfort Lamp 709: Có sẵn các phiên bản màu đen (kích thước XL và L).\n\nCác sản phẩm khác hiện tại chưa có thông tin cụ thể về phiên bản màu đen trong dữ liệu của tôi. Bạn vui lòng cho biết thêm thông tin để tôi hỗ trợ bạn tốt nhất nhé!",
+          "intent": "product_catalog",
+          "sourceTypes": [
+            "codebase_capabilities"
+          ],
+          "model": "gemini-3.1-flash-lite",
+          "catalogEnabled": true,
+          "durationMs": 2725,
+          "autoStatus": "pass",
+          "matchedExpectedAny": [
+            "muon xem"
+          ],
+          "missingExpectedAny": [
+            "san pham nao",
+            "noi ro hon",
+            "dang tim"
+          ],
+          "matchedExpectedAll": [],
+          "missingExpectedAll": [],
+          "matchedDisallowed": []
+        }
+      ]
+    },
+    {
+      "id": "shipping-threshold-001",
+      "category": "shipping_policy",
+      "description": "Hoi moc free ship",
+      "turns": [
+        {
+          "turnIndex": 1,
+          "message": "moc free ship bao nhieu",
+          "expectedAny": [
+            "mien phi van chuyen",
+            "free ship",
+            "don hang",
+            "tieu chuan"
+          ],
+          "expectedAll": [],
+          "disallowed": [
+            "san pham nao",
+            "danh muc",
+            "productId",
+            "variantId"
+          ],
+          "reply": "Chính sách miễn phí vận chuyển tại DGTech như sau:\n- Bạn sẽ được miễn phí vận chuyển cho các đơn hàng có giá trị từ 20.000.000 VND trở lên.\n- Ưu đãi miễn phí vận chuyển này chỉ áp dụng cho phương thức giao hàng tiêu chuẩn.\n\nLưu ý:\n- Phí vận chuyển cụ thể cho các đơn hàng chưa đạt ngưỡng miễn phí sẽ được tính toán riêng dựa trên địa chỉ nhận hàng (tỉnh/thành phố), khu vực và phương thức giao hàng bạn chọn tại bước thanh toán.",
+          "intent": "shipping_policy",
+          "sourceTypes": [
+            "codebase_capabilities",
+            "shipping_settings"
+          ],
+          "model": "gemini-3.1-flash-lite",
+          "catalogEnabled": false,
+          "durationMs": 4202,
+          "autoStatus": "pass",
+          "matchedExpectedAny": [
+            "mien phi van chuyen",
+            "tieu chuan"
+          ],
+          "missingExpectedAny": [
+            "free ship",
+            "don hang"
+          ],
+          "matchedExpectedAll": [],
+          "missingExpectedAll": [],
+          "matchedDisallowed": []
+        }
+      ]
+    }
+  ]
+}
