@@ -71,6 +71,18 @@ export const FloatingAIWidget = () => {
 
   const displayedMessages = messages.length > 0 ? messages : [introMessage()];
 
+  const ThinkingIndicator = () => (
+    <div className="flex justify-start">
+      <div className="rounded-2xl border border-orange-200/60 bg-linear-to-br from-orange-50 to-background px-3 py-3 shadow-sm dark:border-orange-900/40 dark:from-orange-950/20">
+        <div className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-400 [animation-delay:-0.2s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-500 [animation-delay:-0.1s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-orange-600" />
+        </div>
+      </div>
+    </div>
+  );
+
   const loadConversations = async () => {
     setIsLoadingConversations(true);
     setLoadError(null);
@@ -349,7 +361,7 @@ export const FloatingAIWidget = () => {
 
               <div ref={messagesRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
                 {isLoadingMessages ? (
-                  <div className="text-sm text-muted-foreground">Loading messages...</div>
+                  <ThinkingIndicator />
                 ) : (
                   displayedMessages.map((message) => (
                     <div
@@ -368,11 +380,7 @@ export const FloatingAIWidget = () => {
                   ))
                 )}
                 {isSending && (
-                  <div className="flex justify-start">
-                    <div className="max-w-60 rounded-2xl bg-muted px-3 py-2 text-sm text-foreground">
-                      Dang tra loi...
-                    </div>
-                  </div>
+                  <ThinkingIndicator />
                 )}
                 {loadError && <div className="text-xs text-destructive">{loadError}</div>}
               </div>

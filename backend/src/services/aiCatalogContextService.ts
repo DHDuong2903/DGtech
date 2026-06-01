@@ -1,10 +1,12 @@
 import { Op } from "sequelize";
 import { Category, Product, ProductVariant } from "../models/associationsModel.js";
+import { cacheGetJson, cacheSetJson } from "../libs/cache.js";
 import {
   getStorefrontUserTier,
   resolveVariantPricingBatch,
   type VariantPricingContext,
 } from "./discountCampaignResolveService.js";
+import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
 
 type CatalogVariantRow = {
   variantId: string;
@@ -60,6 +62,12 @@ type BuildCatalogContextOptions = {
   recentUserMessages?: string[];
   userId?: string | null;
 };
+
+const AI_CATALOG_SUMMARY_CACHE_KEY = "ai-catalog:summary:v1";
+const AI_CATALOG_SUMMARY_STALE_CACHE_KEY = "ai-catalog:summary:stale:v1";
+const AI_CATALOG_SUMMARY_CACHE_TTL_MS = 2 * 60 * 1000;
+const AI_CATALOG_SUMMARY_STALE_TTL_MS = 15 * 60 * 1000;
+const AI_CATALOG_FALLBACK_FEATURED_LIMIT = 6;
 
 const CATALOG_HINT_PATTERNS = [
   /\bsan pham\b/i,
@@ -351,6 +359,182 @@ async function applyDiscountContextToProducts(products: CatalogProductRow[], use
   }
 }
 
+type CatalogSummarySnapshot = {
+  totalActiveProducts: number;
+  totalCategories: number;
+  allCategories: CatalogCategoryRow[];
+  fallbackFeaturedProducts: CatalogProductRow[];
+  productIndex: CatalogProductIndexEntry[];
+};
+
+type CatalogProductIndexEntry = {
+  productId: string;
+  categoryId: number;
+  normalizedName: string;
+  normalizedDescription: string;
+  normalizedCategoryName: string;
+  normalizedVariantText: string;
+  stock: number;
+  hasRealVariants: boolean;
+};
+
+function buildNormalizedVariantIndexText(variants?: CatalogVariantRow[]) {
+  if (!Array.isArray(variants) || variants.length === 0) return "";
+  const values: string[] = [];
+  for (const variant of variants) {
+    if (variant?.sku) values.push(String(variant.sku));
+    if (variant?.attributes && typeof variant.attributes === "object") {
+      for (const [key, value] of Object.entries(variant.attributes)) {
+        values.push(String(key));
+        values.push(String(value));
+      }
+    }
+  }
+  return normalizeText(values.join(" "));
+}
+
+function toCatalogProductIndexEntry(product: CatalogProductRow): CatalogProductIndexEntry {
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  return {
+    productId: product.productId,
+    categoryId: Number(product.categoryId),
+    normalizedName: normalizeText(product.name || ""),
+    normalizedDescription: normalizeText(product.description || ""),
+    normalizedCategoryName: normalizeText(product.category?.name || ""),
+    normalizedVariantText: buildNormalizedVariantIndexText(variants),
+    stock: Number(product.stock || 0),
+    hasRealVariants: variants.some((variant) => !variant.isDefault),
+  };
+}
+
+function scoreCatalogIndexEntry(entry: CatalogProductIndexEntry, normalizedMessage: string, searchTerms: string[]) {
+  let score = 0;
+
+  if (normalizedMessage && entry.normalizedName.includes(normalizedMessage)) score += 220;
+  if (normalizedMessage && entry.normalizedCategoryName.includes(normalizedMessage)) score += 120;
+
+  for (const term of searchTerms) {
+    const normalizedTerm = normalizeText(term);
+    if (!normalizedTerm) continue;
+    if (entry.normalizedName.includes(normalizedTerm)) score += 30;
+    if (entry.normalizedCategoryName.includes(normalizedTerm)) score += 18;
+    if (entry.normalizedVariantText.includes(normalizedTerm)) score += 18;
+    if (entry.normalizedDescription.includes(normalizedTerm)) score += 8;
+  }
+
+  if (entry.stock > 0) score += 4;
+  if (entry.hasRealVariants) score += 6;
+  return score;
+}
+
+function findMatchedCategoriesFromSummary(allCategories: CatalogCategoryRow[], searchTerms: string[]) {
+  if (searchTerms.length === 0) return [];
+  const scored = allCategories
+    .map((category) => {
+      const normalizedName = normalizeText(category.name || "");
+      let score = 0;
+      for (const term of searchTerms) {
+        const normalizedTerm = normalizeText(term);
+        if (normalizedName.includes(normalizedTerm)) score += 20;
+      }
+      return { category, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.category.name.localeCompare(right.category.name));
+
+  return scored.slice(0, 6).map((item) => item.category);
+}
+
+function findProductIdsFromCatalogIndex(
+  productIndex: CatalogProductIndexEntry[],
+  message: string,
+  searchTerms: string[],
+  matchedCategoryIds: number[],
+) {
+  const normalizedMessage = normalizeText(message);
+  const scored = productIndex
+    .map((entry) => {
+      let score = scoreCatalogIndexEntry(entry, normalizedMessage, searchTerms);
+      if (matchedCategoryIds.includes(entry.categoryId)) score += 14;
+      return { entry, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      if (right.entry.stock !== left.entry.stock) return right.entry.stock - left.entry.stock;
+      return left.entry.productId.localeCompare(right.entry.productId);
+    });
+
+  return scored.slice(0, 12).map((item) => item.entry.productId);
+}
+
+async function loadCatalogSummarySnapshot() {
+  const cached = await cacheGetJson<CatalogSummarySnapshot>(AI_CATALOG_SUMMARY_CACHE_KEY);
+  if (cached) return cached;
+
+  try {
+    const totalActiveProducts = await withDbRetry(
+      () => Product.count({ where: { status: "ACTIVE" } }),
+      { label: "aiCatalog.totalActiveProducts" },
+    );
+    const totalCategories = await withDbRetry(() => Category.count(), { label: "aiCatalog.totalCategories" });
+    const allCategoriesRows = await withDbRetry(
+      () =>
+        Category.findAll({
+          order: [["name", "ASC"]],
+        }),
+      { label: "aiCatalog.allCategories" },
+    );
+    const fallbackFeaturedRows = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: { status: "ACTIVE" },
+          include: productInclude,
+          order: [["stock", "DESC"], ["updatedAt", "DESC"]],
+          limit: AI_CATALOG_FALLBACK_FEATURED_LIMIT,
+        }),
+      { label: "aiCatalog.fallbackFeatured" },
+    );
+
+    const snapshot: CatalogSummarySnapshot = {
+      totalActiveProducts,
+      totalCategories,
+      allCategories: allCategoriesRows.map((row: any) => row.get({ plain: true })) as CatalogCategoryRow[],
+      fallbackFeaturedProducts: fallbackFeaturedRows.map((row: any) => row.get({ plain: true })) as CatalogProductRow[],
+      productIndex: fallbackFeaturedRows.map((row: any) => row.get({ plain: true })),
+    };
+
+    const activeProductIndexRows = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: { status: "ACTIVE" },
+          include: productInclude,
+          order: [["updatedAt", "DESC"]],
+        }),
+      { label: "aiCatalog.productIndex" },
+    );
+
+    snapshot.productIndex = activeProductIndexRows.map((row: any) =>
+      toCatalogProductIndexEntry(row.get({ plain: true }) as CatalogProductRow),
+    );
+
+    await Promise.all([
+      cacheSetJson(AI_CATALOG_SUMMARY_CACHE_KEY, snapshot, AI_CATALOG_SUMMARY_CACHE_TTL_MS),
+      cacheSetJson(AI_CATALOG_SUMMARY_STALE_CACHE_KEY, snapshot, AI_CATALOG_SUMMARY_STALE_TTL_MS),
+    ]);
+    return snapshot;
+  } catch (error) {
+    if (isTransientDbError(error)) {
+      const stale = await cacheGetJson<CatalogSummarySnapshot>(AI_CATALOG_SUMMARY_STALE_CACHE_KEY);
+      if (stale) {
+        console.warn("loadCatalogSummarySnapshot: serving stale cache after DB error");
+        return stale;
+      }
+    }
+    throw error;
+  }
+}
+
 function buildCatalogContextText(
   searchTerms: string[],
   matchedProducts: CatalogProductRow[],
@@ -523,26 +707,17 @@ export async function buildCatalogContext(
     };
   }
 
-  // Always fetch all categories and featured products for context
-  const [totalActiveProducts, totalCategories, allCategoriesRows, featuredProductsRows] = await Promise.all([
-    Product.count({ where: { status: "ACTIVE" } }),
-    Category.count(),
-    Category.findAll({
-      order: [["name", "ASC"]],
-    }),
-    Product.findAll({
-      where: { status: "ACTIVE" },
-      include: productInclude,
-      order: [["stock", "DESC"], ["updatedAt", "DESC"]],
-      limit: 10,
-    }),
-  ]);
-
-  const allCategories = allCategoriesRows.map((row) => row.get({ plain: true })) as CatalogCategoryRow[];
-  const featuredProducts = featuredProductsRows.map((row) => row.get({ plain: true })) as CatalogProductRow[];
-  await applyDiscountContextToProducts(featuredProducts, options?.userId);
+  const summary = await loadCatalogSummarySnapshot();
+  const totalActiveProducts = summary.totalActiveProducts;
+  const totalCategories = summary.totalCategories;
+  const allCategories = summary.allCategories;
 
   if (searchTerms.length === 0) {
+    const featuredProducts = summary.fallbackFeaturedProducts.map((row) => ({
+      ...row,
+      variants: Array.isArray(row.variants) ? row.variants.map((variant) => ({ ...variant })) : [],
+    }));
+    await applyDiscountContextToProducts(featuredProducts, options?.userId);
     return {
       shouldUseCatalogContext,
       isVariantIntent,
@@ -562,52 +737,44 @@ export async function buildCatalogContext(
     };
   }
 
-  const productTextClauses = searchTerms.flatMap((term) => [
-    { name: { [Op.iLike]: `%${term}%` } },
-    { description: { [Op.iLike]: `%${term}%` } },
-  ]);
-
-  const categoryNameClauses = searchTerms.map((term) => ({
-    name: { [Op.iLike]: `%${term}%` },
-  }));
-
-  const [matchedCategoriesRows, matchedProductsByText] = await Promise.all([
-    Category.findAll({
-      where: { [Op.or]: categoryNameClauses },
-      order: [["name", "ASC"]],
-      limit: 6,
-    }),
-    Product.findAll({
-      where: {
-        status: "ACTIVE",
-        [Op.or]: productTextClauses,
-      },
-      include: productInclude,
-      order: [["updatedAt", "DESC"]],
-      limit: 12,
-    }),
-  ]);
-
-  const matchedCategories = matchedCategoriesRows.map((row) => row.get({ plain: true })) as CatalogCategoryRow[];
+  const matchedCategories = findMatchedCategoriesFromSummary(allCategories, searchTerms);
+  const matchedCategoryIds = matchedCategories.map((category) => category.categoryId);
+  const matchedProductIds = findProductIdsFromCatalogIndex(summary.productIndex, message, searchTerms, matchedCategoryIds);
   const productMap = new Map<string, CatalogProductRow>();
 
-  for (const row of matchedProductsByText) {
-    const plain = row.get({ plain: true }) as CatalogProductRow;
-    productMap.set(plain.productId, plain);
+  if (matchedProductIds.length > 0) {
+    const matchedProductsRows = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: {
+            status: "ACTIVE",
+            productId: { [Op.in]: matchedProductIds },
+          },
+          include: productInclude,
+          order: [["updatedAt", "DESC"]],
+        }),
+      { label: "aiCatalog.matchedProductsByIndex" },
+    );
+    for (const row of matchedProductsRows) {
+      const plain = row.get({ plain: true }) as CatalogProductRow;
+      productMap.set(plain.productId, plain);
+    }
   }
 
-  const matchedCategoryIds = matchedCategories.map((category) => category.categoryId);
-  if (matchedCategoryIds.length > 0 && productMap.size < 12) {
-    const categoryProducts = await Product.findAll({
-      where: {
-        status: "ACTIVE",
-        categoryId: { [Op.in]: matchedCategoryIds },
-      },
-      include: productInclude,
-      order: [["updatedAt", "DESC"]],
-      limit: 12 - productMap.size,
-    });
-
+  if (matchedCategoryIds.length > 0 && productMap.size < 8) {
+    const categoryProducts = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: {
+            status: "ACTIVE",
+            categoryId: { [Op.in]: matchedCategoryIds },
+          },
+          include: productInclude,
+          order: [["updatedAt", "DESC"]],
+          limit: Math.max(1, 8 - productMap.size),
+        }),
+      { label: "aiCatalog.categoryProducts" },
+    );
     for (const row of categoryProducts) {
       const plain = row.get({ plain: true }) as CatalogProductRow;
       productMap.set(plain.productId, plain);
@@ -616,6 +783,18 @@ export async function buildCatalogContext(
 
   const matchedProducts = sortProductsByRelevance(Array.from(productMap.values()), message, searchTerms).slice(0, 8);
   await applyDiscountContextToProducts(matchedProducts, options?.userId);
+  const featuredProducts =
+    matchedProducts.length === 0
+      ? summary.fallbackFeaturedProducts
+          .map((row) => ({
+            ...row,
+            variants: Array.isArray(row.variants) ? row.variants.map((variant) => ({ ...variant })) : [],
+          }))
+          .slice(0, 5)
+      : [];
+  if (featuredProducts.length > 0) {
+    await applyDiscountContextToProducts(featuredProducts, options?.userId);
+  }
 
   return {
     shouldUseCatalogContext,

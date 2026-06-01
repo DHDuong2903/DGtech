@@ -129,6 +129,26 @@ async function findRecentHistory(conversationId: string): Promise<ChatHistoryMes
     .filter((item) => item.text.trim().length > 0);
 }
 
+async function loadLatestMessageByConversationId(conversationIds: string[]) {
+  const uniqueIds = [...new Set(conversationIds.filter(Boolean))];
+  const map = new Map<string, any>();
+  if (!uniqueIds.length) return map;
+
+  const rows = await AiConversationMessage.findAll({
+    where: { conversationId: { [Op.in]: uniqueIds } },
+    order: [["conversationId", "ASC"], ["createdAt", "DESC"]],
+  });
+
+  for (const row of rows as any[]) {
+    const plain = row.get({ plain: true });
+    if (!map.has(plain.conversationId)) {
+      map.set(plain.conversationId, plain);
+    }
+  }
+
+  return map;
+}
+
 export async function listAiConversations(actor: ConversationActor) {
   const ownerWhere = requireConversationActor(actor);
   const conversations = await AiConversation.findAll({
@@ -137,16 +157,14 @@ export async function listAiConversations(actor: ConversationActor) {
     limit: 20,
   });
 
-  const results = [];
-  for (const row of conversations) {
-    const lastMessage = await AiConversationMessage.findOne({
-      where: { conversationId: (row as any).conversationId },
-      order: [["createdAt", "DESC"]],
-    });
-    results.push(normalizeConversationRow(row.get({ plain: true }), lastMessage?.get?.({ plain: true }) || lastMessage));
-  }
+  const latestMessageByConversationId = await loadLatestMessageByConversationId(
+    conversations.map((row: any) => row.conversationId),
+  );
 
-  return results;
+  return conversations.map((row: any) => {
+    const plain = row.get({ plain: true });
+    return normalizeConversationRow(plain, latestMessageByConversationId.get(plain.conversationId));
+  });
 }
 
 export async function createAiConversation(actor: ConversationActor) {

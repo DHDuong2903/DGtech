@@ -1,5 +1,10 @@
 import { buildCatalogContext } from "./aiCatalogContextService.js";
+import {
+  buildStructuredPolicyContext,
+  shouldUseCompactPolicyContextOnly,
+} from "./aiPolicyStructuredContextService.js";
 import { buildWebsiteKnowledgeContext } from "./aiWebsiteKnowledgeService.js";
+import { buildStructuredAiContext } from "./aiStructuredContextService.js";
 
 export type ChatHistoryMessage = {
   sender: "user" | "ai";
@@ -33,6 +38,12 @@ type GeminiResponse = {
 const GEMINI_MODEL = process.env.GEMINI_MODEL;
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const MAX_HISTORY_MESSAGES = 12;
+const POLICY_ONLY_INTENTS = new Set([
+  "shipping_policy",
+  "payment_policy",
+  "membership_policy",
+  "voucher_policy",
+]);
 
 function maskApiKey(apiKey: string) {
   if (apiKey.length <= 8) return `${apiKey.slice(0, 2)}***${apiKey.slice(-2)}`;
@@ -135,8 +146,23 @@ export async function generateChatReply(
     recentUserMessages,
     userId: options?.userId,
   });
+  const shouldSuppressCatalogContext = POLICY_ONLY_INTENTS.has(websiteKnowledgeContext.intent);
+  const effectiveCatalogContext = shouldSuppressCatalogContext
+    ? {
+        ...catalogContext,
+        shouldUseCatalogContext: false,
+        matchedProducts: [],
+        matchedCategories: [],
+        contextText: "",
+      }
+    : catalogContext;
+  const policyStructuredContext = await buildStructuredPolicyContext(websiteKnowledgeContext, {
+    userId: options?.userId,
+    sourceTypes: websiteKnowledgeContext.sourceTypes,
+  });
+  const structuredContext = buildStructuredAiContext(normalizedMessage, effectiveCatalogContext, websiteKnowledgeContext);
   console.log(
-    `[AI Chat] Context summary: intent=${websiteKnowledgeContext.intent}, authenticated=${options?.userId ? "true" : "false"}, sourceTypes=${websiteKnowledgeContext.sourceTypes.join(",") || "none"}, catalogEnabled=${catalogContext.shouldUseCatalogContext}, variantIntent=${catalogContext.isVariantIntent}, searchTerms=${catalogContext.searchTerms.join(",") || "none"}, matchedProducts=${catalogContext.matchedProducts.length}, matchedCategories=${catalogContext.matchedCategories.length}`,
+    `[AI Chat] Context summary: intent=${websiteKnowledgeContext.intent}, authenticated=${options?.userId ? "true" : "false"}, sourceTypes=${websiteKnowledgeContext.sourceTypes.join(",") || "none"}, catalogEnabled=${effectiveCatalogContext.shouldUseCatalogContext}, variantIntent=${effectiveCatalogContext.isVariantIntent}, searchTerms=${effectiveCatalogContext.searchTerms.join(",") || "none"}, matchedProducts=${effectiveCatalogContext.matchedProducts.length}, matchedCategories=${effectiveCatalogContext.matchedCategories.length}, answerMode=${structuredContext.answerMode}, retrievalConfidence=${structuredContext.retrievalConfidence}, clarify=${structuredContext.shouldAskClarifyingQuestion ? "true" : "false"}, policyTools=${policyStructuredContext.toolNames.join(",") || "none"}, catalogSuppressed=${shouldSuppressCatalogContext ? "true" : "false"}`,
   );
 
   console.log("[AI Chat] Step 4/6: Building Gemini contents payload");
@@ -148,8 +174,11 @@ export async function generateChatReply(
     "If you do not know a specific store policy or order detail, say so clearly and avoid inventing facts.",
     "Do not claim to have performed actions in external systems.",
     "Treat the provided website knowledge context as source of truth for store capabilities, payment rules, shipping behavior, tax settings, and general store guidance.",
+    "Treat any AI tool result block as higher priority than verbose context if they disagree.",
     "Never expose internal field names, database table names, schema names, raw identifiers, or implementation details to customers.",
     "Rewrite technical context into natural Vietnamese suitable for customers.",
+    "If the AI tool result says answer_mode=clarify, ask exactly one short clarification question first and do not pretend to know the exact product yet.",
+    "If retrieval_confidence=low, present uncertain results as suggestions only and avoid definitive claims unless the context explicitly confirms them.",
     "",
     "=== RESPONSE FORMATTING RULES ===",
     "Format your response for maximum clarity and readability:",
@@ -166,10 +195,10 @@ export async function generateChatReply(
     "  '- Giao hàng nhanh: 1-2 ngày (phí tính theo địa điểm)'",
     "  '- Giao hàng Express: Cùng ngày (cho TP.HCM, Hà Nội)'",
     "",
-    catalogContext.shouldUseCatalogContext
+    effectiveCatalogContext.shouldUseCatalogContext
       ? "When website catalog context is provided, treat it as the source of truth for product availability, pricing, and categories."
       : "No website catalog context was provided for this question, so avoid claiming exact product availability unless the user already gave that information.",
-    catalogContext.isVariantIntent
+    effectiveCatalogContext.isVariantIntent
       ? "If the question asks about variants, types, colors, sizes, or attributes, answer from Focused product variants first and enumerate the concrete variants you see there."
       : "If Focused product variants are present, use them when they materially improve product-detail accuracy.",
     websiteKnowledgeContext.intent === "order_support"
@@ -179,7 +208,11 @@ export async function generateChatReply(
       ? "Authenticated user context may be present. If so, you may use it to answer about the current signed-in user's own rank or recent orders."
       : "No authenticated user context is available in this request, so do not claim to know the user's private rank or order history.",
   ];
-  const contextParts = [websiteKnowledgeContext.contextText, catalogContext.contextText].filter(Boolean);
+  const contextParts = [
+    structuredContext.contextText,
+    policyStructuredContext.contextText,
+    shouldUseCompactPolicyContextOnly(websiteKnowledgeContext) ? "" : websiteKnowledgeContext.contextText,
+  ].filter(Boolean);
   const contents = [
     ...(contextParts.length > 0
       ? [
@@ -259,6 +292,6 @@ export async function generateChatReply(
     model: GEMINI_MODEL,
     intent: websiteKnowledgeContext.intent,
     sourceTypes: websiteKnowledgeContext.sourceTypes,
-    catalogEnabled: catalogContext.shouldUseCatalogContext,
+    catalogEnabled: effectiveCatalogContext.shouldUseCatalogContext,
   };
 }
