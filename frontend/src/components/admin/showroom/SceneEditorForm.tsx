@@ -250,7 +250,7 @@ export function SceneEditorForm({
             <h2 className="text-lg font-semibold">Positions</h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Positions are synced from the uploaded 3D scene model. You can map categories here, but position names and count are read from the model.
+            Positions are synced from the uploaded 3D scene model. You can map categories here but position names and count are read from the model.
           </p>
 
           {draft.positions.length === 0 ? (

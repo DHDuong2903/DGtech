@@ -1,4 +1,3 @@
-import { Button } from "@/src/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 
@@ -18,7 +17,7 @@ const formatTime = (seconds: number) => {
 
 export const PaymentHeader = ({ orderId, isPaid, isExpired, timeLeft, onBackToOrder }: PaymentHeaderProps) => {
   return (
-    <div className="mb-3 space-y-3">
+    <div className="mb-5 space-y-3 sm:mb-6">
       <button
         onClick={onBackToOrder}
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
@@ -28,11 +27,13 @@ export const PaymentHeader = ({ orderId, isPaid, isExpired, timeLeft, onBackToOr
       </button>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-foreground">
-            {isPaid ? "Payment successful" : `Order #${orderId.slice(0, 8)}`}
-          </h1>
-        </div>
+        {!isPaid ? (
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground">{`Order #${orderId.slice(0, 8)}`}</h1>
+          </div>
+        ) : (
+          <div />
+        )}
 
         {!isPaid && !isExpired && (
           <div className="sm:text-right">
