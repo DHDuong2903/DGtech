@@ -133,7 +133,7 @@ export const Navbar = () => {
 
           <form
             onSubmit={handleNavSearch}
-            className="relative hidden w-56 items-center lg:flex xl:w-64"
+            className="relative hidden w-44 items-center lg:flex xl:w-52"
             role="search"
             aria-label="Search catalog"
           >

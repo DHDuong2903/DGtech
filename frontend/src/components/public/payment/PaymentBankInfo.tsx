@@ -1,7 +1,5 @@
 import { Card } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Spinner } from "@/src/components/ui/spinner";
-import { Copy, Check, RefreshCw } from "lucide-react";
+import { Copy } from "lucide-react";
 import { formatCurrency } from "@/src/utils";
 
 interface PaymentBankInfoProps {
@@ -10,10 +8,7 @@ interface PaymentBankInfoProps {
   accountName?: string;
   amount: number;
   transactionContent?: string;
-  checking: boolean;
-  copied: string | null;
   onCopy: (text: string, field: string) => void;
-  onCheckStatus: () => void;
 }
 
 export const PaymentBankInfo = ({
@@ -22,10 +17,7 @@ export const PaymentBankInfo = ({
   accountName,
   amount,
   transactionContent,
-  checking,
-  copied,
   onCopy,
-  onCheckStatus,
 }: PaymentBankInfoProps) => {
   return (
     <Card className="overflow-hidden gap-0 p-0 shadow-none border-border">
@@ -98,26 +90,6 @@ export const PaymentBankInfo = ({
             Enter the reference exactly to ensure your payment is matched automatically.
           </p>
         </div>
-
-        {/* Check Status Button */}
-        <Button
-          onClick={onCheckStatus}
-          disabled={checking}
-          className="w-full h-11 mt-2 font-semibold"
-          variant="outline"
-        >
-          {checking ? (
-            <>
-              <Spinner data-icon="inline-start" />
-              Verifying payment...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" />
-              Check payment status
-            </>
-          )}
-        </Button>
       </div>
     </Card>
   );
