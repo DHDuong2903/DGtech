@@ -162,7 +162,7 @@ export default function PaymentPage() {
   const isPaid = payment.status === "PAID";
 
   return (
-    <div className="min-h-screen bg-background py-3">
+    <div className="min-h-screen bg-background py-4 sm:py-6">
       <div className={cn("mx-auto max-w-4xl", STOREFRONT_H_PADDING)}>
         <PaymentHeader
           orderId={orderId}
@@ -179,13 +179,9 @@ export default function PaymentPage() {
             onContinueShopping={() => router.push("/shop")}
           />
         ) : isPaid ? (
-          <PaymentSuccess
-            orderId={orderId}
-            transactionId={payment.transactionId}
-            onViewOrderDetail={() => router.push(`/orders/${orderId}`)}
-          />
+          <PaymentSuccess onViewOrderDetail={() => router.push(`/orders/${orderId}`)} />
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-5 md:grid-cols-2">
             <PaymentQRCode qrCodeUrl={payment.qrCodeUrl} />
 
             <PaymentBankInfo

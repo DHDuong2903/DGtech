@@ -32,10 +32,6 @@ import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { Spinner } from "@/src/components/ui/spinner";
 
-const getPaymentMethodLabel = (method: "COD" | "BANK_TRANSFER") => {
-  return method === "COD" ? "Cash on delivery (COD)" : "Bank transfer";
-};
-
 export default function OrderDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -98,6 +94,10 @@ export default function OrderDetailPage() {
   const paymentStatusColor = isCancelled
     ? "border-red-500/30 bg-red-500/15 text-red-950 dark:text-red-300"
     : getPaymentStatusColor(currentOrder.paymentMethod, currentOrder.status, currentOrder.payment);
+  const canContinuePayment =
+    currentOrder.paymentMethod === "BANK_TRANSFER" &&
+    currentOrder.status === "PENDING" &&
+    currentOrder.payment?.status !== "PAID";
 
   return (
     <div className="min-h-[calc(100vh-200px)] bg-background py-3">
@@ -287,13 +287,11 @@ export default function OrderDetailPage() {
                 </div>
 
                 <div className="space-y-2 pt-0">
-                  {currentOrder.paymentMethod === "BANK_TRANSFER" &&
-                    currentOrder.payment?.status !== "PAID" &&
-                    currentOrder.status !== "CANCELLED" && (
-                      <Link href={`/payment/${currentOrder.orderId}`} className="block">
-                        <Button className="w-full bg-orange-600 hover:bg-orange-700">Continue Payment</Button>
-                      </Link>
-                    )}
+                  {canContinuePayment && (
+                    <Link href={`/payment/${currentOrder.orderId}`} className="block">
+                      <Button className="w-full bg-orange-600 hover:bg-orange-700">Continue Payment</Button>
+                    </Link>
+                  )}
                   {currentOrder.status === "COMPLETED" && <Button className="w-full">Buy again</Button>}
                   <Link href="/orders" className="block">
                     <Button variant="outline" className="w-full">
