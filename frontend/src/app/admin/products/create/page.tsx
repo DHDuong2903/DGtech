@@ -2,25 +2,25 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, ImageIcon, Plus, Save, Upload, X } from "lucide-react";
 import { AdminLayout } from "@/src/components/admin/AdminLayout";
 import { createAdminVariantEditColumns } from "@/src/components/admin/product-editor/variantColumns";
 import { VariantAttributesEditor } from "@/src/components/admin/product-editor/VariantAttributesEditor";
 import { useAdminProductVariants } from "@/src/components/admin/product-editor/useAdminProductVariants";
 import type { AdminVariantGridRow } from "@/src/components/admin/product-editor/variantUtils";
-import { useProductStore, useCategoryStore } from "@/src/stores";
+import { GlbPreviewViewer } from "@/src/components/shared/GlbPreviewViewer";
+import { useCategoryStore, useProductStore } from "@/src/stores";
 import { Button } from "@/src/components/ui/button";
-import { ArrowLeft, Save, X, Upload, Plus } from "lucide-react";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
-import { isValidImage } from "@/src/utils";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { toast } from "sonner";
-import { Spinner } from "@/src/components/ui/spinner";
-import Link from "next/link";
 import { DataTable } from "@/src/components/ui/data-table";
+import { Spinner } from "@/src/components/ui/spinner";
 import { ADMIN_LIST_DATA_TABLE_PROPS } from "@/src/constant";
+import { isValidGlbModel, isValidImage } from "@/src/utils";
+import { toast } from "sonner";
 
 const emptyVariantGrid = (): AdminVariantGridRow[] => [];
 
@@ -28,10 +28,7 @@ export default function CreateProductPage() {
   const router = useRouter();
   const { createProduct } = useProductStore();
   const { categories, fetchCategories } = useCategoryStore();
-
   const [saving, setSaving] = useState(false);
-
-  // Form states
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -41,8 +38,12 @@ export default function CreateProductPage() {
     status: "ACTIVE",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imagePreview, setImagePreview] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [model3dFile, setModel3dFile] = useState<File | null>(null);
+  const [model3dPreviewUrl, setModel3dPreviewUrl] = useState<string | null>(null);
+  const model3dInputRef = useRef<HTMLInputElement>(null);
+  const [model3dError, setModel3dError] = useState<string | null>(null);
 
   const getFallbackGridWhenNoValidAttributes = useCallback(() => emptyVariantGrid(), []);
 
@@ -67,26 +68,55 @@ export default function CreateProductPage() {
     fetchCategories();
   }, [fetchCategories]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (file && isValidImage(file).valid) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    } else if (file) {
-      toast.error(isValidImage(file).error || "Invalid image");
+  useEffect(() => {
+    if (!model3dFile) {
+      setModel3dPreviewUrl(null);
+      return;
     }
+    const objectUrl = URL.createObjectURL(model3dFile);
+    setModel3dPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [model3dFile]);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const validation = isValidImage(file);
+    if (!validation.valid) {
+      toast.error(validation.error || "Invalid image");
+      return;
+    }
+
+    setImageFile(file);
+    setModel3dFile(null);
+    setModel3dError(null);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
-  const handleSave = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleModel3dChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const validation = isValidGlbModel(file);
+    if (!validation.valid) {
+      setModel3dError(validation.error || "Invalid 3D model");
+      return;
+    }
+
+    setModel3dFile(file);
+    setImageFile(null);
+    setImagePreview("");
+    setModel3dError(null);
+  };
+
+  const handleSave = async (event?: React.FormEvent) => {
+    if (event) event.preventDefault();
 
     if (!formData.name.trim()) return toast.error("Please enter product name");
     if (!formData.categoryId) return toast.error("Please select a category");
-
-    // Validate main specs if variants don't exist
     if (variantsGrid.length === 0) {
       if (formData.price === "" || parseFloat(formData.price) < 0) return toast.error("Please enter a valid price");
       if (formData.stock === "" || parseInt(formData.stock) < 0) return toast.error("Please enter a valid stock");
@@ -102,25 +132,25 @@ export default function CreateProductPage() {
       data.append("categoryId", formData.categoryId);
       data.append("status", formData.status);
       if (imageFile) data.append("image", imageFile);
+      if (model3dFile) data.append("model3d", model3dFile);
+      if (variantsGrid.length > 0) data.append("variants", JSON.stringify(variantsGrid));
 
-      if (variantsGrid.length > 0) {
-        data.append("variants", JSON.stringify(variantsGrid));
+      const response = await createProduct(data);
+      if (!response.success) {
+        toast.error(response.error || "Failed to create product");
+        return;
       }
 
-      const res = await createProduct(data);
-      if (res.success) {
-        toast.success("Product created successfully");
-        const newId = res.data?.productId;
-        router.push(newId ? `/admin/products/${newId}` : "/admin/products");
-      } else {
-        toast.error(res.error || "Failed to create product");
-      }
+      toast.success("Product created successfully");
+      router.push(response.data?.productId ? `/admin/products/${response.data.productId}` : "/admin/products");
     } catch {
       toast.error("An error occurred");
     } finally {
       setSaving(false);
     }
   };
+
+  const activeMedia: "empty" | "image" | "model" = model3dPreviewUrl ? "model" : imagePreview ? "image" : "empty";
 
   return (
     <AdminLayout>
@@ -161,19 +191,51 @@ export default function CreateProductPage() {
 
         <form
           onSubmit={handleSave}
-          className="grid grid-cols-1 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-4 items-start"
+          className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]"
         >
-          {/* LEFT COLUMN: Image & Basic Info */}
           <div className="min-w-0 space-y-4">
-            <div className="relative group">
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview" className="w-full rounded-md border aspect-square object-cover" />
-              ) : (
-                <div className="aspect-square w-full overflow-hidden rounded-md border">
-                  <ProductImageFallback className="h-full w-full" iconClassName="h-14 w-14" />
+            <section className="rounded-md border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Product Media</h2>
                 </div>
-              )}
-              <div className="mt-4 flex justify-center">
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {activeMedia === "model" ? "3D model" : activeMedia === "image" ? "2D image" : "No media"}
+                </span>
+              </div>
+
+              <div className="mt-4">
+                {activeMedia === "model" ? (
+                  <GlbPreviewViewer
+                    src={model3dPreviewUrl}
+                    title="3D product preview"
+                    description="Upload a .glb file to inspect it with full 360 rotation."
+                    useEmbeddedCameraMarkers={false}
+                    allowFreeNavigation
+                  />
+                ) : activeMedia === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={imagePreview}
+                    alt="Product preview"
+                    className="aspect-square w-full rounded-md border border-border object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-square w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-md border border-border bg-muted/30 px-6 text-center text-muted-foreground">
+                    <div className="rounded-full bg-background p-3 shadow-sm">
+                      <ImageIcon className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Choose one media type</p>
+                      <p className="text-xs leading-5">
+                        Upload image for the regular catalog card, or upload a `.glb` model if this product should use 3D instead.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
                 <Button
                   type="button"
                   variant="secondary"
@@ -183,19 +245,34 @@ export default function CreateProductPage() {
                   className="gap-2"
                 >
                   <Upload className="h-4 w-4" />
-                  {imagePreview ? "Change image" : "Upload image"}
+                  {activeMedia === "image" ? "Replace image" : "Upload image"}
                 </Button>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => model3dInputRef.current?.click()}
+                  disabled={saving}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {activeMedia === "model" ? "Replace model" : "Upload model"}
+                </Button>
               </div>
-            </div>
 
-            <div className="grid gap-4">
+              {model3dError ? <p className="mt-3 text-center text-xs font-medium text-destructive">{model3dError}</p> : null}
+
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <input
+                ref={model3dInputRef}
+                type="file"
+                accept=".glb,model/gltf-binary"
+                className="hidden"
+                onChange={handleModel3dChange}
+              />
+            </section>
+
+            <section className="grid gap-4 rounded-md border border-border bg-card p-4 shadow-sm">
               <div className="grid gap-2">
                 <Label className="font-semibold">
                   Product name <span className="text-red-500">*</span>
@@ -204,7 +281,7 @@ export default function CreateProductPage() {
                   required
                   placeholder="Enter product name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 />
               </div>
 
@@ -212,26 +289,23 @@ export default function CreateProductPage() {
                 <Label className="font-semibold">
                   Category <span className="text-red-500">*</span>
                 </Label>
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(v) => setFormData({ ...formData, categoryId: v })}
-                  required
-                >
+                <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.categoryId} value={c.categoryId.toString()}>
-                        {c.name}
+                    {categories.map((category) => (
+                      <SelectItem key={category.categoryId} value={String(category.categoryId)}>
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid gap-2">
                 <Label className="font-semibold">Status</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -244,10 +318,8 @@ export default function CreateProductPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label className="font-semibold flex items-center justify-between">
-                    <span>
-                      Price <span className="text-red-500">*</span>
-                    </span>
+                  <Label className="font-semibold">
+                    Price <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="number"
@@ -256,14 +328,12 @@ export default function CreateProductPage() {
                     required
                     disabled={variantsGrid.length > 0}
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onChange={(event) => setFormData({ ...formData, price: event.target.value })}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="font-semibold flex items-center justify-between">
-                    <span>
-                      Initial Stock <span className="text-red-500">*</span>
-                    </span>
+                  <Label className="font-semibold">
+                    Initial Stock <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="number"
@@ -271,7 +341,7 @@ export default function CreateProductPage() {
                     required
                     disabled={variantsGrid.length > 0}
                     value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    onChange={(event) => setFormData({ ...formData, stock: event.target.value })}
                   />
                 </div>
               </div>
@@ -281,18 +351,17 @@ export default function CreateProductPage() {
                 <Textarea
                   placeholder="Describe your product..."
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(event) => setFormData({ ...formData, description: event.target.value })}
                   rows={5}
                 />
               </div>
-            </div>
+            </section>
           </div>
 
-          {/* RIGHT COLUMN: Variants */}
-          <div className="min-w-0 space-y-6 h-full rounded-md border bg-card p-4 shadow-sm">
+          <div className="min-w-0 space-y-6 rounded-md border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">Product Variants</h3>
+                <h3 className="text-lg font-semibold">Product Variants</h3>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -303,7 +372,8 @@ export default function CreateProductPage() {
                   disabled={variantOptions.length >= 3}
                   className="gap-2"
                 >
-                  <Plus className="h-4 w-4" /> Add attribute
+                  <Plus className="h-4 w-4" />
+                  Add attribute
                 </Button>
                 {variantOptions.length > 0 && (
                   <Button
@@ -313,7 +383,8 @@ export default function CreateProductPage() {
                     onClick={() => generateVariants(formData.name, formData.price || "0")}
                     className="gap-2"
                   >
-                    <Plus className="h-4 w-4" /> Generate combinations
+                    <Plus className="h-4 w-4" />
+                    Generate combinations
                   </Button>
                 )}
               </div>
@@ -333,7 +404,6 @@ export default function CreateProductPage() {
               }
             />
 
-            {/* Generated Grid */}
             {variantsGrid.length > 0 && (
               <div className="mt-6 pt-0">
                 <DataTable
@@ -342,14 +412,14 @@ export default function CreateProductPage() {
                   data={variantsGrid}
                   showToolbar={true}
                   filterColumnId="sku"
-                  filterPlaceholder="Search by SKU…"
+                  filterPlaceholder="Search by SKU..."
                   noun="variants"
                   onBulkDelete={({ selectedData, clearSelection }) => {
-                    setVariantsGrid(variantsGrid.filter((v) => !selectedData.includes(v)));
+                    setVariantsGrid(variantsGrid.filter((variant) => !selectedData.includes(variant)));
                     clearSelection();
                   }}
                 />
-                <p className="text-[10px] text-muted-foreground mt-2 italic text-center">
+                <p className="mt-2 text-center text-[10px] italic text-muted-foreground">
                   Tip: You can edit individual prices and stock after generation.
                 </p>
               </div>

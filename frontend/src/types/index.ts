@@ -13,6 +13,8 @@ export * from "./bundleType";
 export * from "./voucherType";
 export * from "./stockReceiptType";
 export * from "./aiChatType";
+export * from "./showroomType";
+export * from "./roomType";
 
 // API Response Types
 export interface ApiResponse<T> {

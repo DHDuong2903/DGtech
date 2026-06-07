@@ -12,7 +12,7 @@ import { getHttpStatusForError, getPublicErrorMessage } from "../helpers/dbResil
 
 export const createProduct = async (req: any, res: any) => {
   try {
-    const newProduct = await createProductSvc(req.body, req.file);
+    const newProduct = await createProductSvc(req.body, req.files);
     return res.status(201).json({ message: "Them san pham moi thanh cong", newProduct });
   } catch (error: any) {
     console.error("Loi khi goi createProduct:", error);
@@ -28,7 +28,7 @@ export const createProduct = async (req: any, res: any) => {
 
 export const updateProduct = async (req: any, res: any) => {
   try {
-    const product = await updateProductSvc(req.params.productId, req.body, req.file);
+    const product = await updateProductSvc(req.params.productId, req.body, req.files);
     return res.status(200).json({ message: "Cap nhat san pham thanh cong", product });
   } catch (error: any) {
     console.error("Loi khi goi updateProduct:", error);

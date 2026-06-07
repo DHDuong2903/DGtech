@@ -13,14 +13,71 @@ import {
   getStorefrontUserTier,
 } from "./discountCampaignResolveService.js";
 import { cacheBumpVersion, cacheGetJson, cacheGetVersion, cacheSetJson } from "../libs/cache.js";
-import { uploadProductImageBuffer } from "../helpers/uploadProductImage.js";
+import {
+  destroyCloudinaryAsset,
+  uploadProductImageBuffer,
+  uploadProductModelBuffer,
+} from "../helpers/uploadProductMedia.js";
 import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
+import {
+  MAX_PRODUCT_IMAGE_FILE_SIZE_BYTES,
+  MAX_PRODUCT_MODEL_FILE_SIZE_BYTES,
+  isGlbUpload,
+} from "../middlewares/upload.js";
 
 const STOREFRONT_PRODUCT_CACHE_NAMESPACE = "storefront-products";
 const STOREFRONT_PRODUCT_LIST_CACHE_TTL_MS = 60000;
 const STOREFRONT_PRODUCT_DETAIL_CACHE_TTL_MS = 60000;
 const STOREFRONT_FEATURED_CACHE_TTL_MS = 30000;
 const STOREFRONT_STALE_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function normalizeBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+function extractUploadedProductFiles(files?: Record<string, any[]>) {
+  const imageFile = Array.isArray(files?.image) ? files.image[0] : undefined;
+  const model3dFile = Array.isArray(files?.model3d) ? files.model3d[0] : undefined;
+  return { imageFile, model3dFile };
+}
+
+function validateUploadedFiles(imageFile?: any, model3dFile?: any) {
+  if (imageFile && model3dFile) {
+    throw Object.assign(new Error("A product can only use one media type: image or 3D model"), {
+      status: 400,
+    });
+  }
+
+  if (imageFile?.size > MAX_PRODUCT_IMAGE_FILE_SIZE_BYTES) {
+    throw Object.assign(
+      new Error(`Image must be at most ${MAX_PRODUCT_IMAGE_FILE_SIZE_BYTES / 1024 / 1024}MB`),
+      { status: 413 },
+    );
+  }
+
+  if (model3dFile) {
+    if (!isGlbUpload(model3dFile)) {
+      throw Object.assign(new Error("Only .glb model files are allowed"), { status: 400 });
+    }
+    if (model3dFile.size > MAX_PRODUCT_MODEL_FILE_SIZE_BYTES) {
+      throw Object.assign(
+        new Error(`3D model must be at most ${MAX_PRODUCT_MODEL_FILE_SIZE_BYTES / 1024 / 1024}MB`),
+        { status: 413 },
+      );
+    }
+  }
+}
+
+function attachShowroomMetaToPlainProduct(plain: any) {
+  const { isShowroomEnabled: _ignoredIsShowroomEnabled, showroomOverrides: _ignoredShowroomOverrides, ...rest } =
+    plain || {};
+  return {
+    ...rest,
+    showroomEligible: Boolean(rest.model3dUrl),
+  };
+}
 
 export function normalizeProductStatus(value: unknown): "ACTIVE" | "DRAFT" | null {
   if (value === undefined || value === null || value === "") return null;
@@ -71,11 +128,13 @@ export function serializeStorefrontProductSummary(row: any) {
     name: plain.name,
     description: plain.description,
     imageUrl: plain.imageUrl,
+    model3dUrl: plain.model3dUrl,
     price: plain.price,
     compareAtPrice: plain.compareAtPrice,
     stock: plain.stock,
     status: plain.status,
     categoryId: plain.categoryId,
+    showroomEligible: Boolean(plain.model3dUrl),
     category,
   };
 }
@@ -99,8 +158,10 @@ export function buildProductListWhere(query: Record<string, unknown>) {
   return where;
 }
 
-export async function createProduct(body: Record<string, unknown>, file?: any) {
+export async function createProduct(body: Record<string, unknown>, files?: Record<string, any[]>) {
   const { name, description, price, stock, categoryId } = body as any;
+  const { imageFile, model3dFile } = extractUploadedProductFiles(files);
+  validateUploadedFiles(imageFile, model3dFile);
   let variantsData: any[] | null = null;
   if (body.variants) {
     try {
@@ -121,11 +182,33 @@ export async function createProduct(body: Record<string, unknown>, file?: any) {
   if (existingProduct) throw Object.assign(new Error("Product already exists"), { status: 409 });
 
   let imageUrl: string | null = null;
-  if (file?.buffer) {
+  if (imageFile?.buffer && !model3dFile?.buffer) {
     try {
-      imageUrl = await uploadProductImageBuffer(file.buffer, file.mimetype);
+      const imageUpload = await uploadProductImageBuffer(imageFile.buffer, imageFile.mimetype);
+      imageUrl = imageUpload.secureUrl;
     } catch (uploadErr: any) {
       throw Object.assign(new Error("Failed to upload image to Cloudinary"), {
+        status: 502,
+        details: uploadErr?.message || String(uploadErr),
+      });
+    }
+  }
+
+  let model3dUrl: string | null = null;
+  let model3dPublicId: string | null = null;
+  let model3dMimeType: string | null = null;
+  let model3dFileName: string | null = null;
+  let model3dSizeBytes: number | null = null;
+  if (model3dFile?.buffer) {
+    try {
+      const modelUpload = await uploadProductModelBuffer(model3dFile.buffer, model3dFile.originalname);
+      model3dUrl = modelUpload.secureUrl;
+      model3dPublicId = modelUpload.publicId;
+      model3dMimeType = model3dFile.mimetype || "model/gltf-binary";
+      model3dFileName = model3dFile.originalname || null;
+      model3dSizeBytes = Number(model3dFile.size || modelUpload.bytes || 0) || null;
+    } catch (uploadErr: any) {
+      throw Object.assign(new Error("Failed to upload 3D model to Cloudinary"), {
         status: 502,
         details: uploadErr?.message || String(uploadErr),
       });
@@ -139,6 +222,12 @@ export async function createProduct(body: Record<string, unknown>, file?: any) {
     price: parseFloat(price),
     compareAtPrice: null,
     imageUrl,
+    model3dUrl,
+    model3dPublicId,
+    model3dMimeType,
+    model3dFileName,
+    model3dSizeBytes,
+    isShowroomEnabled: Boolean(model3dUrl),
     stock: parseInt(stock) || 0,
     categoryId: parseInt(categoryId),
     status,
@@ -180,11 +269,13 @@ export async function createProduct(body: Record<string, unknown>, file?: any) {
   const productWithCategory = await getProductWithCategory(Product, productId);
   clearCompareAtPriceForMultiVariantProduct(productWithCategory);
   await invalidateStorefrontProductCache();
-  return productWithCategory;
+  return attachShowroomMetaToPlainProduct(productWithCategory.get({ plain: true }));
 }
 
-export async function updateProduct(productId: string, body: Record<string, unknown>, file?: any) {
+export async function updateProduct(productId: string, body: Record<string, unknown>, files?: Record<string, any[]>) {
   const { name, description, price, compareAtPrice, stock, categoryId } = body as any;
+  const { imageFile, model3dFile } = extractUploadedProductFiles(files);
+  validateUploadedFiles(imageFile, model3dFile);
   let variantsData: any[] | null = null;
   if (body.variants) {
     try {
@@ -198,15 +289,61 @@ export async function updateProduct(productId: string, body: Record<string, unkn
   if (!product) throw Object.assign(new Error("Product not found"), { status: 404 });
 
   let imageUrl = product.imageUrl;
-  if (file?.buffer) {
+  if (imageFile?.buffer) {
     try {
-      imageUrl = await uploadProductImageBuffer(file.buffer, file.mimetype);
+      const imageUpload = await uploadProductImageBuffer(imageFile.buffer, imageFile.mimetype);
+      imageUrl = imageUpload.secureUrl;
     } catch (uploadErr: any) {
       throw Object.assign(new Error("Failed to upload image to Cloudinary"), {
         status: 502,
         details: uploadErr?.message || String(uploadErr),
       });
     }
+  }
+
+  let model3dUrl = product.model3dUrl;
+  let model3dPublicId = product.model3dPublicId;
+  let model3dMimeType = product.model3dMimeType;
+  let model3dFileName = product.model3dFileName;
+  let model3dSizeBytes = product.model3dSizeBytes;
+  const shouldRemoveModel3d = normalizeBoolean(body.removeModel3d);
+  const shouldSwitchToImage = Boolean(imageFile?.buffer);
+
+  if (model3dFile?.buffer) {
+    try {
+      const modelUpload = await uploadProductModelBuffer(model3dFile.buffer, model3dFile.originalname);
+      const oldPublicId = model3dPublicId;
+      model3dUrl = modelUpload.secureUrl;
+      model3dPublicId = modelUpload.publicId;
+      model3dMimeType = model3dFile.mimetype || "model/gltf-binary";
+      model3dFileName = model3dFile.originalname || null;
+      model3dSizeBytes = Number(model3dFile.size || modelUpload.bytes || 0) || null;
+      if (oldPublicId && oldPublicId !== model3dPublicId) {
+        await destroyCloudinaryAsset(oldPublicId, "raw");
+      }
+    } catch (uploadErr: any) {
+      throw Object.assign(new Error("Failed to upload 3D model to Cloudinary"), {
+        status: 502,
+        details: uploadErr?.message || String(uploadErr),
+      });
+    }
+    imageUrl = null;
+  } else if (shouldSwitchToImage && model3dUrl) {
+    if (model3dPublicId) {
+      await destroyCloudinaryAsset(model3dPublicId, "raw");
+    }
+    model3dUrl = null;
+    model3dPublicId = null;
+    model3dMimeType = null;
+    model3dFileName = null;
+    model3dSizeBytes = null;
+  } else if (shouldRemoveModel3d && model3dPublicId) {
+    await destroyCloudinaryAsset(model3dPublicId, "raw");
+    model3dUrl = null;
+    model3dPublicId = null;
+    model3dMimeType = null;
+    model3dFileName = null;
+    model3dSizeBytes = null;
   }
 
   const nextStatus = normalizeProductStatus(body.status);
@@ -303,6 +440,12 @@ export async function updateProduct(productId: string, body: Record<string, unkn
     price: finalPrice,
     compareAtPrice: finalCompareAtPrice,
     imageUrl,
+    model3dUrl,
+    model3dPublicId,
+    model3dMimeType,
+    model3dFileName,
+    model3dSizeBytes,
+    isShowroomEnabled: Boolean(model3dUrl),
     stock: finalStock,
     categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
     status: nextStatus ?? product.status,
@@ -311,21 +454,29 @@ export async function updateProduct(productId: string, body: Record<string, unkn
   const productWithCategory = await getProductWithCategory(Product, product.productId);
   clearCompareAtPriceForMultiVariantProduct(productWithCategory);
   await invalidateStorefrontProductCache();
-  return productWithCategory;
+  return attachShowroomMetaToPlainProduct(productWithCategory.get({ plain: true }));
 }
 
 export async function deleteProduct(productId: string) {
   const product = await Product.findByPk(productId);
   if (!product) throw Object.assign(new Error("Product not found"), { status: 404 });
+  if (product.model3dPublicId) {
+    await destroyCloudinaryAsset(product.model3dPublicId, "raw");
+  }
   await product.destroy();
   await invalidateStorefrontProductCache();
 }
 
 export async function getProductById(productId: string, clerkId?: string) {
   const tier = await getStorefrontUserTier(clerkId);
-  const cacheKey = await buildStorefrontProductCacheKey("detail", { productId, tier });
-  const cached = await cacheGetJson<any>(cacheKey);
-  if (cached) return cached;
+  const adminUser = await isAdmin(clerkId);
+  const cacheKey = adminUser
+    ? null
+    : await buildStorefrontProductCacheKey("detail", { productId, tier, viewer: "public" });
+  if (cacheKey) {
+    const cached = await cacheGetJson<any>(cacheKey);
+    if (cached) return cached;
+  }
 
   try {
     const product = await withDbRetry(
@@ -340,21 +491,20 @@ export async function getProductById(productId: string, clerkId?: string) {
     );
     if (!product) throw Object.assign(new Error("San pham khong ton tai"), { status: 404 });
 
-    const adminUser = await isAdmin(clerkId);
     if (product.status === "DRAFT" && !adminUser) {
       throw Object.assign(new Error("Product not found"), { status: 404 });
     }
 
     clearCompareAtPriceForMultiVariantProduct(product);
     await applyCampaignPricingToProductForStorefront(product, tier);
-
-    const payload = { message: "Product retrieved successfully", product: product.get({ plain: true }) };
-    if (product.status !== "DRAFT") {
+    const plainProduct = attachShowroomMetaToPlainProduct(product.get({ plain: true }));
+    const payload = { message: "Product retrieved successfully", product: plainProduct };
+    if (cacheKey && product.status !== "DRAFT") {
       await setStorefrontCachePayload(cacheKey, payload, STOREFRONT_PRODUCT_DETAIL_CACHE_TTL_MS);
     }
     return payload;
   } catch (error) {
-    if (isTransientDbError(error)) {
+    if (cacheKey && isTransientDbError(error)) {
       const stale = await cacheGetJson<any>(buildStorefrontStaleCacheKey(cacheKey));
       if (stale) {
         console.warn(`getProductById(${productId}): serving stale cache after DB error`);
@@ -451,7 +601,7 @@ export async function getAdminInventory(query: Record<string, unknown>) {
     totalItems,
     totalPages: Math.max(1, Math.ceil(totalItems / limitNum)),
     currentPage: pageNum,
-    data: rows,
+    data: rows.map((row) => attachShowroomMetaToPlainProduct(row.get({ plain: true }))),
   };
 }
 

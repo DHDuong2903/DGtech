@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Star, Store } from "lucide-react";
+import { Cuboid, Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Star, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -16,8 +16,7 @@ import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { ThemeToggle } from "@/src/components/ThemeToggle";
 import { NavbarCategories } from "@/src/components/public/layout/NavbarCategories";
-import { usersApi } from "@/src/apis/userApi";
-import type { UserRank } from "@/src/types";
+import { useUserRank } from "@/src/hooks";
 
 const navUnderline =
   "group relative inline-flex items-center gap-1.5 text-sm text-foreground/80 transition-colors hover:text-foreground " +
@@ -55,15 +54,16 @@ export const Navbar = () => {
   const { cart, fetchCart } = useCartStore();
   const { isSignedIn, isLoaded, user } = useUser();
   const [navSearch, setNavSearch] = useState("");
-  const [rank, setRank] = useState<UserRank | null>(null);
+  const { rank } = useUserRank();
   const cartFetchedForRef = useRef<string | null>(null);
-  const rankFetchedForRef = useRef<string | null>(null);
   const cartQty = cart ? cartQuantityTotal(cart) : 0;
   const metadataRankRaw = user?.publicMetadata?.rank;
   const metadataRank =
     typeof metadataRankRaw === "string" && metadataRankRaw.trim().length > 0 ? metadataRankRaw.trim() : null;
   const menuRankLabel =
-    metadataRank || (rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : null);
+    rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : metadataRank;
+  const canAccessShowroom =
+    rank?.currentRank === "gold" || (typeof metadataRank === "string" && metadataRank.toLowerCase() === "gold");
 
   useEffect(() => {
     if (!isLoaded || !user?.id) return;
@@ -75,42 +75,6 @@ export const Navbar = () => {
     cartFetchedForRef.current = user.id;
     void fetchCart();
   }, [fetchCart, isLoaded, isSignedIn, user?.id]);
-
-  useEffect(() => {
-    let active = true;
-
-    if (!isLoaded || !isSignedIn || !user?.id) {
-      rankFetchedForRef.current = null;
-      return () => {
-        active = false;
-      };
-    }
-    if (metadataRank) {
-      rankFetchedForRef.current = user.id;
-      return () => {
-        active = false;
-      };
-    }
-    if (rankFetchedForRef.current === user.id) {
-      return () => {
-        active = false;
-      };
-    }
-    rankFetchedForRef.current = user.id;
-
-    usersApi
-      .getMyRank()
-      .then((data) => {
-        if (active) setRank(data);
-      })
-      .catch((error) => {
-        console.error("Failed to load rank badge:", error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isLoaded, isSignedIn, metadataRank, user?.id]);
 
   const handleNavSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,6 +113,14 @@ export const Navbar = () => {
               </NavLink>
             </li>
             <NavbarCategories />
+            {isSignedIn && canAccessShowroom && (
+              <li>
+                <NavLink href="/showroom-3d">
+                  <Cuboid className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
+                  <span className="hidden sm:inline">Showroom</span>
+                </NavLink>
+              </li>
+            )}
             {!isLoading && isAdmin && (
               <li>
                 <NavLink href="/admin">

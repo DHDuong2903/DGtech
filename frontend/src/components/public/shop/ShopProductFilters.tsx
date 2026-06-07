@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Filter, ListFilter } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/src/components/ui/button";
@@ -39,10 +39,15 @@ type ShopProductFiltersProps = {
 };
 
 export function ShopProductFilters({ categories, applied, onApply }: ShopProductFiltersProps) {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ShopProductFilterValues>(applied);
 
   const activeCount = useMemo(() => countAppliedShopProductFilters(applied), [applied]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleApply = () => {
     const min = draft.minPrice.trim();
@@ -64,6 +69,20 @@ export function ShopProductFilters({ categories, applied, onApply }: ShopProduct
     setDraft(defaultShopProductFilters);
     setOpen(false);
   };
+
+  if (!mounted) {
+    return (
+      <Button type="button" variant="outline" size="sm" className="gap-2" disabled>
+        <ListFilter className="h-4 w-4" />
+        Filters
+        {activeCount > 0 ? (
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 font-mono text-xs">
+            {activeCount}
+          </Badge>
+        ) : null}
+      </Button>
+    );
+  }
 
   return (
     <Popover

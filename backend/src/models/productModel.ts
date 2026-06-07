@@ -32,6 +32,31 @@ export const Product = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    model3dUrl: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    model3dPublicId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    model3dMimeType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    model3dFileName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    model3dSizeBytes: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    isShowroomEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     stock: {
       type: DataTypes.INTEGER,
       defaultValue: 0,

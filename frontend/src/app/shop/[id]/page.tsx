@@ -322,7 +322,7 @@ const ProductDetailPage = () => {
         </button>
 
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,min(48vw,30rem))_minmax(0,1fr)] lg:gap-5">
-          <ProductImage imageUrl={product.imageUrl} name={product.name} />
+          <ProductImage imageUrl={product.imageUrl} model3dUrl={product.model3dUrl} name={product.name} />
 
           <div className="flex min-w-0 flex-col gap-3 py-1 lg:py-1">
             <ProductInfo

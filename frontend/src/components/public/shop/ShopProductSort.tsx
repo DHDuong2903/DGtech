@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDownUp } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Label } from "@/src/components/ui/label";
@@ -27,10 +27,15 @@ type ShopProductSortProps = {
 };
 
 export function ShopProductSort({ applied, onApply }: ShopProductSortProps) {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ShopSortMode>(applied);
 
   const activeCount = useMemo(() => countAppliedShopSort(applied), [applied]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleApply = () => {
     onApply(draft);
@@ -42,6 +47,20 @@ export function ShopProductSort({ applied, onApply }: ShopProductSortProps) {
     setDraft(defaultShopSort);
     setOpen(false);
   };
+
+  if (!mounted) {
+    return (
+      <Button type="button" variant="outline" size="sm" className="gap-2" disabled>
+        <ArrowDownUp className="h-4 w-4" />
+        Sort
+        {activeCount > 0 ? (
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 font-mono text-xs">
+            {activeCount}
+          </Badge>
+        ) : null}
+      </Button>
+    );
+  }
 
   return (
     <Popover

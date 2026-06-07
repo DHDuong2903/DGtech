@@ -1,6 +1,11 @@
 // Validation utilities
 
-import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_FILE_SIZE_BYTES } from "../constant";
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_MODEL3D_MIME_TYPES,
+  MAX_IMAGE_FILE_SIZE_BYTES,
+  MAX_MODEL3D_FILE_SIZE_BYTES,
+} from "../constant";
 
 /**
  * Validate email format
@@ -38,6 +43,24 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
     };
   }
 
+  return { valid: true };
+};
+
+export const isValidGlbModel = (file: File): { valid: boolean; error?: string } => {
+  const isValidMime = (ALLOWED_MODEL3D_MIME_TYPES as readonly string[]).includes(file.type);
+  const isValidExt = /\.glb$/i.test(file.name);
+  if (!isValidMime && !isValidExt) {
+    return {
+      valid: false,
+      error: "Only .glb model files are allowed",
+    };
+  }
+  if (file.size > MAX_MODEL3D_FILE_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `3D model must be at most ${MAX_MODEL3D_FILE_SIZE_BYTES / 1024 / 1024}MB`,
+    };
+  }
   return { valid: true };
 };
 
