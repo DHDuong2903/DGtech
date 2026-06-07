@@ -5,6 +5,7 @@ import { Product } from "@/src/types";
 import { formatCurrency, toMoneyNumber } from "@/src/utils";
 import { ProductImageFallback } from "./ProductImageFallback";
 import Image from "next/image";
+import { ShowroomProductPreview } from "@/src/components/public/showroom/ShowroomProductPreview";
 
 interface ProductCardProps {
   product: Product;
@@ -30,7 +31,9 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
     >
       {/* Image */}
       <div className="bg-muted relative aspect-square overflow-hidden">
-        {product.imageUrl ? (
+        {product.model3dUrl ? (
+          <ShowroomProductPreview src={product.model3dUrl} className="h-full w-full rounded-none border-0" />
+        ) : product.imageUrl ? (
           <Image
             src={product.imageUrl}
             alt={product.name}

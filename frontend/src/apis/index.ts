@@ -15,6 +15,8 @@ export * from "./stockReceiptsApi";
 export * from "./vouchersApi";
 export * from "./taxsApi";
 export * from "./aiChatApi";
+export * from "./showroomApi";
+export * from "./roomsApi";
 
 // Re-export for convenience
 export { categoriesApi } from "./categoriesApi";
@@ -33,3 +35,5 @@ export { orderApi } from "./orderApi";
 export { paymentApi } from "./paymentApi";
 export { shippingApi } from "./shippingApi";
 export { stockReceiptsApi } from "./stockReceiptsApi";
+export { showroomApi } from "./showroomApi";
+export { roomsApi } from "./roomsApi";

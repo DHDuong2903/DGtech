@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BadgePercent,
+  Cuboid,
+  DoorOpen,
   Images,
   Layers,
   LayoutDashboard,
@@ -40,11 +42,13 @@ export const ADMIN_SIDEBAR_NAV_ITEMS: AdminSidebarNavItem[] = [
   { id: "products", label: "Products", icon: Sofa, href: "/admin/products" },
   { id: "stock-receipts", label: "Stock receipts", icon: Warehouse, href: "/admin/stock-receipts" },
   { id: "categories", label: "Categories", icon: Tag, href: "/admin/categories" },
+  { id: "rooms", label: "Room", icon: DoorOpen, href: "/admin/rooms" },
   { id: "users", label: "Users", icon: Users, href: "/admin/users" },
   { id: "slideshows", label: "Slideshows", icon: Images, href: "/admin/slideshows" },
   { id: "shipping", label: "Shipping", icon: Truck, href: "/admin/shipping" },
   { id: "discount-campaigns", label: "Discount campaigns", icon: BadgePercent, href: "/admin/discount-campaigns" },
   { id: "bundles", label: "Bundles", icon: Layers, href: "/admin/bundles" },
+  { id: "showroom", label: "3D Scenes", icon: Cuboid, href: "/admin/showroom" },
   { id: "vouchers", label: "Vouchers", icon: Ticket, href: "/admin/vouchers" },
   { id: "taxs", label: "Taxs", icon: ReceiptText, href: "/admin/taxs" },
 ];
@@ -70,6 +74,8 @@ export const API_ROUTE = {
   TAXS: "/taxs",
   STOCK_RECEIPTS: "/stock-receipts",
   AI: "/ai",
+  SHOWROOM: "/showroom",
+  ROOMS: "/rooms",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -100,6 +106,8 @@ export const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png",
 
 /** 5 MiB */
 export const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+export const ALLOWED_MODEL3D_MIME_TYPES = ["model/gltf-binary"] as const;
+export const MAX_MODEL3D_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Orders

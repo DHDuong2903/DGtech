@@ -20,6 +20,12 @@ export interface Product {
   compareAtPrice?: number | null;
   stock: number;
   imageUrl?: string;
+  model3dUrl?: string | null;
+  model3dPublicId?: string | null;
+  model3dMimeType?: string | null;
+  model3dFileName?: string | null;
+  model3dSizeBytes?: number | null;
+  showroomEligible?: boolean;
   categoryId: number;
   status: ProductStatus;
   category?: {
@@ -39,6 +45,7 @@ export interface ProductFormData {
   categoryId: number;
   status: ProductStatus;
   image?: File;
+  model3d?: File;
 }
 
 export type ProductCreateData = Omit<Product, "productId" | "createdAt" | "updatedAt" | "category">;
