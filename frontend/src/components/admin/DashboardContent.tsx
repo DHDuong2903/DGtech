@@ -383,14 +383,14 @@ export const DashboardContent = () => {
 
   const periodSelect = (
     <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-      <SelectTrigger size="sm" className="min-w-[9.5rem]" aria-label="Khoảng thời gian">
+      <SelectTrigger size="sm" className="min-w-[9.5rem]" aria-label="Time range">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="7d">7 ngày</SelectItem>
-        <SelectItem value="30d">1 tháng</SelectItem>
-        <SelectItem value="365d">1 năm</SelectItem>
-        <SelectItem value="all">Tổng thời gian</SelectItem>
+        <SelectItem value="7d">7 days</SelectItem>
+        <SelectItem value="30d">30 days</SelectItem>
+        <SelectItem value="365d">1 year</SelectItem>
+        <SelectItem value="all">All time</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -407,51 +407,51 @@ export const DashboardContent = () => {
             <Alert className="px-4 py-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle className="text-sm font-medium leading-snug">
-                Đơn: đang dùng {DASHBOARD_ORDER_FETCH_LIMIT} mẫu gần nhất / {orderTotalInDb} trong hệ thống.
+                Orders: using the latest {DASHBOARD_ORDER_FETCH_LIMIT} records out of {orderTotalInDb} in the system.
               </AlertTitle>
             </Alert>
           ) : null}
 
-          <DashboardBlock title="Cần xử lý">
+          <DashboardBlock title="Needs attention">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <ActionTile
                 href="/admin/orders?status=PENDING"
-                title="Đơn chờ xử lý"
+                title="Pending orders"
                 count={pendingOrders}
                 icon={<ShoppingCart className="h-4 w-4" />}
                 emphasize={pendingOrders > 0}
               />
               <ActionTile
                 href="/admin/orders?status=PROCESSING"
-                title="Đơn đang chuẩn bị"
+                title="Orders in preparation"
                 count={processingOrders}
                 icon={<Package className="h-4 w-4" />}
                 emphasize={processingOrders > 0}
               />
               <ActionTile
                 href="/admin/stock-receipts"
-                title="Phiếu nhập nháp"
+                title="Draft stock receipts"
                 count={draftReceiptTotal}
                 icon={<Warehouse className="h-4 w-4" />}
                 emphasize={draftReceiptTotal > 0}
               />
               <ActionTile
                 href="/admin/discount-campaigns"
-                title="Chiến dịch sắp hết hạn"
+                title="Campaigns ending soon"
                 count={campaignsEndingSoon.length}
                 icon={<BadgePercent className="h-4 w-4" />}
                 emphasize={campaignsEndingSoon.length > 0}
               />
               <ActionTile
                 href="/admin/vouchers"
-                title="Voucher sắp hết hạn"
+                title="Vouchers expiring soon"
                 count={vouchersExpiringSoon.length}
                 icon={<Ticket className="h-4 w-4" />}
                 emphasize={vouchersExpiringSoon.length > 0}
               />
               <ActionTile
                 href="/admin/products"
-                title="Tồn kho (hết hoặc thấp)"
+                title="Stock attention"
                 count={stockAttentionCount}
                 icon={<Package className="h-4 w-4" />}
                 emphasize={outOfStockCount > 0}
@@ -459,37 +459,37 @@ export const DashboardContent = () => {
             </div>
           </DashboardBlock>
 
-          <DashboardBlock title="Số liệu" action={periodSelect}>
+          <DashboardBlock title="Key metrics" action={periodSelect}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {[
                 {
                   icon: <DollarSign className="h-3.5 w-3.5" />,
-                  label: "Doanh thu",
+                  label: "Revenue",
                   value: formatCurrency(revenuePeriod),
                 },
                 {
                   icon: <ShoppingCart className="h-3.5 w-3.5" />,
-                  label: "Hoàn thành",
+                  label: "Fulfilled",
                   value: String(fulfilledPeriod),
                 },
                 {
                   icon: <XCircle className="h-3.5 w-3.5" />,
-                  label: "Hủy",
+                  label: "Cancelled",
                   value: String(cancelledPeriod),
                 },
                 {
                   icon: <DollarSign className="h-3.5 w-3.5" />,
-                  label: "TB đơn (GMV)",
+                  label: "Avg order (GMV)",
                   value: ordersPeriodCount ? formatCurrency(avgTicketPeriod) : "—",
                 },
                 {
                   icon: <Package className="h-3.5 w-3.5" />,
-                  label: "Giá trị tồn",
+                  label: "Inventory value",
                   value: formatCurrency(inventoryValue),
                 },
                 {
                   icon: <Warehouse className="h-3.5 w-3.5" />,
-                  label: "Giá trị nhập",
+                  label: "Import cost",
                   value: importCostLoading ? "—" : formatCurrency(importCost ?? 0),
                   muted: importCostLoading,
                 },
@@ -512,7 +512,7 @@ export const DashboardContent = () => {
             </div>
           </DashboardBlock>
 
-          <DashboardBlock title="Phân tích & tổng hợp">
+          <DashboardBlock title="Analysis & overview">
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-4">
                 <div className="bg-muted/20 flex flex-wrap items-stretch gap-3 rounded-lg border p-3">
@@ -530,7 +530,7 @@ export const DashboardContent = () => {
                         <TrendingDown className="h-5 w-5 shrink-0" />
                       )}
                       <div>
-                        <p className="text-xs font-medium opacity-90">Doanh thu vs kỳ trước</p>
+                        <p className="text-xs font-medium opacity-90">Revenue vs previous period</p>
                         <p className="text-lg font-bold tabular-nums">
                           {revenueCompare.pct >= 0 ? "+" : ""}
                           {revenueCompare.pct.toFixed(1)}%
@@ -541,19 +541,19 @@ export const DashboardContent = () => {
                     <div className="flex min-w-[8rem] flex-1 items-center gap-2 rounded-md border border-dashed bg-background/80 px-3 py-2">
                       <TrendingUp className="text-muted-foreground h-5 w-5 shrink-0" />
                       <div>
-                        <p className="text-muted-foreground text-xs font-medium">Kỳ trước không có doanh thu</p>
+                        <p className="text-muted-foreground text-xs font-medium">No revenue in the previous period</p>
                         <p className="text-lg font-bold tabular-nums">{formatCurrency(revenuePeriod)}</p>
                       </div>
                     </div>
                   ) : (
                     <div className="text-muted-foreground flex flex-1 items-center rounded-md border border-dashed px-3 py-2 text-sm">
-                      So kỳ không áp dụng cho &quot;Tổng thời gian&quot;.
+                      Comparison is not available for &quot;All time&quot;.
                     </div>
                   )}
                   <div className="flex min-w-[6rem] flex-1 flex-col justify-center rounded-md border bg-background/80 px-3 py-2">
                     <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                       <Percent className="h-3.5 w-3.5" />
-                      Tỷ lệ hủy (kỳ)
+                      Cancellation rate
                     </div>
                     <p className="text-lg font-bold tabular-nums">{cancelRatePeriod.toFixed(1)}%</p>
                   </div>
@@ -563,7 +563,7 @@ export const DashboardContent = () => {
                   >
                     <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                       <CreditCard className="h-3.5 w-3.5" />
-                      Chờ CK
+                      Awaiting transfer
                     </div>
                     <p className="text-lg font-bold tabular-nums">{bankTransferAwaiting}</p>
                   </Link>
@@ -571,7 +571,7 @@ export const DashboardContent = () => {
 
                 <div>
                   <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
-                    Đơn theo trạng thái (kỳ đã chọn)
+                    Orders by status
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {ORDER_STATUSES_FOR_STRIP.map((st) => (
@@ -590,14 +590,13 @@ export const DashboardContent = () => {
                   </div>
                   <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     <span>
-                      <span className="text-foreground font-semibold">{campaignsActive.length}</span> chiến dịch
-                      hoạt động
+                      <span className="text-foreground font-semibold">{campaignsActive.length}</span> active campaigns
                     </span>
                     <span>
-                      <span className="text-foreground font-semibold">{vouchersActive}</span> voucher hoạt động
+                      <span className="text-foreground font-semibold">{vouchersActive}</span> active vouchers
                     </span>
                     <Link href="/admin/discount-campaigns" className="text-primary font-medium hover:underline">
-                      Chiến dịch
+                      Campaigns
                     </Link>
                     <Link href="/admin/vouchers" className="text-primary font-medium hover:underline">
                       Voucher
@@ -609,7 +608,7 @@ export const DashboardContent = () => {
               <div className="space-y-4">
                 <div>
                   <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
-                    Doanh thu 7 ngày gần nhất
+                    Revenue in the last 7 days
                   </p>
                   <div className="flex h-28 items-end gap-1.5 rounded-lg border bg-muted/15 px-2 pb-2 pt-4">
                     {last7DaysRevenueBars.map((d) => (
@@ -629,11 +628,11 @@ export const DashboardContent = () => {
 
                 <div>
                   <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
-                    Top sản phẩm theo doanh thu dòng (kỳ đã chọn)
+                    Top products by net revenue
                   </p>
                   {topProductsByRevenue.length === 0 ? (
                     <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-center text-sm">
-                      Không có đơn trong kỳ.
+                      No orders in the selected period.
                     </div>
                   ) : (
                     <ul className="divide-y rounded-lg border">
@@ -662,17 +661,17 @@ export const DashboardContent = () => {
           </DashboardBlock>
 
           <DashboardBlock
-            title="Đơn mới nhất"
+            title="Latest orders"
             action={
               <Link href="/admin/orders" className="text-primary text-sm font-medium hover:underline">
-                Tất cả đơn
+                View all orders
               </Link>
             }
           >
             {recentOrders.length === 0 ? (
               <div className="text-muted-foreground flex flex-col items-center rounded-lg border border-dashed py-10">
                 <ShoppingCart className="mb-2 h-10 w-10 opacity-20" />
-                <p className="text-sm">Chưa có đơn</p>
+                <p className="text-sm">No orders yet</p>
               </div>
             ) : (
               <div className="divide-y rounded-lg border">
@@ -685,12 +684,12 @@ export const DashboardContent = () => {
                     <div className="min-w-0 flex-1">
                       <span className="font-medium">#{order.orderId.slice(0, 8)}</span>
                       <span className="text-muted-foreground ml-2 text-xs">
-                        {new Date(order.createdAt).toLocaleString("vi-VN")}
+                        {new Date(order.createdAt).toLocaleString("en-US")}
                       </span>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="font-semibold tabular-nums">{formatCurrency(order.totalPrice)}</span>
-                      <span className="text-muted-foreground text-xs">{order.items.length} món</span>
+                      <span className="text-muted-foreground text-xs">{order.items.length} items</span>
                       <Badge className={getStatusColor(order.status)}>{getStatusLabel(order.status)}</Badge>
                     </div>
                   </Link>

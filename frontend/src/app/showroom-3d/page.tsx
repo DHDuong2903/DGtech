@@ -307,6 +307,10 @@ export default function Showroom3DPage() {
     );
   }
 
+  if (activeSceneKey && (sceneLoading || !sceneDetail)) {
+    return <PageContentLoader className="bg-background" minHeightClass="min-h-[65vh]" />;
+  }
+
   if (!sceneDetail?.scene.roomModelUrl) {
     return (
       <div className="bg-background">

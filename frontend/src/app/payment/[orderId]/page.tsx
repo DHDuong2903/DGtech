@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { paymentApi } from "../../../apis/paymentApi";
@@ -26,10 +26,9 @@ export default function PaymentPage() {
 
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+  const hasShownPaidToastRef = useRef(false);
 
   const fetchPayment = useCallback(async () => {
     try {
@@ -44,31 +43,37 @@ export default function PaymentPage() {
     }
   }, [orderId]);
 
-  const checkPaymentStatus = useCallback(async () => {
-    try {
-      setChecking(true);
-      const response = await paymentApi.checkPaymentStatus(orderId);
+  const checkPaymentStatus = useCallback(
+    async ({ background = false, showPaidToast = true }: { background?: boolean; showPaidToast?: boolean } = {}) => {
+      try {
+        const response = await paymentApi.checkPaymentStatus(orderId);
 
-      if (response.status === "PAID") {
-        toast.success("Payment received. Your order is being processed.");
-        // Refresh payment info
-        await fetchPayment();
-      } else {
-        toast.info("Payment not detected yet");
+        if (response.status === "PAID") {
+          if (showPaidToast && !hasShownPaidToastRef.current) {
+            toast.success("Payment received. Your order is being processed.");
+            hasShownPaidToastRef.current = true;
+          }
+          await fetchPayment();
+        }
+      } catch (error) {
+        console.error("Error checking payment:", error);
+        if (!background) {
+          toast.error("Could not check payment status");
+        }
       }
-    } catch (error) {
-      console.error("Error checking payment:", error);
-      toast.error("Could not check payment status");
-    } finally {
-      setChecking(false);
+    },
+    [orderId, fetchPayment]
+  );
+
+  useEffect(() => {
+    if (payment?.status === "PAID") {
+      hasShownPaidToastRef.current = true;
     }
-  }, [orderId, fetchPayment]);
+  }, [payment?.status]);
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(field);
     toast.success(`Copied ${field}`);
-    setTimeout(() => setCopied(null), 2000);
   };
 
   useEffect(() => {
@@ -136,16 +141,15 @@ export default function PaymentPage() {
     cancelExpiredOrder();
   }, [isExpired, orderId, payment?.status]);
 
-  // Auto refresh payment status every 10 seconds
-  // useEffect(() => {
-  //   if (!payment || payment.status === "PAID" || isExpired) return;
+  useEffect(() => {
+    if (!payment || payment.status === "PAID" || isExpired) return;
 
-  //   const interval = setInterval(() => {
-  //     checkPaymentStatus();
-  //   }, 10000);
+    const interval = setInterval(() => {
+      void checkPaymentStatus({ background: true, showPaidToast: true });
+    }, 5000);
 
-  //   return () => clearInterval(interval);
-  // }, [payment, isExpired, checkPaymentStatus]);
+    return () => clearInterval(interval);
+  }, [payment, isExpired, checkPaymentStatus]);
 
   if (!isLoaded || loading) {
     return <PaymentLoadingState />;
@@ -190,10 +194,7 @@ export default function PaymentPage() {
               accountName={payment.accountName}
               amount={payment.amount}
               transactionContent={payment.transactionContent}
-              checking={checking}
-              copied={copied}
               onCopy={copyToClipboard}
-              onCheckStatus={checkPaymentStatus}
             />
           </div>
         )}
