@@ -18,6 +18,7 @@ export function ProductBundleBlocks({ bundles, bundleBuyBusyId, onBuyNowBundle }
         const lines: BundleLineRow[] = b.items.map((line) => ({
           id: `${b.bundleId}-${line.variantId}`,
           imageUrl: line.imageUrl,
+          model3dUrl: line.model3dUrl,
           name: line.productName ?? "Product",
           attributes: line.attributes ?? null,
           quantity: line.quantity,

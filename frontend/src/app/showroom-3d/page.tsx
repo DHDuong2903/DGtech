@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
+import { toast } from "sonner";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
 import { showroomApi } from "@/src/apis/showroomApi";
 import type {
   ShowroomEligibleProduct,
+  ShowroomSavedSetup,
   ShowroomScene,
   ShowroomSceneDetailResponse,
   ShowroomSceneSlot,
@@ -17,11 +19,23 @@ import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
+import { Spinner } from "@/src/components/ui/spinner";
 import { ShowroomProductPreview } from "@/src/components/public/showroom/ShowroomProductPreview";
 import { useUserRank } from "@/src/hooks";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 
 type SlotSelectionMap = Record<string, string>;
+
+function stableSelectionKey(value: SlotSelectionMap) {
+  return JSON.stringify(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .reduce<Record<string, string>>((acc, [slotId, productId]) => {
+        acc[slotId] = productId;
+        return acc;
+      }, {}),
+  );
+}
 
 function groupSceneCategories(slots: ShowroomSceneSlot[], products: ShowroomEligibleProduct[]) {
   const byCategoryId = new Map<
@@ -68,10 +82,12 @@ export default function Showroom3DPage() {
   const [sceneLoading, setSceneLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedBySlot, setSelectedBySlot] = useState<SlotSelectionMap>({});
+  const [savedSetup, setSavedSetup] = useState<ShowroomSavedSetup | null>(null);
   const [focusedSlotId, setFocusedSlotId] = useState<string | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [activeSelectionProductId, setActiveSelectionProductId] = useState<string | null>(null);
   const [pendingPlacementByProduct, setPendingPlacementByProduct] = useState<Record<string, string | null>>({});
+  const [savingSetup, setSavingSetup] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -141,6 +157,7 @@ export default function Showroom3DPage() {
     const loadScene = async () => {
       setSceneLoading(true);
       setSelectedBySlot({});
+      setSavedSetup(null);
       setSelectedProductIds([]);
       setActiveSelectionProductId(null);
       setPendingPlacementByProduct({});
@@ -148,6 +165,8 @@ export default function Showroom3DPage() {
         const detail = await showroomApi.getSceneByKey(activeSceneKey);
         if (!active) return;
         setSceneDetail(detail);
+        setSavedSetup(detail.savedSetup ?? null);
+        setSelectedBySlot(detail.savedSetup?.selectedBySlot ?? {});
         setFocusedSlotId(null);
         setError(null);
       } catch (err: unknown) {
@@ -199,8 +218,10 @@ export default function Showroom3DPage() {
     () => selectedProducts.filter((product) => Boolean(pendingPlacementByProduct[product.productId])).length,
     [pendingPlacementByProduct, selectedProducts],
   );
-  const totalEligible = sceneDetail?.eligibleProducts.length ?? 0;
-  const filledPositions = Object.keys(selectedBySlot).length;
+  const hasUnsavedSetupChanges = useMemo(
+    () => stableSelectionKey(selectedBySlot) !== stableSelectionKey(savedSetup?.selectedBySlot ?? {}),
+    [savedSetup?.selectedBySlot, selectedBySlot],
+  );
 
   const assignPendingPlacement = (productId: string, slotId: string | null) => {
     setPendingPlacementByProduct((prev) => {
@@ -261,6 +282,25 @@ export default function Showroom3DPage() {
       delete next[slotId];
       return next;
     });
+  };
+
+  const handleSaveSetup = async () => {
+    if (!activeSceneKey) return;
+    setSavingSetup(true);
+    try {
+      const nextSavedSetup = await showroomApi.saveSceneSetup(activeSceneKey, { selectedBySlot });
+      setSavedSetup(nextSavedSetup);
+      toast.success("Showroom setup saved.");
+    } catch (err: unknown) {
+      console.error("Failed to save showroom setup:", err);
+      toast.error(
+        isAxiosError(err)
+          ? ((err.response?.data as { error?: string } | undefined)?.error ?? "Could not save showroom setup")
+          : "Could not save showroom setup",
+      );
+    } finally {
+      setSavingSetup(false);
+    }
   };
 
   const handleToggleSelectedProduct = (product: ShowroomEligibleProduct) => {
@@ -326,9 +366,9 @@ export default function Showroom3DPage() {
 
   return (
     <div className="bg-background">
-      <div className={cn("mx-auto max-w-7xl py-5", STOREFRONT_H_PADDING)}>
-        <div className="grid gap-4 xl:grid-cols-[minmax(310px,0.72fr)_minmax(0,1.88fr)]">
-          <aside className="flex min-h-0 flex-col rounded-xl border bg-card p-4">
+      <div className={cn("mx-auto max-w-7xl py-4", STOREFRONT_H_PADDING)}>
+        <div className="grid gap-4 xl:h-[calc(100dvh-5.5rem)] xl:grid-cols-[minmax(290px,0.84fr)_minmax(0,1.66fr)]">
+          <aside className="flex min-h-0 max-h-[min(48dvh,780px)] flex-col overflow-hidden rounded-xl border bg-card p-4 xl:h-full xl:max-h-none">
             <div className="mb-4 space-y-4">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
@@ -345,6 +385,21 @@ export default function Showroom3DPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <Button
+                  type="button"
+                  variant={hasUnsavedSetupChanges ? "default" : "outline"}
+                  disabled={savingSetup || !hasUnsavedSetupChanges}
+                  onClick={() => void handleSaveSetup()}
+                >
+                  {savingSetup ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      Save setup
+                    </>
+                  ) : (
+                    "Save setup"
+                  )}
+                </Button>
               </div>
 
               {selectedProducts.length > 0 ? (
@@ -427,7 +482,6 @@ export default function Showroom3DPage() {
                     <div className="grid grid-cols-2 gap-3">
                       {group.products.map((product) => {
                         const matchingSlots = getMatchingSlotsForProduct(product, sceneDetail.slots);
-                        const previewTargetSlot = matchingSlots.length === 1 ? matchingSlots[0] : null;
                         const placedInSlot =
                           group.slots.find((slot) => selectedBySlot[slot.slotId] === product.productId) ?? null;
                         const isSelected = selectedProductIds.includes(product.productId);
@@ -447,17 +501,29 @@ export default function Showroom3DPage() {
                                   <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
                                 </div>
                                 <p className="line-clamp-3 text-xs leading-5 text-muted-foreground">{product.description}</p>
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div
+                                  className={cn(
+                                    "grid gap-2",
+                                    placedInSlot ? "grid-cols-2" : "grid-cols-1",
+                                  )}
+                                >
                                   <Button
                                     type="button"
                                     size="sm"
+                                    className="w-full"
                                     variant={isSelected ? "default" : "outline"}
                                     onClick={() => handleToggleSelectedProduct(product)}
                                   >
                                     {isSelected ? "Selected" : "Select"}
                                   </Button>
                                   {placedInSlot ? (
-                                    <Button type="button" variant="ghost" size="sm" onClick={() => handleClearSlot(placedInSlot.slotId)}>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() => handleClearSlot(placedInSlot.slotId)}
+                                    >
                                       Remove
                                     </Button>
                                   ) : null}
@@ -479,15 +545,16 @@ export default function Showroom3DPage() {
             </div>
           </aside>
 
-          <section className="space-y-4">
-            <div className="rounded-xl border bg-card p-3">
-              <div className="relative">
+          <section className="flex min-h-0 max-h-[min(52dvh,900px)] flex-col gap-4 xl:h-full xl:max-h-none">
+            <div className="rounded-xl border bg-card p-3 xl:flex-1 xl:min-h-0">
+              <div className="relative xl:h-full">
                 <ShowroomCanvas
                   roomModelUrl={sceneDetail.scene.roomModelUrl}
                   slots={sceneDetail.slots}
                   occupants={occupants}
                   focusedSlotId={focusedSlotId}
                   onSelectSlot={handleSelectSlot}
+                  className="xl:h-full"
                 />
                 {sceneLoading ? (
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/70 backdrop-blur-sm">
@@ -499,7 +566,7 @@ export default function Showroom3DPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border bg-card p-4">
+            <div className="max-h-[min(22dvh,220px)] overflow-y-auto rounded-xl border bg-card p-4 xl:max-h-[220px]">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h2 className="text-base font-semibold">Scene positions</h2>

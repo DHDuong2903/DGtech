@@ -108,6 +108,7 @@ export const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png",
 export const MAX_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 export const ALLOWED_MODEL3D_MIME_TYPES = ["model/gltf-binary"] as const;
 export const MAX_MODEL3D_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+export const MAX_SHOWROOM_ROOM_MODEL_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Orders

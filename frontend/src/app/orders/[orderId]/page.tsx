@@ -16,7 +16,6 @@ import {
   getStatusColor,
   getStatusLabel,
 } from "../../../utils";
-import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import {
   Dialog,
@@ -29,8 +28,8 @@ import {
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { Spinner } from "@/src/components/ui/spinner";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -144,18 +143,15 @@ export default function OrderDetailPage() {
                   <div className="divide-y pr-2">
                     {currentOrder.items.map((item) => (
                       <div key={item.orderItemId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-background">
-                          {item.product?.imageUrl ? (
-                            <Image
-                              src={item.product.imageUrl}
-                              alt={item.product?.name || "Product"}
-                              fill
-                              className="object-contain"
-                            />
-                          ) : (
-                            <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6" />
-                          )}
-                        </div>
+                        <ProductMediaThumb
+                          imageUrl={item.product?.imageUrl}
+                          model3dUrl={item.product?.model3dUrl}
+                          alt={item.product?.name || "Product"}
+                          className="h-12 w-12 shrink-0"
+                          sizes="48px"
+                          imageClassName="object-contain"
+                          fallbackIconClassName="h-6 w-6"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-foreground">
                             {item.product?.name || "Product"}

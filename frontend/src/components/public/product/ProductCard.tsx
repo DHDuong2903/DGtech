@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Product } from "@/src/types";
 import { formatCurrency, toMoneyNumber } from "@/src/utils";
 import { ProductImageFallback } from "./ProductImageFallback";
@@ -14,21 +14,13 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product, compact }: ProductCardProps) => {
-  const router = useRouter();
   const sale = toMoneyNumber(product.price);
   const list = toMoneyNumber(product.compareAtPrice);
   const saleOk = Number.isFinite(sale) ? sale : 0;
   const showStrike = Number.isFinite(list) && list > saleOk;
 
-  const handleClick = () => {
-    router.push(`/shop/${product.productId}`);
-  };
-
   return (
-    <div
-      className="bg-card border-border group min-w-0 cursor-pointer overflow-hidden rounded-lg border shadow-sm transition-all duration-300 hover:shadow-md"
-      onClick={handleClick}
-    >
+    <div className="bg-card border-border group min-w-0 overflow-hidden rounded-lg border shadow-sm transition-all duration-300 hover:shadow-md">
       {/* Image */}
       <div className="bg-muted relative aspect-square overflow-hidden">
         {product.model3dUrl ? (
@@ -64,15 +56,16 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
 
       {/* Info */}
       <div className={compact ? "min-w-0 p-2.5" : "min-w-0 p-4"}>
-        <h3
+        <Link
+          href={`/shop/${product.productId}`}
           className={
             compact
-              ? "text-foreground/80 group-hover:text-primary mb-1 line-clamp-2 break-words text-sm font-medium leading-snug transition-colors"
-              : "text-foreground group-hover:text-primary mb-2 line-clamp-2 break-words text-base font-semibold leading-snug transition-colors"
+              ? "text-foreground/80 hover:text-primary mb-1 block line-clamp-2 break-words text-sm font-medium leading-snug transition-colors"
+              : "text-foreground hover:text-primary mb-2 block line-clamp-2 break-words text-base font-semibold leading-snug transition-colors"
           }
         >
           {product.name}
-        </h3>
+        </Link>
 
         {product.category && (
           <p

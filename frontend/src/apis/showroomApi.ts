@@ -3,6 +3,7 @@ import axiosInstance from "../lib/axios";
 import type {
   ShowroomScene,
   ShowroomSceneDetailResponse,
+  ShowroomSavedSetup,
   ShowroomSceneSlot,
 } from "../types";
 
@@ -22,7 +23,16 @@ export const showroomApi = {
       scene: data.scene,
       slots: data.slots || [],
       eligibleProducts: data.eligibleProducts || [],
+      savedSetup: data.savedSetup || null,
     };
+  },
+
+  saveSceneSetup: async (sceneKey: string, payload: { selectedBySlot: Record<string, string> }) => {
+    const { data } = await axiosInstance.put<{
+      message: string;
+      savedSetup: ShowroomSavedSetup | null;
+    }>(`${API_ROUTE.SHOWROOM}/scenes/${sceneKey}/setup`, payload);
+    return data.savedSetup;
   },
 
   adminGetScenes: async () => {

@@ -12,6 +12,15 @@ function normalizeBoolean(value: unknown): boolean {
   return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }
 
+function withAssetVersion(url: unknown, version: unknown) {
+  if (typeof url !== "string" || !url.trim()) return null;
+  const normalizedUrl = url.trim();
+  const normalizedVersion = String(version ?? "").trim();
+  if (!normalizedVersion) return normalizedUrl;
+  const separator = normalizedUrl.includes("?") ? "&" : "?";
+  return `${normalizedUrl}${separator}v=${encodeURIComponent(normalizedVersion)}`;
+}
+
 function normalizeSceneRow(row: any) {
   return {
     sceneId: row.sceneId,
@@ -22,7 +31,8 @@ function normalizeSceneRow(row: any) {
       row.roomId && row.roomName
         ? { roomId: Number(row.roomId), name: row.roomName, description: row.roomDescription ?? "" }
         : null,
-    roomModelUrl: row.roomModelUrl ?? null,
+    roomModelStorageUrl: row.roomModelUrl ?? null,
+    roomModelUrl: withAssetVersion(row.roomModelUrl, row.updatedAt ?? row.roomModelPublicId ?? row.roomModelFileName),
     roomModelPublicId: row.roomModelPublicId ?? null,
     roomModelMimeType: row.roomModelMimeType ?? null,
     roomModelFileName: row.roomModelFileName ?? null,
@@ -75,6 +85,21 @@ function normalizeEligibleProduct(row: any) {
   };
 }
 
+function normalizeSavedSetupRow(row: any) {
+  const selectedBySlot =
+    row?.selectedBySlot && typeof row.selectedBySlot === "object" && !Array.isArray(row.selectedBySlot)
+      ? row.selectedBySlot
+      : {};
+
+  return {
+    setupId: row.setupId,
+    sceneId: row.sceneId,
+    clerkId: row.clerkId,
+    selectedBySlot,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function parseSlotsPayload(value: unknown) {
   if (Array.isArray(value)) return value;
   if (typeof value === "string" && value.trim().length > 0) {
@@ -86,6 +111,32 @@ function parseSlotsPayload(value: unknown) {
     }
   }
   return [];
+}
+
+function normalizeSelectedBySlotPayload(value: unknown) {
+  const raw =
+    typeof value === "string" && value.trim().length > 0
+      ? (() => {
+          try {
+            return JSON.parse(value);
+          } catch {
+            throw Object.assign(new Error("Invalid selectedBySlot payload"), { status: 400 });
+          }
+        })()
+      : value;
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+
+  const normalized: Record<string, string> = {};
+  for (const [slotId, productId] of Object.entries(raw as Record<string, unknown>)) {
+    const normalizedSlotId = String(slotId ?? "").trim();
+    const normalizedProductId = String(productId ?? "").trim();
+    if (!normalizedSlotId || !normalizedProductId) continue;
+    normalized[normalizedSlotId] = normalizedProductId;
+  }
+  return normalized;
 }
 
 function normalizeCategoryId(value: unknown) {
@@ -468,6 +519,7 @@ async function loadSceneById(sceneId: string) {
         s."thumbnailUrl",
         s."isActive",
         s."sortOrder",
+        s."updatedAt",
         r."name" AS "roomName",
         r."description" AS "roomDescription",
         (
@@ -505,6 +557,7 @@ async function loadSceneByKey(sceneKey: string, onlyStorefrontReady: boolean) {
         s."thumbnailUrl",
         s."isActive",
         s."sortOrder",
+        s."updatedAt",
         r."name" AS "roomName",
         r."description" AS "roomDescription",
         (
@@ -606,6 +659,7 @@ async function loadAllScenesWithSlots() {
         s."thumbnailUrl",
         s."isActive",
         s."sortOrder",
+        s."updatedAt",
         r."name" AS "roomName",
         r."description" AS "roomDescription",
         (
@@ -673,6 +727,7 @@ async function loadStorefrontScenes() {
         s."thumbnailUrl",
         s."isActive",
         s."sortOrder",
+        s."updatedAt",
         r."name" AS "roomName",
         r."description" AS "roomDescription",
         (
@@ -726,6 +781,48 @@ async function loadEligibleProductsForScene(sceneId: string) {
   return (rows as any[]).map(normalizeEligibleProduct);
 }
 
+async function loadSavedSetupForScene(clerkId: string, sceneId: string) {
+  const rows = await sequelize.query(
+    `
+      SELECT
+        "setupId",
+        "sceneId",
+        "clerkId",
+        "selectedBySlot",
+        "updatedAt"
+      FROM "showroom_saved_setups"
+      WHERE "clerkId" = :clerkId
+        AND "sceneId" = :sceneId
+      LIMIT 1
+    `,
+    {
+      replacements: { clerkId, sceneId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[])[0] ? normalizeSavedSetupRow((rows as any[])[0]) : null;
+}
+
+function sanitizeSelectedBySlot(selectedBySlot: Record<string, string>, slots: any[], eligibleProducts: any[]) {
+  const activeSlots = new Map(slots.filter((slot) => slot.isActive).map((slot) => [slot.slotId, slot]));
+  const productsById = new Map(eligibleProducts.map((product) => [product.productId, product]));
+  const seenProducts = new Set<string>();
+  const sanitized: Record<string, string> = {};
+
+  for (const [slotId, productId] of Object.entries(selectedBySlot || {})) {
+    const slot = activeSlots.get(slotId);
+    const product = productsById.get(productId);
+    if (!slot || !product) continue;
+    if (slot.allowedCategoryId == null || slot.allowedCategoryId !== product.categoryId) continue;
+    if (seenProducts.has(productId)) continue;
+    sanitized[slotId] = productId;
+    seenProducts.add(productId);
+  }
+
+  return sanitized;
+}
+
 async function validateCategoryIfNeeded(categoryId: number | null) {
   if (categoryId == null) return;
   const category = await Category.findByPk(categoryId);
@@ -747,20 +844,114 @@ export async function getGoldShowroomScenes() {
   return { message: "Showroom scenes retrieved successfully", scenes };
 }
 
-export async function getGoldShowroomSceneByKey(sceneKey: string) {
+export async function getGoldShowroomSceneByKey(sceneKey: string, clerkId?: string | null) {
   const scene = await loadSceneByKey(sceneKey, true);
   if (!scene) throw Object.assign(new Error("Showroom scene not found"), { status: 404 });
 
-  const [slots, eligibleProducts] = await Promise.all([
+  const [slots, eligibleProducts, savedSetup] = await Promise.all([
     loadSceneSlots(scene.sceneId, false),
     loadEligibleProductsForScene(scene.sceneId),
+    clerkId ? loadSavedSetupForScene(clerkId, scene.sceneId) : Promise.resolve(null),
   ]);
+
+  const sanitizedSavedSelection = sanitizeSelectedBySlot(savedSetup?.selectedBySlot ?? {}, slots, eligibleProducts);
 
   return {
     message: "Showroom scene retrieved successfully",
     scene,
     slots,
     eligibleProducts,
+    savedSetup: savedSetup
+      ? {
+          ...savedSetup,
+          selectedBySlot: sanitizedSavedSelection,
+        }
+      : null,
+  };
+}
+
+export async function saveGoldShowroomSceneSetup(
+  clerkId: string | null | undefined,
+  sceneKey: string,
+  body: Record<string, unknown>,
+) {
+  if (!clerkId) {
+    throw Object.assign(new Error("Unauthorized"), { status: 401 });
+  }
+
+  const scene = await loadSceneByKey(sceneKey, true);
+  if (!scene) throw Object.assign(new Error("Showroom scene not found"), { status: 404 });
+
+  const [slots, eligibleProducts, existingSetup] = await Promise.all([
+    loadSceneSlots(scene.sceneId, false),
+    loadEligibleProductsForScene(scene.sceneId),
+    loadSavedSetupForScene(clerkId, scene.sceneId),
+  ]);
+
+  const selectedBySlot = sanitizeSelectedBySlot(
+    normalizeSelectedBySlotPayload(body.selectedBySlot),
+    slots,
+    eligibleProducts,
+  );
+
+  if (existingSetup) {
+    await sequelize.query(
+      `
+        UPDATE "showroom_saved_setups"
+        SET
+          "selectedBySlot" = CAST(:selectedBySlot AS jsonb),
+          "updatedAt" = NOW()
+        WHERE "setupId" = :setupId
+      `,
+      {
+        replacements: {
+          setupId: existingSetup.setupId,
+          selectedBySlot: JSON.stringify(selectedBySlot),
+        },
+        type: QueryTypes.UPDATE,
+      },
+    );
+  } else {
+    await sequelize.query(
+      `
+        INSERT INTO "showroom_saved_setups" (
+          "setupId",
+          "clerkId",
+          "sceneId",
+          "selectedBySlot",
+          "createdAt",
+          "updatedAt"
+        )
+        VALUES (
+          :setupId,
+          :clerkId,
+          :sceneId,
+          CAST(:selectedBySlot AS jsonb),
+          NOW(),
+          NOW()
+        )
+      `,
+      {
+        replacements: {
+          setupId: randomUUID(),
+          clerkId,
+          sceneId: scene.sceneId,
+          selectedBySlot: JSON.stringify(selectedBySlot),
+        },
+        type: QueryTypes.INSERT,
+      },
+    );
+  }
+
+  const savedSetup = await loadSavedSetupForScene(clerkId, scene.sceneId);
+  return {
+    message: "Showroom setup saved successfully",
+    savedSetup: savedSetup
+      ? {
+          ...savedSetup,
+          selectedBySlot,
+        }
+      : null,
   };
 }
 
@@ -946,7 +1137,7 @@ export async function updateAdminShowroomScene(
   await validateIncomingSlots(slots);
 
   const removeRoomModel = normalizeBoolean(body.removeRoomModel);
-  let nextRoomModelUrl = scene.roomModelUrl;
+  let nextRoomModelUrl = scene.roomModelStorageUrl ?? scene.roomModelUrl;
   let nextRoomModelPublicId = scene.roomModelPublicId;
   let nextRoomModelMimeType = scene.roomModelMimeType;
   let nextRoomModelFileName = scene.roomModelFileName;

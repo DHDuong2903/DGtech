@@ -3,6 +3,7 @@ import multer from "multer";
 
 export const MAX_PRODUCT_IMAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 export const MAX_PRODUCT_MODEL_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+export const MAX_SHOWROOM_ROOM_MODEL_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 function isGlbUpload(file: any) {
   if (!file) return false;
@@ -30,7 +31,7 @@ const upload = multer({
 const showroomSceneUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: MAX_PRODUCT_MODEL_FILE_SIZE_BYTES,
+    fileSize: MAX_SHOWROOM_ROOM_MODEL_FILE_SIZE_BYTES,
   },
   fileFilter: (_req: any, file: any, cb: any) => {
     if (file.fieldname === "roomModel" && isGlbUpload(file)) {
