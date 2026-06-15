@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bounds, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { Cuboid, RotateCcw } from "lucide-react";
 import { Mesh, Object3D, Quaternion, Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { cn } from "@/src/lib/utils";
+import { ModelLoadBoundary } from "@/src/components/shared/ModelLoadBoundary";
 
 type SlotMarker = {
   id: string;
@@ -260,8 +261,8 @@ export function GlbPreviewViewer({
   markerPrefix = "SLOT_",
   cameraMarkerPrefix = "CAM_",
   cameraMarkerOverrides,
-  defaultOverview,
   showResetViewButton = false,
+  fallback,
 }: {
   src?: string | null;
   title?: string;
@@ -281,13 +282,8 @@ export function GlbPreviewViewer({
   markerPrefix?: string;
   cameraMarkerPrefix?: string;
   cameraMarkerOverrides?: Record<string, string>;
-  defaultOverview?: {
-    position: readonly [number, number, number];
-    target: readonly [number, number, number];
-    azimuthAngle?: number;
-    polarAngle?: number;
-  };
   showResetViewButton?: boolean;
+  fallback?: ReactNode;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const [slotMarkers, setSlotMarkers] = useState<SlotMarker[]>([]);
@@ -359,10 +355,6 @@ export function GlbPreviewViewer({
       : (defaultViewPresetId ?? viewPresets?.[0]?.id ?? null);
 
   useEffect(() => {
-    setFocusedMarkerId(null);
-  }, [src]);
-
-  useEffect(() => {
     if (src) {
       useGLTF.preload(src);
     }
@@ -379,9 +371,21 @@ export function GlbPreviewViewer({
       controlsRef.current.target.set(0, 0.85, 0);
     }
     controlsRef.current.update();
-  }, [focusedSlotMarker, resolvedActivePresetId, viewPresets]);
+  }, [allowFreeNavigation, focusedSlotMarker, resolvedActivePresetId, viewPresets]);
 
   const cameraPosition = allowFreeNavigation ? ([2.8, 2.1, 3.1] as const) : resolvedDefaultView.position;
+  const loadFailureFallback =
+    fallback ?? (
+      <div className="flex aspect-square items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-[linear-gradient(160deg,#fbf6ef,#efe5d8)] p-6 text-center">
+        <div className="max-w-[220px] space-y-2 text-slate-600">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/70 shadow-sm">
+            <Cuboid className="h-6 w-6" />
+          </div>
+          <p className="text-sm font-medium text-slate-900">{title}</p>
+          <p className="text-xs leading-5">The 3D model could not be loaded.</p>
+        </div>
+      </div>
+    );
 
   const handleResetView = () => {
     setFocusedMarkerId(null);
@@ -429,19 +433,21 @@ export function GlbPreviewViewer({
           <shadowMaterial opacity={0.14} />
         </mesh>
         <Suspense fallback={null}>
-          <Bounds fit clip margin={1.2}>
-            <GlbScene
-              src={src}
-              showNamedMarkers={showNamedMarkers}
-              useEmbeddedCameraMarkers={useEmbeddedCameraMarkers}
-              markerPrefix={markerPrefix}
-              cameraMarkerPrefix={cameraMarkerPrefix}
-              focusedMarkerId={focusedMarkerId}
-              onMarkerClick={(markerId) => setFocusedMarkerId(markerId)}
-              onSlotMarkersChange={setSlotMarkers}
-              onCameraMarkersChange={setCameraMarkers}
-            />
-          </Bounds>
+          <ModelLoadBoundary fallback={loadFailureFallback}>
+            <Bounds fit clip margin={1.2}>
+              <GlbScene
+                src={src}
+                showNamedMarkers={showNamedMarkers}
+                useEmbeddedCameraMarkers={useEmbeddedCameraMarkers}
+                markerPrefix={markerPrefix}
+                cameraMarkerPrefix={cameraMarkerPrefix}
+                focusedMarkerId={focusedMarkerId}
+                onMarkerClick={(markerId) => setFocusedMarkerId(markerId)}
+                onSlotMarkersChange={setSlotMarkers}
+                onCameraMarkersChange={setCameraMarkers}
+              />
+            </Bounds>
+          </ModelLoadBoundary>
         </Suspense>
         {!allowFreeNavigation ? (
           <MarkerFocusController

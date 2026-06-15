@@ -20,6 +20,20 @@ export const ProductImage = ({ imageUrl, model3dUrl, name }: ProductImageProps) 
             className="h-full w-full rounded-xl border-0"
             useEmbeddedCameraMarkers={false}
             allowFreeNavigation
+            fallback={
+              imageUrl ? (
+                <Image
+                  src={imageUrl}
+                  alt={name}
+                  fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <ProductImageFallback className="h-full w-full" iconClassName="h-16 w-16" />
+              )
+            }
           />
         ) : imageUrl ? (
           <Image
