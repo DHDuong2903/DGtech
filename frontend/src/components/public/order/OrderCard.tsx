@@ -2,9 +2,6 @@ import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Spinner } from "@/src/components/ui/spinner";
-import Image from "next/image";
-import Link from "next/link";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import {
   formatCurrency,
   getPaymentStatusColor,
@@ -14,6 +11,7 @@ import {
 } from "@/src/utils";
 import { Order } from "@/src/types";
 import { cn } from "@/src/lib/utils";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 interface OrderCardProps {
   order: Order;
@@ -57,18 +55,15 @@ export const OrderCard = ({ order, onViewDetail, onBuyAgain, onCancel, isBuyingA
           <div className="divide-y pr-2">
             {order.items.map((item) => (
               <div key={item.orderItemId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-background">
-                  {item.product?.imageUrl ? (
-                    <Image
-                      src={item.product.imageUrl}
-                      alt={item.product?.name || "Product"}
-                      fill
-                      className="object-contain"
-                    />
-                  ) : (
-                    <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6" />
-                  )}
-                </div>
+                <ProductMediaThumb
+                  imageUrl={item.product?.imageUrl}
+                  model3dUrl={item.product?.model3dUrl}
+                  alt={item.product?.name || "Product"}
+                  className="h-12 w-12 shrink-0"
+                  sizes="48px"
+                  imageClassName="object-contain"
+                  fallbackIconClassName="h-6 w-6"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{item.product?.name || "Product"}</p>
                   <p className="text-muted-foreground text-xs">x {item.quantity}</p>

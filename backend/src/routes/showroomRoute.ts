@@ -7,6 +7,7 @@ import {
   getAdminShowroomScenes,
   getGoldShowroomSceneByKey,
   getGoldShowroomScenes,
+  saveGoldShowroomSceneSetup,
   updateAdminShowroomScene,
   updateAdminShowroomSlot,
 } from "../controllers/showroomController.js";
@@ -21,6 +22,7 @@ router.use(requireAuth);
 
 router.get("/scenes", requireGoldTier, getGoldShowroomScenes);
 router.get("/scenes/:sceneKey", requireGoldTier, getGoldShowroomSceneByKey);
+router.put("/scenes/:sceneKey/setup", requireGoldTier, saveGoldShowroomSceneSetup);
 
 router.get("/admin/scenes", requireAdmin, getAdminShowroomScenes);
 router.get("/admin/scenes/:sceneId", requireAdmin, getAdminShowroomSceneById);

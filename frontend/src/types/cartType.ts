@@ -18,6 +18,7 @@ export type CartBundleSnapshotLine = {
   productId: string | null;
   productName: string | null;
   imageUrl: string | null;
+  model3dUrl?: string | null;
   attributes?: Record<string, string> | null;
   unitCatalogPrice: number | null;
   storefrontProductUrl: string | null;

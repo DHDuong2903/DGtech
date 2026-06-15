@@ -7,12 +7,13 @@ import type { DiscountKind } from "@/src/types/discountCampaignType";
 import { attrsLabel, formatMoney, variantList, variantUnitPrice } from "./discountCampaignProductUi";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
-import { Sofa, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
 import { AdminSpinner, AdminContentLoader } from "@/src/components/admin/AdminLoading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { toast } from "sonner";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 const PAGE_SIZE = 20;
 
@@ -361,16 +362,15 @@ export function DiscountCampaignRuleProductPickerModal({
                         {/* Name cell spans the full remaining width */}
                         <TableCell className="max-w-0 whitespace-normal" colSpan={2}>
                           <div className="flex min-w-0 items-center gap-2 pr-4">
-                            <div className="bg-muted relative h-9 w-9 shrink-0 overflow-hidden rounded border">
-                              {full.imageUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={full.imageUrl} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                <span className="text-muted-foreground flex h-full items-center justify-center text-[9px]">
-                                  <Sofa className="text-muted-foreground h-4 w-4" />
-                                </span>
-                              )}
-                            </div>
+                            <ProductMediaThumb
+                              imageUrl={full.imageUrl}
+                              model3dUrl={full.model3dUrl}
+                              alt={full.name}
+                              className="h-9 w-9 shrink-0"
+                              sizes="36px"
+                              imageClassName="object-cover"
+                              fallbackIconClassName="h-4 w-4"
+                            />
                             <span className="min-w-0 truncate font-semibold leading-tight">{full.name}</span>
                           </div>
                         </TableCell>

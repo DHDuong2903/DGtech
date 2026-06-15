@@ -46,7 +46,7 @@ export const isValidImage = (file: File): { valid: boolean; error?: string } => 
   return { valid: true };
 };
 
-export const isValidGlbModel = (file: File): { valid: boolean; error?: string } => {
+export const isValidGlbModel = (file: File, maxSizeBytes = MAX_MODEL3D_FILE_SIZE_BYTES): { valid: boolean; error?: string } => {
   const isValidMime = (ALLOWED_MODEL3D_MIME_TYPES as readonly string[]).includes(file.type);
   const isValidExt = /\.glb$/i.test(file.name);
   if (!isValidMime && !isValidExt) {
@@ -55,10 +55,10 @@ export const isValidGlbModel = (file: File): { valid: boolean; error?: string } 
       error: "Only .glb model files are allowed",
     };
   }
-  if (file.size > MAX_MODEL3D_FILE_SIZE_BYTES) {
+  if (file.size > maxSizeBytes) {
     return {
       valid: false,
-      error: `3D model must be at most ${MAX_MODEL3D_FILE_SIZE_BYTES / 1024 / 1024}MB`,
+      error: `3D model must be at most ${maxSizeBytes / 1024 / 1024}MB`,
     };
   }
   return { valid: true };

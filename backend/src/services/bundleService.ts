@@ -30,7 +30,7 @@ export const bundleIncludeList = [
           {
             model: Product,
             as: "product",
-            attributes: ["productId", "name", "imageUrl", "status", "stock"],
+            attributes: ["productId", "name", "imageUrl", "model3dUrl", "status", "stock"],
           },
         ],
       },
@@ -51,6 +51,7 @@ export function serializeBundle(row: any, opts?: { list?: boolean }) {
         productId: it.variant?.productId ?? it.variant?.product?.productId ?? null,
         productName: it.variant?.product?.name ?? null,
         productImageUrl: it.variant?.product?.imageUrl ?? null,
+        productModel3dUrl: it.variant?.product?.model3dUrl ?? null,
         attributes:
           it.variant?.attributes && typeof it.variant.attributes === "object"
             ? it.variant.attributes
@@ -358,6 +359,7 @@ export async function getStorefrontBundlesByProduct(productId: string, clerkId: 
           productId: pid,
           productName: it.variant?.product?.name ?? null,
           imageUrl: it.variant?.product?.imageUrl ?? null,
+          model3dUrl: it.variant?.product?.model3dUrl ?? null,
           attributes:
             it.variant?.attributes && typeof it.variant.attributes === "object"
               ? it.variant.attributes

@@ -8,16 +8,13 @@ import { useAuth } from "@/src/hooks";
 import { Button } from "@/src/components/ui/button";
 import { Spinner } from "@/src/components/ui/spinner";
 import { Label } from "@/src/components/ui/label";
-import { Textarea } from "@/src/components/ui/textarea";
 import { Card } from "@/src/components/ui/card";
-import { ArrowLeft, BadgePercent, ChevronDown, Package } from "lucide-react";
+import { BadgePercent, ChevronDown, Package } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "../../utils";
-import Image from "next/image";
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { PageContentLoader } from "@/src/components/ui/page-content-loader";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { addressApi } from "@/src/apis/addressApi";
 import { VN_PROVINCES, vnWardsForProvince } from "@/src/constants/vnAdministrative";
 import { VnAddressFormFields, type VnAddressDraft } from "@/src/components/public/address/VnAddressFormFields";
@@ -30,6 +27,7 @@ import { sortCartItemsForDisplay } from "@/src/utils/cartUtils";
 import { cartItemUnitPrice, isBundleCartItem } from "@/src/utils/cartLineUtils";
 import { BundleLineList, BundleSummaryHeader, type BundleLineRow } from "@/src/components/public/bundle";
 import type { EligibleVoucher } from "@/src/types";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 type ShipMode = "saved" | "new";
 
@@ -92,7 +90,7 @@ function CheckoutContent() {
   const { createOrder, loading: orderLoading } = useOrderStore();
 
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "BANK_TRANSFER">("BANK_TRANSFER");
-  const [notes, setNotes] = useState("");
+  const notes = "";
 
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [addrLoading, setAddrLoading] = useState(true);
@@ -597,6 +595,7 @@ function CheckoutContent() {
                       ? item.bundleSnapshot.lines.map((ln) => ({
                           id: ln.variantId,
                           imageUrl: ln.imageUrl,
+                          model3dUrl: ln.model3dUrl,
                           name: ln.productName ?? "Product",
                           attributes: ln.attributes ?? null,
                           quantity: ln.quantity,
@@ -612,25 +611,21 @@ function CheckoutContent() {
                         <>
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 gap-3">
-                              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
-                                {item.product.imageUrl ? (
-                                  <Image
-                                    src={item.product.imageUrl}
-                                    alt={item.product.name}
-                                    fill
-                                    sizes="56px"
-                                    className="object-contain"
-                                  />
-                                ) : (
-                                  <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
-                                )}
-                              </div>
+                              <ProductMediaThumb
+                                imageUrl={item.product.imageUrl}
+                                model3dUrl={item.product.model3dUrl}
+                                alt={item.product.name}
+                                className="h-14 w-14 shrink-0"
+                                sizes="56px"
+                                imageClassName="object-contain"
+                                fallbackIconClassName="h-7 w-7"
+                              />
                               <div className="flex min-w-0 flex-col justify-center">
                                 <p className="truncate text-sm font-medium leading-tight">{item.product.name}</p>
                                 {item.variant && !item.variant.isDefault && item.variant.attributes && (
                                   <p className="text-muted-foreground mt-0.5 text-xs">
                                     {Object.entries(item.variant.attributes)
-                                      .map(([k, v]) => `${v}`)
+                                      .map(([, v]) => `${v}`)
                                       .join(" / ")}
                                   </p>
                                 )}

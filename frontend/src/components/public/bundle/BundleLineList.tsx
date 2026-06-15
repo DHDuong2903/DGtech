@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/src/lib/utils";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import type { BundleLineRow } from "./bundleTypes";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 type Props = {
   lines: BundleLineRow[];
@@ -19,13 +18,14 @@ export function BundleLineList({ lines, className }: Props) {
           key={ln.id}
           className="border-border/80 flex gap-3 border-b py-2.5 last:border-b-0 last:pb-0 first:pt-0"
         >
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md md:h-14 md:w-14">
-            {ln.imageUrl ? (
-              <Image src={ln.imageUrl} alt="" fill sizes="56px" className="object-contain p-0" />
-            ) : (
-              <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6 md:h-7 md:w-7" />
-            )}
-          </div>
+          <ProductMediaThumb
+            imageUrl={ln.imageUrl}
+            model3dUrl={ln.model3dUrl}
+            alt={ln.name}
+            className="h-12 w-12 shrink-0 md:h-14 md:w-14"
+            imageClassName="object-contain p-0"
+            fallbackIconClassName="h-6 w-6 md:h-7 md:w-7"
+          />
           <div className="min-w-0 flex-1">
             <div className="text-foreground text-sm font-medium leading-snug">
               {ln.href ? (
