@@ -32,8 +32,6 @@ type CameraView = {
   target: readonly [number, number, number];
 };
 
-const DIAGNOSTIC_CAMERA_POSITION = [0, 1.2, 0.01] as const;
-
 function markerKeywords(name: string, prefix: string) {
   return name
     .replace(prefix, "")
@@ -269,6 +267,7 @@ export function GlbPreviewViewer({
   markerPrefix = "SLOT_",
   cameraMarkerPrefix = "CAM_",
   cameraMarkerOverrides,
+  defaultOverview,
   showResetViewButton = false,
   fallback,
 }: {
@@ -290,6 +289,12 @@ export function GlbPreviewViewer({
   markerPrefix?: string;
   cameraMarkerPrefix?: string;
   cameraMarkerOverrides?: Record<string, string>;
+  defaultOverview?: {
+    position: readonly [number, number, number];
+    target: readonly [number, number, number];
+    azimuthAngle?: number;
+    polarAngle?: number;
+  };
   showResetViewButton?: boolean;
   fallback?: ReactNode;
 }) {
@@ -325,7 +330,7 @@ export function GlbPreviewViewer({
     },
     [cameraMarkerOverrides, cameraMarkers, focusedSlotMarker],
   );
-  const resolvedDefaultView = useMemo<CameraView | null>(
+  const resolvedDefaultView = useMemo<CameraView>(
     () => {
       if (overviewCameraMarker) {
         return {
@@ -341,7 +346,10 @@ export function GlbPreviewViewer({
         };
       }
 
-      return null;
+      return {
+        position: [3.8, 2.6, 4.2],
+        target: [0, 0.85, 0],
+      };
     },
     [defaultOverview, overviewCameraMarker],
   );
@@ -352,7 +360,7 @@ export function GlbPreviewViewer({
             position: focusedCameraMarker.position,
             target: focusedCameraMarker.target,
           }
-        : focusedSlotMarker && resolvedDefaultView
+        : focusedSlotMarker
           ? {
               position: resolvedDefaultView.position,
               target: [
@@ -382,7 +390,7 @@ export function GlbPreviewViewer({
     if (!preset) return;
     controlsRef.current.setAzimuthalAngle(preset.azimuthAngle);
     controlsRef.current.setPolarAngle(preset.polarAngle);
-    if (!focusedSlotMarker && resolvedDefaultView) {
+    if (!focusedSlotMarker) {
       controlsRef.current.target.set(
         resolvedDefaultView.target[0],
         resolvedDefaultView.target[1],
@@ -390,7 +398,7 @@ export function GlbPreviewViewer({
       );
     }
     controlsRef.current.update();
-  }, [allowFreeNavigation, focusedSlotMarker, resolvedActivePresetId, viewPresets]);
+  }, [allowFreeNavigation, focusedSlotMarker, resolvedActivePresetId, resolvedDefaultView, viewPresets]);
 
   const cameraPosition = allowFreeNavigation ? ([2.8, 2.1, 3.1] as const) : resolvedDefaultView.position;
   const loadFailureFallback =
