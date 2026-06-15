@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { BadgePercent, ChevronDown, Minus, Plus, Trash2, X } from "lucide-react";
 import {
   Drawer,
@@ -25,9 +24,9 @@ import {
   isBundleCartItem,
 } from "@/src/utils/cartLineUtils";
 import { cn } from "@/src/lib/utils";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { BundleSummaryHeader, BundleLineList, type BundleLineRow } from "@/src/components/public/bundle";
 import { FreeShippingCartProgress } from "./FreeShippingCartProgress";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 function cartLineQuantity(cart: Cart) {
   return cart.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -51,6 +50,7 @@ function CartSheetLine({ item }: { item: CartItemType }) {
       ? item.bundleSnapshot.lines.map((ln) => ({
           id: ln.variantId,
           imageUrl: ln.imageUrl,
+          model3dUrl: ln.model3dUrl,
           name: ln.productName ?? "Product",
           attributes: ln.attributes ?? null,
           quantity: ln.quantity,
@@ -115,13 +115,15 @@ function CartSheetLine({ item }: { item: CartItemType }) {
     <div className="border-border flex gap-3 border-b px-3 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="flex gap-3">
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md">
-            {item.product.imageUrl ? (
-              <Image src={item.product.imageUrl} alt="" fill sizes="56px" className="object-contain" />
-            ) : (
-              <ProductImageFallback className="absolute inset-0" iconClassName="h-7 w-7" />
-            )}
-          </div>
+          <ProductMediaThumb
+            imageUrl={item.product.imageUrl}
+            model3dUrl={item.product.model3dUrl}
+            alt={item.product.name}
+            className="h-14 w-14 shrink-0"
+            sizes="56px"
+            imageClassName="object-contain"
+            fallbackIconClassName="h-7 w-7"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-foreground truncate text-sm font-medium leading-tight">{item.product.name}</p>
             {hasRealVariant && (

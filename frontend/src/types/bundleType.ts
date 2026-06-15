@@ -8,6 +8,7 @@ export type BundleItem = {
   productId?: string | null;
   productName?: string | null;
   productImageUrl?: string | null;
+  productModel3dUrl?: string | null;
   attributes?: Record<string, string> | null;
   price?: number;
 };
@@ -42,6 +43,7 @@ export type StorefrontBundleLine = {
   productId: string | null;
   productName: string | null;
   imageUrl: string | null;
+  model3dUrl?: string | null;
   attributes: Record<string, string> | null;
   unitCatalogPrice: number | null;
   storefrontProductUrl: string | null;

@@ -23,11 +23,10 @@ import {
   getStatusColor,
   getStatusLabel,
 } from "../../../../utils";
-import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Spinner } from "@/src/components/ui/spinner";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { cn } from "@/src/lib/utils";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 function AdminSection({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
@@ -395,19 +394,15 @@ export default function AdminOrderDetailPage() {
                       <TableRow key={item.orderItemId}>
                         <TableCell>
                           <div className="flex items-start gap-3">
-                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md">
-                              {item.product?.imageUrl ? (
-                                <Image
-                                  src={item.product.imageUrl}
-                                  alt={item.product?.name || "Product"}
-                                  fill
-                                  className="object-contain"
-                                  sizes="48px"
-                                />
-                              ) : (
-                                <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6" />
-                              )}
-                            </div>
+                            <ProductMediaThumb
+                              imageUrl={item.product?.imageUrl}
+                              model3dUrl={item.product?.model3dUrl}
+                              alt={item.product?.name || "Product"}
+                              className="h-12 w-12 shrink-0"
+                              sizes="48px"
+                              imageClassName="object-contain"
+                              fallbackIconClassName="h-6 w-6"
+                            />
                             <div className="min-w-0 pt-0.5">
                               <p className="font-medium leading-snug">{item.product?.name || "Product"}</p>
                               {item.variant && !item.variant.isDefault && item.variant.attributes && (

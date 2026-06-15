@@ -1,4 +1,5 @@
 import { Readable } from "stream";
+import { randomUUID } from "crypto";
 import cloudinary from "../libs/cloudinary.js";
 
 function uploadBufferToCloudinary(buffer, options) {
@@ -40,16 +41,26 @@ export async function uploadProductImageBuffer(buffer, mimetype) {
 }
 
 function buildRawFilename(originalFilename) {
-  return originalFilename ? originalFilename.replace(/\.glb$/i, "") : undefined;
+  return originalFilename ? originalFilename.replace(/\.glb$/i, "") : "model";
+}
+
+function buildUniqueRawPublicId(originalFilename) {
+  const baseName = buildRawFilename(originalFilename)
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  const suffix = randomUUID().slice(0, 8);
+  return `${baseName || "model"}-${Date.now()}-${suffix}`;
 }
 
 async function uploadRawGlbBuffer(buffer, originalFilename, folder) {
   const result = await uploadBufferToCloudinary(buffer, {
     folder,
     resource_type: "raw",
-    public_id: buildRawFilename(originalFilename),
-    use_filename: true,
-    unique_filename: true,
+    public_id: buildUniqueRawPublicId(originalFilename),
+    use_filename: false,
+    unique_filename: false,
     overwrite: false,
   });
 

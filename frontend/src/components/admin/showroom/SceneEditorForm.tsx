@@ -12,6 +12,7 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Spinner } from "@/src/components/ui/spinner";
+import { MAX_SHOWROOM_ROOM_MODEL_FILE_SIZE_BYTES } from "@/src/constant";
 import { toast } from "sonner";
 import { isValidGlbModel } from "@/src/utils";
 import { ROOM_CAMERA_SLOT_OVERRIDES } from "./constants";
@@ -105,7 +106,7 @@ export function SceneEditorForm({
 
   const handleRoomModelChange = (file: File | null) => {
     if (!file) return;
-    const validation = isValidGlbModel(file);
+    const validation = isValidGlbModel(file, MAX_SHOWROOM_ROOM_MODEL_FILE_SIZE_BYTES);
     if (!validation.valid) {
       toast.error(validation.error || "Invalid 3D model");
       return;

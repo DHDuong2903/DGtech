@@ -44,8 +44,17 @@ export interface ShowroomEligibleProduct extends Product {
   showroomEligible: true;
 }
 
+export interface ShowroomSavedSetup {
+  setupId: string;
+  sceneId: string;
+  clerkId: string;
+  selectedBySlot: Record<string, string>;
+  updatedAt: string;
+}
+
 export interface ShowroomSceneDetailResponse {
   scene: ShowroomScene;
   slots: ShowroomSceneSlot[];
   eligibleProducts: ShowroomEligibleProduct[];
+  savedSetup?: ShowroomSavedSetup | null;
 }

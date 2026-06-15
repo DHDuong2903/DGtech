@@ -4,7 +4,6 @@ import React, { useMemo, useState } from "react";
 import type { Product, ProductVariant } from "@/src/types";
 import type { DiscountKind } from "@/src/types/discountCampaignType";
 import { Checkbox } from "@/src/components/ui/checkbox";
-import { Sofa } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -24,6 +23,7 @@ import {
   variantList,
   variantUnitPrice,
 } from "./discountCampaignProductUi";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 const priceListNumberInputClass =
   "h-8 w-full text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
@@ -188,16 +188,15 @@ export function DiscountCampaignSelectedRuleProductsTable({
                       </TableCell>
                       <TableCell className="max-w-0 whitespace-normal">
                         <div className="flex min-w-0 items-center gap-2 pr-4">
-                          <div className="bg-muted relative h-9 w-9 shrink-0 overflow-hidden rounded border">
-                            {full.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={full.imageUrl} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              <span className="text-muted-foreground flex h-full items-center justify-center text-[9px]">
-                                <Sofa className="text-muted-foreground h-4 w-4" />
-                              </span>
-                            )}
-                          </div>
+                          <ProductMediaThumb
+                            imageUrl={full.imageUrl}
+                            model3dUrl={full.model3dUrl}
+                            alt={full.name}
+                            className="h-9 w-9 shrink-0"
+                            sizes="36px"
+                            imageClassName="object-cover"
+                            fallbackIconClassName="h-4 w-4"
+                          />
                           <span className="min-w-0 truncate font-semibold leading-tight">{full.name}</span>
                         </div>
                       </TableCell>
@@ -238,16 +237,15 @@ export function DiscountCampaignSelectedRuleProductsTable({
                       </TableCell>
                       <TableCell className="max-w-0 whitespace-normal" colSpan={4}>
                         <div className="flex min-w-0 items-center gap-2 pr-4">
-                          <div className="bg-muted relative h-9 w-9 shrink-0 overflow-hidden rounded border">
-                            {full.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={full.imageUrl} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              <span className="text-muted-foreground flex h-full items-center justify-center text-[9px]">
-                                <Sofa className="text-muted-foreground h-4 w-4" />
-                              </span>
-                            )}
-                          </div>
+                          <ProductMediaThumb
+                            imageUrl={full.imageUrl}
+                            model3dUrl={full.model3dUrl}
+                            alt={full.name}
+                            className="h-9 w-9 shrink-0"
+                            sizes="36px"
+                            imageClassName="object-cover"
+                            fallbackIconClassName="h-4 w-4"
+                          />
                           <span className="min-w-0 truncate font-semibold leading-tight">{full.name}</span>
                         </div>
                       </TableCell>

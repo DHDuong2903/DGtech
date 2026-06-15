@@ -31,6 +31,8 @@ type CameraView = {
   target: readonly [number, number, number];
 };
 
+const DIAGNOSTIC_CAMERA_POSITION = [0, 1.2, 0.01] as const;
+
 function markerKeywords(name: string, prefix: string) {
   return name
     .replace(prefix, "")
@@ -194,7 +196,7 @@ function MarkerFocusController({
 }: {
   controlsRef: MutableRefObject<OrbitControlsImpl | null>;
   focusedView: CameraView | null;
-  defaultView: CameraView;
+  defaultView: CameraView | null;
   resetVersion: number;
 }) {
   const { camera } = useThree();
@@ -207,6 +209,12 @@ function MarkerFocusController({
     if (!controls) return;
 
     if (!focusedView) {
+      if (!defaultView) {
+        desiredTargetRef.current = null;
+        desiredPositionRef.current = null;
+        isAnimatingRef.current = false;
+        return;
+      }
       desiredTargetRef.current = new Vector3(...defaultView.target);
       desiredPositionRef.current = new Vector3(...defaultView.position);
       isAnimatingRef.current = true;
@@ -321,18 +329,25 @@ export function GlbPreviewViewer({
     },
     [cameraMarkerOverrides, cameraMarkers, focusedSlotMarker],
   );
-  const resolvedDefaultView = useMemo<CameraView>(
-    () =>
-      overviewCameraMarker
-        ? {
-            position: overviewCameraMarker.position,
-            target: overviewCameraMarker.target,
-          }
-        : {
-            position: [3.8, 2.6, 4.2],
-            target: [0, 0.85, 0],
-          },
-    [overviewCameraMarker],
+  const resolvedDefaultView = useMemo<CameraView | null>(
+    () => {
+      if (overviewCameraMarker) {
+        return {
+          position: overviewCameraMarker.position,
+          target: overviewCameraMarker.target,
+        };
+      }
+
+      if (defaultOverview) {
+        return {
+          position: defaultOverview.position,
+          target: defaultOverview.target,
+        };
+      }
+
+      return null;
+    },
+    [defaultOverview, overviewCameraMarker],
   );
   const resolvedFocusedView = useMemo<CameraView | null>(
     () =>
@@ -341,7 +356,7 @@ export function GlbPreviewViewer({
             position: focusedCameraMarker.position,
             target: focusedCameraMarker.target,
           }
-        : focusedSlotMarker
+        : focusedSlotMarker && resolvedDefaultView
           ? {
               position: resolvedDefaultView.position,
               target: [
@@ -351,16 +366,12 @@ export function GlbPreviewViewer({
               ],
             }
           : null,
-    [focusedCameraMarker, focusedSlotMarker, resolvedDefaultView.position],
+    [focusedCameraMarker, focusedSlotMarker, resolvedDefaultView],
   );
   const resolvedActivePresetId =
     viewPresets?.some((preset) => preset.id === activePresetId)
       ? activePresetId
       : (defaultViewPresetId ?? viewPresets?.[0]?.id ?? null);
-
-  useEffect(() => {
-    setFocusedMarkerId(null);
-  }, [src]);
 
   useEffect(() => {
     if (src) {
@@ -375,13 +386,19 @@ export function GlbPreviewViewer({
     if (!preset) return;
     controlsRef.current.setAzimuthalAngle(preset.azimuthAngle);
     controlsRef.current.setPolarAngle(preset.polarAngle);
-    if (!focusedSlotMarker) {
-      controlsRef.current.target.set(0, 0.85, 0);
+    if (!focusedSlotMarker && resolvedDefaultView) {
+      controlsRef.current.target.set(
+        resolvedDefaultView.target[0],
+        resolvedDefaultView.target[1],
+        resolvedDefaultView.target[2],
+      );
     }
     controlsRef.current.update();
-  }, [focusedSlotMarker, resolvedActivePresetId, viewPresets]);
+  }, [allowFreeNavigation, focusedSlotMarker, resolvedActivePresetId, resolvedDefaultView, viewPresets]);
 
-  const cameraPosition = allowFreeNavigation ? ([2.8, 2.1, 3.1] as const) : resolvedDefaultView.position;
+  const cameraPosition = allowFreeNavigation
+    ? ([2.8, 2.1, 3.1] as const)
+    : (resolvedDefaultView?.position ?? DIAGNOSTIC_CAMERA_POSITION);
 
   const handleResetView = () => {
     setFocusedMarkerId(null);
@@ -474,6 +491,11 @@ export function GlbPreviewViewer({
           <RotateCcw className="h-3.5 w-3.5" />
           Default view
         </button>
+      ) : null}
+      {!allowFreeNavigation && useEmbeddedCameraMarkers && !resolvedDefaultView ? (
+        <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 shadow-sm dark:border-amber-500/30 dark:bg-amber-950/80 dark:text-amber-200">
+          CAM_OVERVIEW not found
+        </div>
       ) : null}
       {viewPresets?.length ? (
         <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-2 px-4 py-4">

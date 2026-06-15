@@ -36,6 +36,9 @@ type CameraView = {
   target: [number, number, number];
 };
 
+const DIAGNOSTIC_CAMERA_POSITION: [number, number, number] = [0, 1.2, 0.01];
+const DIAGNOSTIC_CAMERA_TARGET: [number, number, number] = [0, 1.2, -1];
+
 function markerKeywords(name: string, prefix: string) {
   return name
     .replace(prefix, "")
@@ -246,31 +249,22 @@ function AnimatedProductModel({ occupant, highlighted }: { occupant: Occupant; h
 }
 
 function CameraRig({
-  focus,
   desiredView,
   resetVersion,
 }: {
-  focus: [number, number, number];
   desiredView: CameraView | null;
   resetVersion: number;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const { camera } = useThree();
-  const focusVector = useMemo(() => new Vector3(...focus), [focus]);
   const desiredPositionRef = useRef<Vector3 | null>(null);
   const desiredTargetRef = useRef<Vector3 | null>(null);
   const isAnimatingRef = useRef(true);
   const desiredCameraPosition = useMemo(
-    () =>
-      desiredView
-        ? new Vector3(...desiredView.position)
-        : new Vector3(focus[0] + 5.6, focus[1] + 3.4, focus[2] + 5.8),
-    [desiredView, focus],
+    () => (desiredView ? new Vector3(...desiredView.position) : null),
+    [desiredView],
   );
-  const desiredTarget = useMemo(
-    () => (desiredView ? new Vector3(...desiredView.target) : focusVector),
-    [desiredView, focusVector],
-  );
+  const desiredTarget = useMemo(() => (desiredView ? new Vector3(...desiredView.target) : null), [desiredView]);
   const activeAzimuthAngle = useMemo(() => {
     if (!desiredView) return null;
     const direction = new Vector3(...desiredView.target).sub(new Vector3(...desiredView.position));
@@ -295,9 +289,9 @@ function CameraRig({
   }, [activeAzimuthAngle, activePolarAngle, resetVersion]);
 
   useEffect(() => {
-    desiredTargetRef.current = desiredTarget.clone();
-    desiredPositionRef.current = desiredCameraPosition.clone();
-    isAnimatingRef.current = true;
+    desiredTargetRef.current = desiredTarget ? desiredTarget.clone() : null;
+    desiredPositionRef.current = desiredCameraPosition ? desiredCameraPosition.clone() : null;
+    isAnimatingRef.current = Boolean(desiredTarget && desiredCameraPosition);
   }, [desiredCameraPosition, desiredTarget, resetVersion]);
 
   useFrame((_, delta) => {
@@ -342,17 +336,18 @@ export function ShowroomCanvas({
   occupants,
   focusedSlotId,
   onSelectSlot,
+  className,
 }: {
   roomModelUrl: string;
   slots: ShowroomSceneSlot[];
   occupants: Occupant[];
   focusedSlotId: string | null;
   onSelectSlot?: (slotId: string | null) => void;
+  className?: string;
 }) {
   const [cameraMarkers, setCameraMarkers] = useState<CameraMarker[]>([]);
   const [resetVersion, setResetVersion] = useState(0);
   const focusedSlot = focusedSlotId ? slots.find((slot) => slot.slotId === focusedSlotId) ?? null : null;
-  const focus = (focusedSlot?.cameraFocus ?? [0, 1, 0]) as [number, number, number];
   const focusedSlotCameraTarget = useMemo(
     () => (focusedSlot ? buildCameraTargetForSlot(focusedSlot) : null),
     [focusedSlot],
@@ -401,9 +396,14 @@ export function ShowroomCanvas({
   };
 
   return (
-    <div className="relative h-[460px] cursor-grab overflow-hidden rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fff7ed,transparent_35%),linear-gradient(160deg,#f9f4ed,#e9dcc8)] shadow-inner active:cursor-grabbing lg:h-[720px]">
+    <div
+      className={cn(
+        "relative h-[min(44dvh,420px)] cursor-grab overflow-hidden rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fff7ed,transparent_35%),linear-gradient(160deg,#f9f4ed,#e9dcc8)] shadow-inner active:cursor-grabbing md:h-[min(52dvh,560px)] xl:h-full",
+        className,
+      )}
+    >
       <Canvas
-        camera={{ position: desiredView?.position ?? [3.8, 2.6, 4.2], fov: 38 }}
+        camera={{ position: desiredView?.position ?? DIAGNOSTIC_CAMERA_POSITION, fov: 38 }}
         dpr={[1, 1.25]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         shadows
@@ -415,6 +415,15 @@ export function ShowroomCanvas({
           <circleGeometry args={[3.6, 96]} />
           <shadowMaterial opacity={0.14} />
         </mesh>
+        {!desiredView ? (
+          <group position={DIAGNOSTIC_CAMERA_TARGET}>
+            <Html center>
+              <div className="rounded-full border border-red-300 bg-white/90 px-3 py-1 text-[11px] font-medium text-red-600 shadow-sm">
+                CAM_OVERVIEW not found
+              </div>
+            </Html>
+          </group>
+        ) : null}
         <Suspense fallback={null}>
           <RoomModel src={roomModelUrl} onCameraMarkersChange={setCameraMarkers} />
           {slots.map((slot) => (
@@ -433,7 +442,7 @@ export function ShowroomCanvas({
             />
           ))}
         </Suspense>
-        <CameraRig focus={focus} desiredView={desiredView} resetVersion={resetVersion} />
+        <CameraRig desiredView={desiredView} resetVersion={resetVersion} />
       </Canvas>
       <button
         type="button"

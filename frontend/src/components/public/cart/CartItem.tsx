@@ -3,8 +3,6 @@
 import { Fragment, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { BadgePercent, ChevronDown, Minus, Plus, Trash2 } from "lucide-react";
-import Image from "next/image";
-import { ProductImageFallback } from "@/src/components/public/product/ProductImageFallback";
 import { BundleSummaryHeader, BundleLineList, type BundleLineRow } from "@/src/components/public/bundle";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { TableCell, TableRow } from "@/src/components/ui/table";
@@ -12,6 +10,7 @@ import { CartItem as CartItemType } from "@/src/types";
 import { useCartStore } from "@/src/stores";
 import { cn } from "@/src/lib/utils";
 import { formatCurrency } from "@/src/utils";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 import {
   cartItemCompareAtUnit,
   cartItemMaxQuantity,
@@ -53,6 +52,7 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
       ? item.bundleSnapshot.lines.map((ln) => ({
           id: ln.variantId,
           imageUrl: ln.imageUrl,
+          model3dUrl: ln.model3dUrl,
           name: ln.productName ?? "Product",
           attributes: ln.attributes ?? null,
           quantity: ln.quantity,
@@ -144,13 +144,14 @@ export const CartItem = ({ item, selected, onToggleSelect }: CartItemProps) => {
       </TableCell>
       <TableCell className="min-w-[200px] max-w-[min(100vw-12rem,28rem)]">
         <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md md:h-14 md:w-14">
-            {item.product.imageUrl ? (
-              <Image src={item.product.imageUrl} alt="" fill className="object-contain p-0" />
-            ) : (
-              <ProductImageFallback className="absolute inset-0" iconClassName="h-6 w-6 md:h-7 md:w-7" />
-            )}
-          </div>
+          <ProductMediaThumb
+            imageUrl={item.product.imageUrl}
+            model3dUrl={item.product.model3dUrl}
+            alt={item.product.name}
+            className="h-12 w-12 shrink-0 md:h-14 md:w-14"
+            imageClassName="object-contain p-0"
+            fallbackIconClassName="h-6 w-6 md:h-7 md:w-7"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-foreground truncate font-medium leading-tight">{item.product.name}</p>
             {hasRealVariant && (

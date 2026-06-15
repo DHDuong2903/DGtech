@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Eye, Power, PowerOff, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, Power, PowerOff, Trash2 } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Checkbox } from "@/src/components/ui/checkbox";
@@ -46,20 +46,29 @@ export function createAdminProductColumns(handlers: {
       id: "image",
       header: "Image",
       cell: ({ row }) => (
-        <ProductImage imageUrl={row.original.imageUrl} alt={row.original.name} className="h-12 w-12" />
+        <ProductImage
+          imageUrl={row.original.imageUrl}
+          model3dUrl={row.original.model3dUrl}
+          alt={row.original.name}
+          className="h-12 w-12"
+        />
       ),
       enableSorting: false,
     },
     {
       accessorKey: "name",
       header: "Product",
+      size: 320,
+      maxSize: 360,
       cell: ({ row }) => {
         const p = row.original;
         return (
-          <div>
-            <p>{p.name}</p>
+          <div className="min-w-0 max-w-[14rem] sm:max-w-[16rem] lg:max-w-[18rem] xl:max-w-[20rem]">
+            <p className="truncate font-medium" title={p.name}>
+              {p.name}
+            </p>
             {p.description?.trim() ? (
-              <p className="text-muted-foreground line-clamp-1 text-sm" title={p.description}>
+              <p className="text-muted-foreground truncate text-sm" title={p.description}>
                 {p.description}
               </p>
             ) : null}

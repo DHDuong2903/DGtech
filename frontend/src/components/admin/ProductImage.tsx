@@ -1,33 +1,24 @@
 "use client";
 
-import { Sofa } from "lucide-react";
-import { useState } from "react";
+import { ProductMediaThumb } from "@/src/components/shared/ProductMediaThumb";
 
 interface ProductImageProps {
-  imageUrl?: string;
+  imageUrl?: string | null;
+  model3dUrl?: string | null;
   alt: string;
   className?: string;
 }
 
-export const ProductImage = ({ imageUrl, alt, className = "h-12 w-12" }: ProductImageProps) => {
-  const [imageError, setImageError] = useState(false);
-
-  if (!imageUrl || imageError) {
-    return (
-      <div className={`${className} rounded-md bg-muted flex items-center justify-center border`}>
-        <Sofa className="h-6 w-6 text-muted-foreground" />
-      </div>
-    );
-  }
-
+export const ProductImage = ({ imageUrl, model3dUrl, alt, className = "h-12 w-12" }: ProductImageProps) => {
   return (
-    /* eslint-disable-next-line @next/next/no-img-element */
-    <img
-      src={imageUrl}
+    <ProductMediaThumb
+      imageUrl={imageUrl}
+      model3dUrl={model3dUrl}
       alt={alt}
-      className={`${className} rounded-md object-cover border`}
-      onError={() => setImageError(true)}
-      loading="lazy"
+      className={className}
+      sizes="48px"
+      imageClassName="object-cover"
+      fallbackIconClassName="h-6 w-6"
     />
   );
 };

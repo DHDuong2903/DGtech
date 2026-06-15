@@ -28,7 +28,7 @@ export const cartItemBundleInclude = {
             {
               model: Product,
               as: "product",
-              attributes: ["productId", "name", "imageUrl", "stock", "status", "categoryId"],
+              attributes: ["productId", "name", "imageUrl", "model3dUrl", "stock", "status", "categoryId"],
             },
           ],
         },
@@ -42,7 +42,7 @@ export const storefrontCartItemIncludes = [
     model: Product,
     as: "product",
     required: false,
-    attributes: ["productId", "name", "price", "imageUrl", "stock", "categoryId", "status"],
+    attributes: ["productId", "name", "price", "imageUrl", "model3dUrl", "stock", "categoryId", "status"],
   },
   {
     model: ProductVariant,

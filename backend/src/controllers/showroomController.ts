@@ -6,6 +6,7 @@ import {
   getAdminShowroomScenes as getAdminShowroomScenesSvc,
   getGoldShowroomSceneByKey as getGoldShowroomSceneByKeySvc,
   getGoldShowroomScenes as getGoldShowroomScenesSvc,
+  saveGoldShowroomSceneSetup as saveGoldShowroomSceneSetupSvc,
   updateAdminShowroomScene as updateAdminShowroomSceneSvc,
   updateAdminShowroomSlot as updateAdminShowroomSlotSvc,
 } from "../services/showroomService.js";
@@ -25,12 +26,24 @@ export const getGoldShowroomScenes = async (_req: any, res: any) => {
 
 export const getGoldShowroomSceneByKey = async (req: any, res: any) => {
   try {
-    const payload = await getGoldShowroomSceneByKeySvc(req.params.sceneKey);
+    const payload = await getGoldShowroomSceneByKeySvc(req.params.sceneKey, req.auth?.userId);
     return res.status(200).json(payload);
   } catch (error: any) {
     console.error("getGoldShowroomSceneByKey:", error);
     return res.status(getHttpStatusForError(error)).json({
       error: getPublicErrorMessage(error, "Could not load showroom scene"),
+    });
+  }
+};
+
+export const saveGoldShowroomSceneSetup = async (req: any, res: any) => {
+  try {
+    const payload = await saveGoldShowroomSceneSetupSvc(req.auth?.userId, req.params.sceneKey, req.body);
+    return res.status(200).json(payload);
+  } catch (error: any) {
+    console.error("saveGoldShowroomSceneSetup:", error);
+    return res.status(getHttpStatusForError(error)).json({
+      error: getPublicErrorMessage(error, "Could not save showroom setup"),
     });
   }
 };
