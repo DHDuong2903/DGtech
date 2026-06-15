@@ -24,7 +24,23 @@ export const ProductCard = ({ product, compact }: ProductCardProps) => {
       {/* Image */}
       <div className="bg-muted relative aspect-square overflow-hidden">
         {product.model3dUrl ? (
-          <ShowroomProductPreview src={product.model3dUrl} className="h-full w-full rounded-none border-0" />
+          <ShowroomProductPreview
+            src={product.model3dUrl}
+            className="h-full w-full rounded-none border-0"
+            fallback={
+              product.imageUrl ? (
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <ProductImageFallback className="h-full w-full" iconClassName="h-12 w-12 sm:h-14 sm:w-14" />
+              )
+            }
+          />
         ) : product.imageUrl ? (
           <Image
             src={product.imageUrl}
