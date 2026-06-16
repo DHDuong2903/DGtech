@@ -2,6 +2,7 @@
 import { User } from "../models/userModel.js";
 import type { NextFunction, Request, Response } from "express";
 import { getHttpStatusForError, getPublicErrorMessage } from "../helpers/dbResilience.js";
+import { getMyRank } from "../services/userService.js";
 
 export const requireGoldTier = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -15,7 +16,8 @@ export const requireGoldTier = async (req: Request, res: Response, next: NextFun
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.tier !== "gold") {
+    const rank = await getMyRank(clerkId);
+    if (rank.currentRank !== "gold") {
       return res.status(403).json({ error: "Forbidden - Gold tier required" });
     }
 

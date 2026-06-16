@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usersApi } from "@/src/apis/userApi";
 import type { UserRank } from "@/src/types";
 
@@ -98,7 +98,7 @@ export function useUserRank() {
     };
   }, [isLoaded, isSignedIn, userId]);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!userId) return null;
     invalidateUserRankCache(userId);
     setIsLoading(true);
@@ -113,7 +113,7 @@ export function useUserRank() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   return {
     rank,
