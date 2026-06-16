@@ -79,9 +79,8 @@ function findBestCameraForSlot(slotTarget: SlotCameraTarget, cameraMarkers: Came
   const scopedCameras = cameraMarkers.filter((marker) => !marker.isOverview);
   if (!scopedCameras.length) return null;
 
-  const overrideCameraName = ROOM_CAMERA_SLOT_OVERRIDES[
-    normalizeMarkerName(slotTarget.markerName) as keyof typeof ROOM_CAMERA_SLOT_OVERRIDES
-  ];
+  const overrideCameraName =
+    ROOM_CAMERA_SLOT_OVERRIDES[normalizeMarkerName(slotTarget.markerName) as keyof typeof ROOM_CAMERA_SLOT_OVERRIDES];
   if (overrideCameraName) {
     const overrideCamera = scopedCameras.find(
       (cameraMarker) => normalizeMarkerName(cameraMarker.nodeName) === normalizeMarkerName(overrideCameraName),
@@ -248,18 +247,16 @@ function AnimatedProductModel({ occupant, highlighted }: { occupant: Occupant; h
   );
 }
 
-function CameraRig({
-  desiredView,
-  resetVersion,
-}: {
-  desiredView: CameraView | null;
-  resetVersion: number;
-}) {
+function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | null; resetVersion: number }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const { camera } = useThree();
-  const desiredPositionRef = useRef<Vector3 | null>(null);
-  const desiredTargetRef = useRef<Vector3 | null>(null);
-  const isAnimatingRef = useRef(true);
+  const startPositionRef = useRef<Vector3 | null>(null);
+  const startTargetRef = useRef<Vector3 | null>(null);
+  const midPositionRef = useRef<Vector3 | null>(null);
+  const midTargetRef = useRef<Vector3 | null>(null);
+  const endPositionRef = useRef<Vector3 | null>(null);
+  const endTargetRef = useRef<Vector3 | null>(null);
+  const progressRef = useRef(1);
   const desiredCameraPosition = useMemo(
     () => (desiredView ? new Vector3(...desiredView.position) : null),
     [desiredView],
@@ -289,32 +286,72 @@ function CameraRig({
   }, [activeAzimuthAngle, activePolarAngle, resetVersion]);
 
   useEffect(() => {
-    desiredTargetRef.current = desiredTarget ? desiredTarget.clone() : null;
-    desiredPositionRef.current = desiredCameraPosition ? desiredCameraPosition.clone() : null;
-    isAnimatingRef.current = Boolean(desiredTarget && desiredCameraPosition);
+    const controls = controlsRef.current;
+    if (!controls || !desiredTarget || !desiredCameraPosition) {
+      startPositionRef.current = null;
+      startTargetRef.current = null;
+      midPositionRef.current = null;
+      midTargetRef.current = null;
+      endPositionRef.current = null;
+      endTargetRef.current = null;
+      progressRef.current = 1;
+      return;
+    }
+
+    const currentPosition = camera.position.clone();
+    const currentTarget = controls.target.clone();
+    const nextPosition = desiredCameraPosition.clone();
+    const nextTarget = desiredTarget.clone();
+    const midpointLift = Math.max(1.2, currentPosition.distanceTo(nextPosition) * 0.18);
+
+    startPositionRef.current = currentPosition;
+    startTargetRef.current = currentTarget;
+    endPositionRef.current = nextPosition;
+    endTargetRef.current = nextTarget;
+    midPositionRef.current = currentPosition
+      .clone()
+      .lerp(nextPosition, 0.5)
+      .add(new Vector3(0, midpointLift, 0));
+    midTargetRef.current = currentTarget
+      .clone()
+      .lerp(nextTarget, 0.5)
+      .add(new Vector3(0, midpointLift * 0.35, 0));
+    progressRef.current = 0;
   }, [desiredCameraPosition, desiredTarget, resetVersion]);
 
   useFrame((_, delta) => {
     const controls = controlsRef.current;
-    if (!controls || !isAnimatingRef.current) return;
+    const startPosition = startPositionRef.current;
+    const startTarget = startTargetRef.current;
+    const midPosition = midPositionRef.current;
+    const midTarget = midTargetRef.current;
+    const endPosition = endPositionRef.current;
+    const endTarget = endTargetRef.current;
 
-    const nextTarget = desiredTargetRef.current;
-    const nextPosition = desiredPositionRef.current;
-    const t = 1 - Math.exp(-delta * 4);
-
-    if (nextTarget) {
-      controls.target.lerp(nextTarget, t);
-      controls.update();
+    if (!controls || !startPosition || !startTarget || !midPosition || !midTarget || !endPosition || !endTarget) {
+      return;
     }
 
-    if (nextPosition) {
-      camera.position.lerp(nextPosition, t);
-    }
+    progressRef.current = Math.min(1, progressRef.current + delta * 0.7);
+    const progress = progressRef.current;
+    const segmentProgress = progress < 0.5 ? progress / 0.5 : (progress - 0.5) / 0.5;
+    const easedProgress = segmentProgress * segmentProgress * (3 - 2 * segmentProgress);
 
-    const targetDistance = nextTarget ? controls.target.distanceTo(nextTarget) : 0;
-    const cameraDistance = nextPosition ? camera.position.distanceTo(nextPosition) : 0;
-    if (targetDistance < 0.01 && cameraDistance < 0.01) {
-      isAnimatingRef.current = false;
+    if (progress < 0.5) {
+      camera.position.lerpVectors(startPosition, midPosition, easedProgress);
+      controls.target.lerpVectors(startTarget, midTarget, easedProgress);
+    } else {
+      camera.position.lerpVectors(midPosition, endPosition, easedProgress);
+      controls.target.lerpVectors(midTarget, endTarget, easedProgress);
+    }
+    controls.update();
+
+    if (
+      progress >= 1 &&
+      camera.position.distanceTo(endPosition) < 0.01 &&
+      controls.target.distanceTo(endTarget) < 0.01
+    ) {
+      progressRef.current = 1;
     }
   });
 
@@ -347,7 +384,7 @@ export function ShowroomCanvas({
 }) {
   const [cameraMarkers, setCameraMarkers] = useState<CameraMarker[]>([]);
   const [resetVersion, setResetVersion] = useState(0);
-  const focusedSlot = focusedSlotId ? slots.find((slot) => slot.slotId === focusedSlotId) ?? null : null;
+  const focusedSlot = focusedSlotId ? (slots.find((slot) => slot.slotId === focusedSlotId) ?? null) : null;
   const focusedSlotCameraTarget = useMemo(
     () => (focusedSlot ? buildCameraTargetForSlot(focusedSlot) : null),
     [focusedSlot],
@@ -427,12 +464,7 @@ export function ShowroomCanvas({
         <Suspense fallback={null}>
           <RoomModel src={roomModelUrl} onCameraMarkersChange={setCameraMarkers} />
           {slots.map((slot) => (
-            <SlotMarker
-              key={slot.slotId}
-              slot={slot}
-              active={slot.slotId === focusedSlotId}
-              onSelect={onSelectSlot}
-            />
+            <SlotMarker key={slot.slotId} slot={slot} active={slot.slotId === focusedSlotId} onSelect={onSelectSlot} />
           ))}
           {occupants.map((occupant) => (
             <AnimatedProductModel
