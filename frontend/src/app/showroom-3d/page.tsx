@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
@@ -74,7 +74,8 @@ function getMatchingSlotsForProduct(product: ShowroomEligibleProduct, slots: Sho
 
 export default function Showroom3DPage() {
   const router = useRouter();
-  const { isLoaded, isSignedIn, rank, isLoading: rankLoading } = useUserRank();
+  const { isLoaded, isSignedIn, rank, isLoading: rankLoading, refresh, userId } = useUserRank();
+  const rankRefreshAttemptedRef = useRef<string | null>(null);
   const [availableScenes, setAvailableScenes] = useState<ShowroomScene[]>([]);
   const [activeSceneKey, setActiveSceneKey] = useState<string | null>(null);
   const [sceneDetail, setSceneDetail] = useState<ShowroomSceneDetailResponse | null>(null);
@@ -96,6 +97,10 @@ export default function Showroom3DPage() {
   }, [isLoaded, isSignedIn, router]);
 
   useEffect(() => {
+    rankRefreshAttemptedRef.current = null;
+  }, [userId]);
+
+  useEffect(() => {
     let active = true;
 
     if (!isLoaded || !isSignedIn || rankLoading) {
@@ -105,6 +110,14 @@ export default function Showroom3DPage() {
     }
 
     if (!rank || rank.currentRank !== "gold") {
+      if (userId && rankRefreshAttemptedRef.current !== userId) {
+        rankRefreshAttemptedRef.current = userId;
+        void refresh();
+        return () => {
+          active = false;
+        };
+      }
+
       router.replace("/membership");
       return () => {
         active = false;
@@ -144,7 +157,7 @@ export default function Showroom3DPage() {
     return () => {
       active = false;
     };
-  }, [isLoaded, isSignedIn, rank, rankLoading, router]);
+  }, [isLoaded, isSignedIn, rank, rankLoading, refresh, router, userId]);
 
   useEffect(() => {
     let active = true;
