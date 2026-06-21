@@ -203,7 +203,11 @@ export async function addToCart(clerkId: string, body: Record<string, unknown>) 
   }
 
   // Normal product flow
-  const { productId, variantId, quantity = 1 } = body as any;
+  const { productId, variantId } = body as any;
+  const quantity = parseInt(String(body.quantity ?? 1), 10);
+  if (Number.isNaN(quantity) || quantity < 1) {
+    throw Object.assign(new Error("Valid quantity is required"), { status: 400 });
+  }
   if (!productId) throw Object.assign(new Error("Product ID is required"), { status: 400 });
 
   const product = await Product.findByPk(productId);
@@ -252,8 +256,9 @@ export async function addToCart(clerkId: string, body: Record<string, unknown>) 
   return buildCartResponsePayload({ cart, message }, clerkId);
 }
 
-export async function updateCartItem(clerkId: string, cartItemId: string, quantity: number) {
-  if (!quantity || quantity < 1) {
+export async function updateCartItem(clerkId: string, cartItemId: string, rawQuantity: number) {
+  const quantity = parseInt(String(rawQuantity), 10);
+  if (Number.isNaN(quantity) || quantity < 1) {
     throw Object.assign(new Error("Valid quantity is required"), { status: 400 });
   }
   const cart = await Cart.findOne({ where: { clerkId } });
