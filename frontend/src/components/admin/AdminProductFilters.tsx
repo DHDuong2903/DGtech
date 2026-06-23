@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Filter, ListFilter } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/src/components/ui/button";
@@ -17,6 +17,8 @@ export type AdminProductFilterValues = {
   status: string;
   minPrice: string;
   maxPrice: string;
+  minStock: string;
+  maxStock: string;
   q: string;
 };
 
@@ -25,6 +27,8 @@ export const defaultAdminProductFilters: AdminProductFilterValues = {
   status: "all",
   minPrice: "",
   maxPrice: "",
+  minStock: "",
+  maxStock: "",
   q: "",
 };
 
@@ -34,6 +38,8 @@ export function countAppliedAdminProductFilters(applied: AdminProductFilterValue
   if (applied.status !== "all") n++;
   if (applied.minPrice.trim() !== "") n++;
   if (applied.maxPrice.trim() !== "") n++;
+  if (applied.minStock.trim() !== "") n++;
+  if (applied.maxStock.trim() !== "") n++;
   if (applied.q.trim() !== "") n++;
   return n;
 }
@@ -47,6 +53,8 @@ export function buildAdminProductQueryParams(
   status?: "ACTIVE" | "DRAFT";
   minPrice?: number;
   maxPrice?: number;
+  minStock?: number;
+  maxStock?: number;
   q?: string;
 } {
   const params: {
@@ -56,6 +64,8 @@ export function buildAdminProductQueryParams(
     status?: "ACTIVE" | "DRAFT";
     minPrice?: number;
     maxPrice?: number;
+    minStock?: number;
+    maxStock?: number;
     q?: string;
   } = { page: 1, limit: 1000 };
 
@@ -76,6 +86,16 @@ export function buildAdminProductQueryParams(
     const v = parseFloat(max);
     if (!Number.isNaN(v)) params.maxPrice = v;
   }
+  const minStock = f.minStock.trim();
+  const maxStock = f.maxStock.trim();
+  if (minStock !== "") {
+    const v = parseFloat(minStock);
+    if (!Number.isNaN(v)) params.minStock = v;
+  }
+  if (maxStock !== "") {
+    const v = parseFloat(maxStock);
+    if (!Number.isNaN(v)) params.maxStock = v;
+  }
   if (f.q.trim() !== "") {
     params.q = f.q.trim();
   }
@@ -91,12 +111,6 @@ type AdminProductFiltersProps = {
 export function AdminProductFilters({ categories, applied, onApply }: AdminProductFiltersProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<AdminProductFilterValues>(applied);
-
-  useEffect(() => {
-    if (open) {
-      setDraft(applied);
-    }
-  }, [open, applied]);
 
   const activeCount = useMemo(() => countAppliedAdminProductFilters(applied), [applied]);
 
@@ -121,8 +135,15 @@ export function AdminProductFilters({ categories, applied, onApply }: AdminProdu
     setOpen(false);
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setDraft(applied);
+    }
+    setOpen(nextOpen);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" size="sm" className="gap-2">
           <ListFilter className="h-4 w-4" />
@@ -204,6 +225,42 @@ export function AdminProductFilters({ categories, applied, onApply }: AdminProdu
                   placeholder="Any"
                   value={draft.maxPrice}
                   onChange={(e) => setDraft((d) => ({ ...d, maxPrice: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            <Label>Stock range</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="filter-min-stock" className="text-muted-foreground text-xs font-normal">
+                  Min
+                </Label>
+                <Input
+                  id="filter-min-stock"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step="1"
+                  placeholder="0"
+                  value={draft.minStock}
+                  onChange={(e) => setDraft((d) => ({ ...d, minStock: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="filter-max-stock" className="text-muted-foreground text-xs font-normal">
+                  Max
+                </Label>
+                <Input
+                  id="filter-max-stock"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step="1"
+                  placeholder="Any"
+                  value={draft.maxStock}
+                  onChange={(e) => setDraft((d) => ({ ...d, maxStock: e.target.value }))}
                 />
               </div>
             </div>

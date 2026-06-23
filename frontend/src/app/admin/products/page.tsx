@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import Link from "next/link";
 import { AdminContentLoader } from "../../../components/admin/AdminLoading";
@@ -31,7 +32,22 @@ import { DataTable } from "@/src/components/ui/data-table";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
 import { Plus, Package, FilterX } from "lucide-react";
 
+function filtersFromSearchParams(searchParams: Pick<URLSearchParams, "get">) {
+  return {
+    categoryId: searchParams.get("categoryId") ?? "all",
+    status: searchParams.get("status") ?? "all",
+    minPrice: searchParams.get("minPrice") ?? "",
+    maxPrice: searchParams.get("maxPrice") ?? "",
+    minStock: searchParams.get("minStock") ?? "",
+    maxStock: searchParams.get("maxStock") ?? "",
+    q: searchParams.get("q") ?? "",
+  };
+}
+
 const ProductsPage = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const {
     products,
     loading,
@@ -50,13 +66,22 @@ const ProductsPage = () => {
   const [deleteWorking, setDeleteWorking] = useState(false);
   const clearTableSelectionRef = useRef<(() => void) | null>(null);
 
-  const [appliedFilters, setAppliedFilters] = useState(defaultAdminProductFilters);
-  const [search, setSearch] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState(() => filtersFromSearchParams(searchParams));
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const debouncedSearch = useDebounce(search, 500);
 
   useEffect(() => {
     setAppliedFilters((prev) => ({ ...prev, q: debouncedSearch }));
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    const nextFilters = filtersFromSearchParams(searchParams);
+    setAppliedFilters((prev) => {
+      if (JSON.stringify(prev) === JSON.stringify(nextFilters)) return prev;
+      return nextFilters;
+    });
+    setSearch((prev) => (prev === nextFilters.q ? prev : nextFilters.q));
+  }, [searchParams]);
 
   const refreshProducts = useCallback(() => {
     fetchProducts(buildAdminProductQueryParams(appliedFilters), { adminCatalog: true });
@@ -71,7 +96,29 @@ const ProductsPage = () => {
   }, [refreshProducts]);
 
   const activeFilterCount = countAppliedAdminProductFilters(appliedFilters);
+  const replaceQuery = useCallback(
+    (nextFilters: typeof appliedFilters) => {
+      const params = new URLSearchParams();
+      if (nextFilters.categoryId !== "all") params.set("categoryId", nextFilters.categoryId);
+      if (nextFilters.status !== "all") params.set("status", nextFilters.status);
+      if (nextFilters.minPrice.trim() !== "") params.set("minPrice", nextFilters.minPrice.trim());
+      if (nextFilters.maxPrice.trim() !== "") params.set("maxPrice", nextFilters.maxPrice.trim());
+      if (nextFilters.minStock.trim() !== "") params.set("minStock", nextFilters.minStock.trim());
+      if (nextFilters.maxStock.trim() !== "") params.set("maxStock", nextFilters.maxStock.trim());
+      if (nextFilters.q.trim() !== "") params.set("q", nextFilters.q.trim());
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router],
+  );
 
+  const handleApplyFilters = useCallback(
+    (nextFilters: typeof appliedFilters) => {
+      setAppliedFilters(nextFilters);
+      replaceQuery(nextFilters);
+    },
+    [replaceQuery],
+  );
 
 
   const handleDeleteProduct = async () => {
@@ -167,7 +214,11 @@ const ProductsPage = () => {
                   type="button"
                   variant="outline"
                   className="mt-4"
-                  onClick={() => setAppliedFilters(defaultAdminProductFilters)}
+                  onClick={() => {
+                    setAppliedFilters(defaultAdminProductFilters);
+                    setSearch("");
+                    replaceQuery(defaultAdminProductFilters);
+                  }}
                 >
                   <FilterX className="h-4 w-4" />
                   Clear filters
@@ -206,7 +257,7 @@ const ProductsPage = () => {
                     className="pl-9"
                   />
                 </div>
-                <AdminProductFilters categories={categories} applied={appliedFilters} onApply={setAppliedFilters} />
+                <AdminProductFilters categories={categories} applied={appliedFilters} onApply={handleApplyFilters} />
               </div>
             }
             onBulkDelete={({ selectedData, clearSelection }) => {

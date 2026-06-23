@@ -450,7 +450,7 @@ export const DashboardContent = () => {
                 emphasize={vouchersExpiringSoon.length > 0}
               />
               <ActionTile
-                href="/admin/products"
+                href={`/admin/products?maxStock=${LOW_STOCK_THRESHOLD - 1}`}
                 title="Stock attention"
                 count={stockAttentionCount}
                 icon={<Package className="h-4 w-4" />}

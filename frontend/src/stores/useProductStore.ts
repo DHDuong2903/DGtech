@@ -39,6 +39,8 @@ interface ProductState {
       search?: string;
       minPrice?: number;
       maxPrice?: number;
+      minStock?: number;
+      maxStock?: number;
       status?: "ACTIVE" | "DRAFT";
     },
     options?: { adminCatalog?: boolean },
@@ -82,6 +84,8 @@ export const useProductStore = create<ProductState>()(
           search?: string;
           minPrice?: number;
           maxPrice?: number;
+          minStock?: number;
+          maxStock?: number;
           status?: "ACTIVE" | "DRAFT";
         },
         options?: { adminCatalog?: boolean },
