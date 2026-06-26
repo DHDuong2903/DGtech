@@ -18,7 +18,7 @@ export type StructuredPolicyContextResult = {
   toolNames: string[];
 };
 
-type ShippingPolicySnapshot = {
+export type ShippingPolicySnapshot = {
   displayMode: "included" | "separate";
   freeShippingEnabled: boolean;
   freeShippingMinSubtotal: number;
@@ -29,20 +29,20 @@ type ShippingPolicySnapshot = {
   enabledMethods: Array<{ code: string; name: string }>;
 };
 
-type PaymentPolicySnapshot = {
+export type PaymentPolicySnapshot = {
   supportedMethods: string[];
   enableTax: boolean;
   taxRate: number;
   taxIncluded: boolean;
 };
 
-type MembershipPolicySnapshot = {
+export type MembershipPolicySnapshot = {
   bronzeMax: number;
   silverMax: number;
   cancelPenaltyUnit: number;
 };
 
-type PromotionsSnapshot = {
+export type PromotionsSnapshot = {
   activeVoucherCount: number;
   voucherTypes: string[];
   campaignSummaries: Array<{
@@ -53,7 +53,7 @@ type PromotionsSnapshot = {
   }>;
 };
 
-type AuthenticatedMembershipSnapshot = {
+export type AuthenticatedMembershipSnapshot = {
   currentRank: string;
   nextRank: string | null;
   progressPercent: number;
@@ -116,7 +116,7 @@ async function loadCachedSnapshot<T>(params: {
   }
 }
 
-async function loadShippingPolicySnapshot(): Promise<ShippingPolicySnapshot> {
+export async function loadShippingPolicySnapshot(): Promise<ShippingPolicySnapshot> {
   return loadCachedSnapshot({
     cacheKey: SHIPPING_POLICY_CACHE_KEY,
     staleCacheKey: SHIPPING_POLICY_STALE_CACHE_KEY,
@@ -155,7 +155,7 @@ async function loadShippingPolicySnapshot(): Promise<ShippingPolicySnapshot> {
   });
 }
 
-async function loadPaymentPolicySnapshot(): Promise<PaymentPolicySnapshot> {
+export async function loadPaymentPolicySnapshot(): Promise<PaymentPolicySnapshot> {
   return loadCachedSnapshot({
     cacheKey: PAYMENT_POLICY_CACHE_KEY,
     staleCacheKey: PAYMENT_POLICY_STALE_CACHE_KEY,
@@ -172,7 +172,7 @@ async function loadPaymentPolicySnapshot(): Promise<PaymentPolicySnapshot> {
   });
 }
 
-async function loadMembershipPolicySnapshot(): Promise<MembershipPolicySnapshot> {
+export async function loadMembershipPolicySnapshot(): Promise<MembershipPolicySnapshot> {
   return loadCachedSnapshot({
     cacheKey: MEMBERSHIP_POLICY_CACHE_KEY,
     staleCacheKey: MEMBERSHIP_POLICY_STALE_CACHE_KEY,
@@ -188,7 +188,7 @@ async function loadMembershipPolicySnapshot(): Promise<MembershipPolicySnapshot>
   });
 }
 
-async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
+export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
   return loadCachedSnapshot({
     cacheKey: PROMOTIONS_POLICY_CACHE_KEY,
     staleCacheKey: PROMOTIONS_POLICY_STALE_CACHE_KEY,
@@ -267,7 +267,7 @@ async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
   });
 }
 
-async function loadAuthenticatedMembershipSnapshot(userId: string): Promise<AuthenticatedMembershipSnapshot | null> {
+export async function loadAuthenticatedMembershipSnapshot(userId: string): Promise<AuthenticatedMembershipSnapshot | null> {
   try {
     const rank = await withDbRetry(() => getMyRank(userId), { label: "aiPolicy.membership.userRank" });
     return {

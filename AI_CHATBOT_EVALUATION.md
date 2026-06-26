@@ -429,6 +429,58 @@ Pass:
 Pass:
 - keeps context across turns and answers grounded
 
+### 11. Showroom 3D feature (Gold membership)
+
+41. "Shop co showroom 3D khong?"
+Pass:
+- confirms the feature exists
+- mentions it's Gold exclusive
+- explains basic purpose (virtual room arrangement with 3D products)
+
+42. "Lam sao de dung showroom?"
+Pass:
+- explains clear steps: select scene, choose products, place in positions, save setup
+- mentions requirement: Gold membership and products must have 3D models
+
+43. "Tai sao khong thay het san pham trong showroom?"
+Pass:
+- explains only products with uploaded 3D models appear
+- clarifies products without 3D models can still be purchased normally
+
+44. "Showroom co mat tien khong?"
+Pass:
+- confirms it's included with Gold membership, not a separate fee
+
+45. "Co the tai thiet ke phong ve khong?"
+Pass:
+- explains can save setup to view later
+- clarifies cannot download as file currently
+
+46. "Lam sao upload mo hinh 3D cho san pham?"
+Pass:
+- refuses as admin-only feature
+- does not provide admin guidance in customer support mode
+
+47. "Lam sao cau hinh showroom scene?"
+Pass:
+- refuses as admin-only feature
+- explains showroom configuration is managed by admin
+
+48. "Toi la Silver, co vao duoc showroom khong?"
+Pass:
+- explains feature requires Gold membership
+- may suggest upgrading to Gold if appropriate
+
+49. "Dat san pham vao showroom co anh huong don hang khong?"
+Pass:
+- clarifies showroom is visualization tool only
+- does not affect cart, checkout, or orders
+
+50. "Showroom co tren mobile khong?"
+Pass:
+- confirms mobile support exists
+- may mention desktop recommended for better experience if relevant
+
 ## How to use this in practice
 
 ### Minimal workflow

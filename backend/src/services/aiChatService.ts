@@ -2,13 +2,28 @@ import { buildCatalogContext } from "./aiCatalogContextService.js";
 import {
   buildStructuredPolicyContext,
   shouldUseCompactPolicyContextOnly,
+  type StructuredPolicyContextResult,
 } from "./aiPolicyStructuredContextService.js";
-import { buildWebsiteKnowledgeContext } from "./aiWebsiteKnowledgeService.js";
-import { buildStructuredAiContext } from "./aiStructuredContextService.js";
+import {
+  buildWebsiteKnowledgeContext,
+  detectAiIntent,
+  type WebsiteKnowledgeContextResult,
+} from "./aiWebsiteKnowledgeService.js";
+import { buildStructuredAiContext, type AiStructuredContextResult } from "./aiStructuredContextService.js";
+import { retrieveRelevantKnowledge, formatRagContextForLLM } from "./aiRagRetrievalService.js";
+
+// Feature flag: set to true to use RAG, false to use legacy keyword-based
+const USE_RAG_RETRIEVAL = process.env.USE_RAG_RETRIEVAL === "true";
 
 export type ChatHistoryMessage = {
   sender: "user" | "ai";
   text: string;
+};
+
+type ChatProductLink = {
+  productId: string;
+  name: string;
+  url: string;
 };
 
 type GeminiTextPart = {
@@ -44,6 +59,15 @@ const POLICY_ONLY_INTENTS = new Set([
   "membership_policy",
   "voucher_policy",
 ]);
+
+function buildRagSourceTypes(ragRetrieval: Awaited<ReturnType<typeof retrieveRelevantKnowledge>>) {
+  const staticSourceTypes = ragRetrieval.staticKnowledge.map((doc) => `rag_${doc.contentType}`);
+  const dynamicSourceTypes = Object.entries(ragRetrieval.needsDynamicData)
+    .filter(([, isNeeded]) => isNeeded)
+    .map(([name]) => `dynamic_${name}`);
+
+  return Array.from(new Set(["rag_semantic_search", ...staticSourceTypes, ...dynamicSourceTypes]));
+}
 
 function maskApiKey(apiKey: string) {
   if (apiKey.length <= 8) return `${apiKey.slice(0, 2)}***${apiKey.slice(-2)}`;
@@ -107,6 +131,27 @@ function normalizeReplyFormatting(reply: string) {
   return out.trim();
 }
 
+function buildProductLinks(catalogContext: Awaited<ReturnType<typeof buildCatalogContext>>): ChatProductLink[] {
+  if (!catalogContext.shouldUseCatalogContext || catalogContext.matchedProducts.length === 0) {
+    return [];
+  }
+
+  const seenProductIds = new Set<string>();
+  return catalogContext.matchedProducts
+    .filter((product) => product.productId && product.name)
+    .filter((product) => {
+      if (seenProductIds.has(product.productId)) return false;
+      seenProductIds.add(product.productId);
+      return true;
+    })
+    .slice(0, 5)
+    .map((product) => ({
+      productId: product.productId,
+      name: product.name,
+      url: `/shop/${encodeURIComponent(product.productId)}`,
+    }));
+}
+
 export async function generateChatReply(
   message: unknown,
   history: unknown,
@@ -138,15 +183,66 @@ export async function generateChatReply(
   );
 
   console.log("[AI Chat] Step 3/6: Building website context from catalog data");
+
+  let retrievalMode: "rag" | "legacy" = USE_RAG_RETRIEVAL ? "rag" : "legacy";
+  let ragRetrieval: Awaited<ReturnType<typeof retrieveRelevantKnowledge>> | null = null;
+  let websiteKnowledgeContext: WebsiteKnowledgeContextResult;
+  let policyStructuredContext: StructuredPolicyContextResult = {
+    contextText: "",
+    toolNames: [],
+  };
+
+  if (USE_RAG_RETRIEVAL) {
+    try {
+      console.log("[AI Chat] Using RAG retrieval (semantic search)");
+      ragRetrieval = await retrieveRelevantKnowledge(normalizedMessage, {
+        userId: options?.userId,
+        recentUserMessages,
+      });
+
+      websiteKnowledgeContext = {
+        intent: detectAiIntent(normalizedMessage, { recentUserMessages }),
+        sourceTypes: buildRagSourceTypes(ragRetrieval),
+        contextText: formatRagContextForLLM(ragRetrieval),
+      };
+    } catch (error) {
+      retrievalMode = "legacy";
+      ragRetrieval = null;
+      console.warn(
+        `[AI Chat] RAG retrieval failed; falling back to legacy retrieval: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`,
+      );
+      websiteKnowledgeContext = await buildWebsiteKnowledgeContext(normalizedMessage, {
+        recentUserMessages,
+        userId: options?.userId,
+      });
+      policyStructuredContext = await buildStructuredPolicyContext(websiteKnowledgeContext, {
+        userId: options?.userId,
+        sourceTypes: websiteKnowledgeContext.sourceTypes,
+      });
+    }
+  } else {
+    console.log("[AI Chat] Using legacy keyword-based retrieval");
+    websiteKnowledgeContext = await buildWebsiteKnowledgeContext(normalizedMessage, {
+      recentUserMessages,
+      userId: options?.userId,
+    });
+    policyStructuredContext = await buildStructuredPolicyContext(websiteKnowledgeContext, {
+      userId: options?.userId,
+      sourceTypes: websiteKnowledgeContext.sourceTypes,
+    });
+  }
+
   const catalogContext = await buildCatalogContext(normalizedMessage, {
     recentUserMessages,
     userId: options?.userId,
   });
-  const websiteKnowledgeContext = await buildWebsiteKnowledgeContext(normalizedMessage, {
-    recentUserMessages,
-    userId: options?.userId,
-  });
-  const shouldSuppressCatalogContext = POLICY_ONLY_INTENTS.has(websiteKnowledgeContext.intent);
+
+  const shouldSuppressCatalogContext = retrievalMode === "rag"
+    ? false // RAG handles this automatically
+    : POLICY_ONLY_INTENTS.has(websiteKnowledgeContext.intent);
+
   const effectiveCatalogContext = shouldSuppressCatalogContext
     ? {
         ...catalogContext,
@@ -156,14 +252,27 @@ export async function generateChatReply(
         contextText: "",
       }
     : catalogContext;
-  const policyStructuredContext = await buildStructuredPolicyContext(websiteKnowledgeContext, {
-    userId: options?.userId,
-    sourceTypes: websiteKnowledgeContext.sourceTypes,
-  });
-  const structuredContext = buildStructuredAiContext(normalizedMessage, effectiveCatalogContext, websiteKnowledgeContext);
-  console.log(
-    `[AI Chat] Context summary: intent=${websiteKnowledgeContext.intent}, authenticated=${options?.userId ? "true" : "false"}, sourceTypes=${websiteKnowledgeContext.sourceTypes.join(",") || "none"}, catalogEnabled=${effectiveCatalogContext.shouldUseCatalogContext}, variantIntent=${effectiveCatalogContext.isVariantIntent}, searchTerms=${effectiveCatalogContext.searchTerms.join(",") || "none"}, matchedProducts=${effectiveCatalogContext.matchedProducts.length}, matchedCategories=${effectiveCatalogContext.matchedCategories.length}, answerMode=${structuredContext.answerMode}, retrievalConfidence=${structuredContext.retrievalConfidence}, clarify=${structuredContext.shouldAskClarifyingQuestion ? "true" : "false"}, policyTools=${policyStructuredContext.toolNames.join(",") || "none"}, catalogSuppressed=${shouldSuppressCatalogContext ? "true" : "false"}`,
+
+  const structuredContext: AiStructuredContextResult = buildStructuredAiContext(
+    normalizedMessage,
+    effectiveCatalogContext,
+    websiteKnowledgeContext,
   );
+
+  if (retrievalMode === "rag" && ragRetrieval) {
+    console.log(
+      `[AI Chat] RAG Context summary: retrievedDocs=${ragRetrieval.staticKnowledge.length}, ` +
+      `dynamicData=${Object.keys(ragRetrieval.dynamicContext).join(",") || "none"}, ` +
+      `catalogEnabled=${effectiveCatalogContext.shouldUseCatalogContext}, ` +
+      `matchedProducts=${effectiveCatalogContext.matchedProducts.length}, ` +
+      `answerMode=${structuredContext.answerMode}, ` +
+      `retrievalConfidence=${structuredContext.retrievalConfidence}`
+    );
+  } else {
+    console.log(
+      `[AI Chat] Context summary: intent=${websiteKnowledgeContext.intent}, authenticated=${options?.userId ? "true" : "false"}, sourceTypes=${websiteKnowledgeContext.sourceTypes.join(",") || "none"}, catalogEnabled=${effectiveCatalogContext.shouldUseCatalogContext}, variantIntent=${effectiveCatalogContext.isVariantIntent}, searchTerms=${effectiveCatalogContext.searchTerms.join(",") || "none"}, matchedProducts=${effectiveCatalogContext.matchedProducts.length}, matchedCategories=${effectiveCatalogContext.matchedCategories.length}, answerMode=${structuredContext.answerMode}, retrievalConfidence=${structuredContext.retrievalConfidence}, clarify=${structuredContext.shouldAskClarifyingQuestion ? "true" : "false"}, policyTools=${policyStructuredContext.toolNames.join(",") || "none"}, catalogSuppressed=${shouldSuppressCatalogContext ? "true" : "false"}`,
+    );
+  }
 
   console.log("[AI Chat] Step 4/6: Building Gemini contents payload");
   const systemInstructions = [
@@ -211,7 +320,9 @@ export async function generateChatReply(
   const contextParts = [
     structuredContext.contextText,
     policyStructuredContext.contextText,
-    shouldUseCompactPolicyContextOnly(websiteKnowledgeContext) ? "" : websiteKnowledgeContext.contextText,
+    retrievalMode === "rag" || !shouldUseCompactPolicyContextOnly(websiteKnowledgeContext)
+      ? websiteKnowledgeContext.contextText
+      : "",
   ].filter(Boolean);
   const contents = [
     ...(contextParts.length > 0
@@ -293,5 +404,6 @@ export async function generateChatReply(
     intent: websiteKnowledgeContext.intent,
     sourceTypes: websiteKnowledgeContext.sourceTypes,
     catalogEnabled: effectiveCatalogContext.shouldUseCatalogContext,
+    productLinks: buildProductLinks(effectiveCatalogContext),
   };
 }

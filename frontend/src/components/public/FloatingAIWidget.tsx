@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ArrowUp, History, MessageCirclePlus, X } from "lucide-react";
@@ -8,7 +9,7 @@ import { useUser } from "@clerk/nextjs";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { aiChatApi } from "@/src/apis";
-import type { AiConversationListItem, AiConversationMessage } from "@/src/types";
+import type { AiChatProductLink, AiConversationListItem, AiConversationMessage } from "@/src/types";
 import { cn } from "@/src/lib/utils";
 
 const GUEST_SESSION_STORAGE_KEY = "dgtech_ai_guest_session_id";
@@ -32,6 +33,53 @@ function formatConversationDate(value?: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getMessageProductLinks(message: AiConversationMessage): AiChatProductLink[] {
+  const links = message.metadata?.productLinks;
+  if (!Array.isArray(links)) return [];
+  const seen = new Set<string>();
+  return links
+    .filter((link): link is AiChatProductLink => {
+      if (!link || typeof link !== "object") return false;
+      return typeof link.productId === "string" && typeof link.name === "string" && typeof link.url === "string";
+    })
+    .filter((link) => {
+      const key = `${link.productId}:${link.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return link.name.trim().length > 0 && link.url.startsWith("/shop/");
+    })
+    .sort((left, right) => right.name.length - left.name.length);
+}
+
+function renderAssistantContent(message: AiConversationMessage) {
+  const productLinks = getMessageProductLinks(message);
+  if (message.role !== "assistant" || productLinks.length === 0) {
+    return message.content;
+  }
+
+  const linkByName = new Map(productLinks.map((link) => [link.name.toLowerCase(), link]));
+  const pattern = new RegExp(`(${productLinks.map((link) => escapeRegExp(link.name)).join("|")})`, "gi");
+
+  return message.content.split(pattern).map((part, index) => {
+    const link = linkByName.get(part.toLowerCase());
+    if (!link) return part;
+
+    return (
+      <Link
+        key={`${link.productId}-${index}`}
+        href={link.url}
+        className="font-medium text-orange-600 underline decoration-orange-400/60 underline-offset-4 transition-colors hover:text-orange-700 hover:decoration-orange-600 dark:text-orange-300 dark:hover:text-orange-200"
+      >
+        {part}
+      </Link>
+    );
+  });
 }
 
 function introMessage(): AiConversationMessage {
@@ -180,7 +228,7 @@ export const FloatingAIWidget = () => {
 
     try {
       if (!isSignedIn) {
-        const reply = await aiChatApi.sendGuestMessage(
+        const aiResponse = await aiChatApi.sendGuestMessage(
           trimmedInput,
           displayedMessages
             .filter((message) => message.messageId !== "intro")
@@ -197,7 +245,10 @@ export const FloatingAIWidget = () => {
             messageId: `guest-ai-${Date.now()}`,
             conversationId: "guest",
             role: "assistant",
-            content: reply,
+            content: aiResponse.reply,
+            metadata: {
+              productLinks: aiResponse.productLinks || [],
+            },
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
@@ -374,7 +425,7 @@ export const FloatingAIWidget = () => {
                           message.role === "user" ? "bg-orange-500 text-white" : "bg-muted text-foreground",
                         )}
                       >
-                        {message.content}
+                        {renderAssistantContent(message)}
                       </div>
                     </div>
                   ))

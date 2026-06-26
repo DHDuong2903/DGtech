@@ -240,6 +240,7 @@ export async function sendAiConversationMessage(params: ConversationActor & { co
     metadata: {
       sourceTypes: aiPayload.sourceTypes || [],
       catalogEnabled: !!aiPayload.catalogEnabled,
+      productLinks: aiPayload.productLinks || [],
       authenticated: !!params.userId,
     },
   });

@@ -1,5 +1,11 @@
 export type AiConversationMessageRole = "user" | "assistant" | "system";
 
+export interface AiChatProductLink {
+  productId: string;
+  name: string;
+  url: string;
+}
+
 export interface AiConversationMessage {
   messageId: string;
   conversationId: string;
@@ -7,7 +13,9 @@ export interface AiConversationMessage {
   content: string;
   intent?: string | null;
   model?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    productLinks?: AiChatProductLink[];
+  };
   createdAt: string;
   updatedAt: string;
 }
