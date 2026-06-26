@@ -51,6 +51,10 @@ const INTENT_RULES: Array<{ intent: AiIntent; patterns: RegExp[] }> = [
       /\bkhach hang than thiet\b/i,
       /\blen rank\b/i,
       /\bthang hang\b/i,
+      /\bshowroom\b/i,
+      /\b3d\b/i,
+      /\bphong ao\b/i,
+      /\bmo hinh 3d\b/i,
     ],
   },
   {
@@ -189,6 +193,16 @@ const ADMIN_QUESTION_PATTERNS = [
   /\bdatabase\b/i,
   /\bserver\b/i,
   /\bkho du lieu\b/i,
+  // Showroom admin configuration
+  /\bupload mo hinh 3d\b/i,
+  /\btao showroom scene\b/i,
+  /\bcau hinh showroom\b/i,
+  /\bquang ly showroom\b/i,
+  /\bthiet lap showroom\b/i,
+  /\bupload glb\b/i,
+  /\bupload gltf\b/i,
+  /\btao vi tri showroom\b/i,
+  /\bset up showroom\b/i,
 ];
 
 function looksLikeAdminQuestion(message: string): boolean {
@@ -261,6 +275,7 @@ function buildCapabilitiesBlock() {
   return [
     "Thong tin tong quan ve website:",
     "- Website co catalog san pham, category, product variants, reviews, cart, checkout, dia chi giao hang, voucher, bundle va theo doi don hang.",
+    "- Website co tinh nang Showroom 3D (danh rieng cho Gold members) de sap xep san pham noi that trong khong gian phong ao.",
     "- Widget chat AI hien la tro ly tu van, khong phai he thong thao tac truc tiep tren tai khoan khach hang.",
     "- Neu can xem chi tiet don hang ca nhan, thanh toan da tra hay voucher cua rieng tung user, AI phai noi ro rang can du lieu/xac thuc bo sung.",
   ];
@@ -311,6 +326,16 @@ async function buildMembershipBlock() {
       `- Neu tong diem tich luy tu ${formatPrice(settings.silverMax)} tro len thi user o hang Gold.`,
       "- Navbar co hien badge rank va website co trang /membership de xem tien do len hang.",
       "- Membership UI hien co mo ta: Silver mo rong kha nang duoc ap dung member discount campaigns, cai thien voucher privilege va tang kha nang mo free shipping theo dieu kien; Gold co uu dai giam gia/voucher tot hon Silver va uu tien tiep can mot so campaign.",
+      "",
+      "Tinh nang Showroom 3D (Gold exclusive):",
+      "- Showroom 3D la tinh nang danh rieng cho thanh vien Gold.",
+      "- Cho phep sap xep san pham noi that trong khong gian phong ao 3D truoc khi mua.",
+      "- Chi hien thi san pham co mo hinh 3D da duoc upload (dinh dang GLB/GLTF).",
+      "- Co the chon nhieu khong gian phong (living room, bedroom, office, v.v.).",
+      "- Moi phong co cac vi tri (slots/positions) de dat san pham, moi vi tri chi chap nhan san pham thuoc category cu the.",
+      "- Gold member co the luu lai bo cuc phong da sap xep de xem lai sau.",
+      "- Truy cap tai trang /showroom-3d (can dang nhap voi tai khoan Gold).",
+      "- Day la cong cu xem truoc, khong phai gio hang. Mua san pham van thuc hien o trang catalog binh thuong.",
     ];
   } catch (error) {
     return [

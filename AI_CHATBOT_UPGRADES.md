@@ -154,3 +154,142 @@
 ### Suggested next upgrade
 - Add category aliases and synonym dictionaries for retrieval.
 - Add deeper multi-turn topic tracking so short follow-up questions stay on the right entity more reliably.
+
+## 2026-06-26
+
+### New feature context: 3D Showroom (Gold members only)
+
+The website now has a new interactive 3D showroom feature exclusive to Gold members. The chatbot should be aware of this feature to answer user questions about it.
+
+### What is the 3D Showroom?
+
+- **Access**: Gold membership exclusive feature at `/showroom-3d`
+- **Purpose**: Interactive 3D room where Gold members can virtually arrange furniture products before purchasing
+- **Technology**: Real-time 3D visualization using uploaded GLB/GLTF room models and product 3D models
+
+### Core capabilities
+
+1. **Scene selection**
+   - Multiple room scenes available (e.g., living room, bedroom, office)
+   - Each scene has a unique 3D model of a room
+   - Admin configures which scenes are available
+
+2. **Product placement**
+   - Only products with uploaded 3D models are eligible for the showroom
+   - Each scene has designated "positions" or "slots" where products can be placed
+   - Each position is restricted to a specific product category (e.g., "Desk" position only accepts desk products)
+   - Products can be:
+     - Selected from the sidebar product list
+     - Placed into compatible positions
+     - Removed from positions
+     - Viewed from different camera angles
+
+3. **Interactive 3D viewer**
+   - Orbit controls (drag to rotate, scroll to zoom)
+   - Automatic camera focus when selecting a position
+   - Named positions with labels (e.g., "Main Desk", "Side Chair")
+   - Overview camera for full room view
+   - Reset view button to return to default camera
+
+4. **Save and restore setups**
+   - Gold members can save their room arrangements
+   - Saved setups persist across sessions
+   - One saved setup per scene per user
+
+### How it works
+
+1. User must be signed in with Gold membership
+2. Navigate to the showroom page
+3. Select a room scene from dropdown
+4. Browse products grouped by category
+5. Select products and assign them to compatible positions
+6. View the 3D arrangement in real-time
+7. Save the setup for later
+
+### Product eligibility
+
+- Only products with `model3dUrl` (uploaded 3D model) appear in showroom
+- Products must be ACTIVE status
+- Products must match the category allowed for each position
+- Example: if position "Main Desk" allows category "Desks", only desk products with 3D models appear as options for that position
+
+### User experience flow
+
+- **Product selection**: Click "Select" on products, then choose which position to place them
+- **Multiple positions**: If a product category has multiple positions, user chooses the specific one
+- **Visual feedback**: Selected products highlighted, placed products show "Remove" button
+- **Camera control**: Click position labels to focus camera on that area
+- **Save changes**: "Save setup" button becomes active when changes are made
+
+### Common user questions the chatbot should handle
+
+1. **Access questions**
+   - "How do I access the showroom?" → Must be Gold member, go to showroom page
+   - "Why can't I see the showroom?" → Need Gold membership
+   - "Is showroom free?" → Included with Gold membership
+
+2. **Feature questions**
+   - "What is the 3D showroom?" → Explain it's a virtual room where they can arrange furniture
+   - "How does the showroom work?" → Explain selection, placement, and save features
+   - "Can I save my room setup?" → Yes, one setup per scene
+
+3. **Product questions**
+   - "Why don't I see all products in showroom?" → Only products with 3D models
+   - "How do I add products to the room?" → Select product, choose position, confirm placement
+   - "Can I put any product anywhere?" → No, positions have category restrictions
+
+4. **Technical questions**
+   - "What file format for 3D models?" → GLB/GLTF format
+   - "Can I download my room design?" → No, but can save setup to view later
+   - "Does it work on mobile?" → Yes, but desktop recommended for better experience
+
+### What the chatbot should NOT claim
+
+- Cannot help users upload 3D models (admin-only feature)
+- Cannot help configure scenes or positions (admin-only)
+- Cannot access user's specific saved setups or private data
+- Cannot generate or create 3D models for products
+- Cannot modify room models or camera positions
+
+### Boundaries
+
+- If user asks about upgrading to Gold: refer to membership page
+- If user asks about admin showroom configuration: explain it's admin-only, cannot provide guidance in customer chatbot mode
+- If user asks about missing products: explain that products need 3D models uploaded by admin
+
+### Integration with existing chatbot knowledge
+
+- Showroom is a **membership benefit** (specifically Gold tier)
+- Related to **product catalog** (uses same products, but filtered by 3D model availability)
+- Related to **membership policy** (Gold exclusive feature)
+- Does NOT affect shipping, payment, or checkout (it's a visualization tool, not a shopping cart)
+
+### Practical chatbot behavior
+
+When user asks about showroom:
+1. Confirm if they are asking about the 3D virtual showroom
+2. Verify they understand it requires Gold membership
+3. Explain the core feature: virtual room arrangement with 3D product models
+4. If they ask how to use it, give clear steps
+5. If they ask why products are missing, explain 3D model requirement
+6. If they ask technical details, stay grounded in what the feature actually supports
+
+### Example responses
+
+**User: "Shop có tính năng showroom 3D không?"**
+Good response: "Có, shop có tính năng Showroom 3D dành riêng cho hội viên Gold. Đây là không gian phòng 3D ảo nơi bạn có thể bố trí sắp xếp các sản phẩm nội thất trước khi mua. Bạn cần thành viên Gold để sử dụng tính năng này."
+
+**User: "Làm sao dùng showroom?"**
+Good response: "Để sử dụng Showroom 3D (dành cho Gold members):
+1. Chọn không gian phòng từ danh sách
+2. Chọn sản phẩm từ danh mục bên trái (chỉ sản phẩm có mô hình 3D)
+3. Đặt sản phẩm vào vị trí phù hợp trong phòng
+4. Xem trước bố cục 3D real-time
+5. Lưu thiết lập để xem lại sau
+Lưu ý: chỉ sản phẩm đã có mô hình 3D mới xuất hiện trong showroom."
+
+**User: "Tại sao không thấy hết sản phẩm trong showroom?"**
+Good response: "Showroom 3D chỉ hiển thị các sản phẩm đã có mô hình 3D được upload. Nếu sản phẩm chưa có mô hình 3D, nó sẽ không xuất hiện trong danh sách showroom, nhưng vẫn mua được bình thường trên trang shop."
+
+**User: "Có thể tải thiết kế phòng về không?"**
+Good response: "Hiện tại bạn có thể lưu thiết lập bố trí phòng trên hệ thống để xem lại sau, nhưng chưa hỗ trợ tải file thiết kế về máy."

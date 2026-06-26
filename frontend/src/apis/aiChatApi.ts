@@ -1,7 +1,7 @@
 import { API_ROUTE } from "../constant";
 import axiosInstance from "../lib/axios";
 import axios from "axios";
-import type { AiConversationDetail, AiConversationListItem, AiConversationMessage } from "../types";
+import type { AiChatProductLink, AiConversationDetail, AiConversationListItem, AiConversationMessage } from "../types";
 
 type ChatMessagePayload = {
   sender: "user" | "ai";
@@ -13,6 +13,11 @@ type ChatApiErrorResponse = {
   code?: string;
   userMessage?: string;
   retryAfterSeconds?: number;
+};
+
+type GuestChatResponse = {
+  reply: string;
+  productLinks?: AiChatProductLink[];
 };
 
 type ConversationListResponse = {
@@ -40,13 +45,16 @@ function withGuestSessionId<T extends Record<string, unknown>>(payload: T, guest
 }
 
 export const aiChatApi = {
-  sendGuestMessage: async (message: string, history: ChatMessagePayload[]): Promise<string> => {
+  sendGuestMessage: async (message: string, history: ChatMessagePayload[]): Promise<GuestChatResponse> => {
     try {
-      const { data } = await axiosInstance.post<{ reply: string }>(`${API_ROUTE.AI}/chat`, {
+      const { data } = await axiosInstance.post<GuestChatResponse>(`${API_ROUTE.AI}/chat`, {
         message,
         history,
       });
-      return data.reply;
+      return {
+        reply: data.reply,
+        productLinks: data.productLinks || [],
+      };
     } catch (error) {
       if (axios.isAxiosError<ChatApiErrorResponse>(error)) {
         const apiError = error.response?.data;
