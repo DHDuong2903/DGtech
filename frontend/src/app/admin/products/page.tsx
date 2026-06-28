@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import Link from "next/link";
@@ -44,7 +44,7 @@ function filtersFromSearchParams(searchParams: Pick<URLSearchParams, "get">) {
   };
 }
 
-const ProductsPage = () => {
+const ProductsPageInner = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -318,4 +318,16 @@ const ProductsPage = () => {
   );
 };
 
-export default ProductsPage;
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <AdminLayout>
+          <AdminContentLoader minHeightClass="min-h-[320px]" />
+        </AdminLayout>
+      }
+    >
+      <ProductsPageInner />
+    </Suspense>
+  );
+}
