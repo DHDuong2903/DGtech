@@ -12,10 +12,7 @@
     "db:migrate:undo": "sequelize-cli db:migrate:undo --config sequelize.config.cjs",
     "validate:vn-zones": "node scripts/validate-province-zone-keys.mjs",
     "seed:products": "tsx scripts/seed-products.mjs",
-    "eval:ai": "npm run build && node scripts/evaluate-ai-chatbot.mjs",
-    "knowledge:extract": "node scripts/extract-knowledge-base.mjs",
-    "knowledge:embed": "node scripts/embed-knowledge-base.mjs",
-    "knowledge:sync": "npm run knowledge:extract && npm run knowledge:embed"
+    "eval:ai": "npm run build && node scripts/evaluate-ai-chatbot.mjs"
   },
   "keywords": [],
   "author": "",
