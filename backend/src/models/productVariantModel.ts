@@ -36,6 +36,11 @@ export const ProductVariant = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
     attributes: {
       type: DataTypes.JSONB,
       defaultValue: {},

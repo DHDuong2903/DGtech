@@ -24,6 +24,7 @@ import {
   MAX_PRODUCT_MODEL_FILE_SIZE_BYTES,
   isGlbUpload,
 } from "../middlewares/upload.js";
+import { deactivateOrDestroyVariants } from "../helpers/variantLifecycle.js";
 
 const STOREFRONT_PRODUCT_CACHE_NAMESPACE = "storefront-products";
 const STOREFRONT_PRODUCT_LIST_CACHE_TTL_MS = 60000;
@@ -367,7 +368,7 @@ export async function updateProduct(productId: string, body: Record<string, unkn
   };
 
   if (variantsData && Array.isArray(variantsData)) {
-    const existingVariants = await ProductVariant.findAll({ where: { productId } });
+    const existingVariants = await ProductVariant.findAll({ where: { productId, isActive: true } });
     const existingIds = existingVariants.map((v: any) => v.variantId);
     const updatedIds: string[] = [];
     const hasRealVariants = variantsData.length > 0;
@@ -375,7 +376,7 @@ export async function updateProduct(productId: string, body: Record<string, unkn
     if (hasRealVariants) {
       const defaultVar = existingVariants.find((v: any) => v.isDefault);
       if (defaultVar && !variantsData.some((v) => v.variantId === defaultVar.variantId)) {
-        await ProductVariant.destroy({ where: { variantId: (defaultVar as any).variantId } });
+        await deactivateOrDestroyVariants([(defaultVar as any).variantId]);
       }
       let sumStock = 0, minPrice = Infinity, minCompareAtPrice: number | null = null;
       for (const v of variantsData) {
@@ -406,7 +407,7 @@ export async function updateProduct(productId: string, body: Record<string, unkn
       finalStock = sumStock;
       finalCompareAtPrice = minCompareAtPrice;
       const toDelete = existingIds.filter((id) => !updatedIds.includes(id));
-      if (toDelete.length > 0) await ProductVariant.destroy({ where: { variantId: { [Op.in]: toDelete } } });
+      if (toDelete.length > 0) await deactivateOrDestroyVariants(toDelete);
     } else {
       let defaultVar = existingVariants.find((v: any) => v.isDefault);
       const newPrice = price ? parseFloat(price) : defaultVar ? defaultVar.price : product.price;
@@ -420,10 +421,12 @@ export async function updateProduct(productId: string, body: Record<string, unkn
       if (defaultVar) await ProductVariant.update(payload, { where: { variantId: (defaultVar as any).variantId } });
       else await ProductVariant.create(payload);
       finalPrice = payload.price; finalCompareAtPrice = payload.compareAtPrice; finalStock = payload.stock;
-      await ProductVariant.destroy({ where: { productId, isDefault: false } });
+      await deactivateOrDestroyVariants(
+        existingVariants.filter((v: any) => !v.isDefault).map((v: any) => v.variantId),
+      );
     }
   } else {
-    let defaultVar = await ProductVariant.findOne({ where: { productId, isDefault: true } });
+    let defaultVar = await ProductVariant.findOne({ where: { productId, isDefault: true, isActive: true } });
     if (defaultVar) {
       const autoCompare = calculateAutoCompareAtPrice(finalPrice, defaultVar.price, defaultVar.compareAtPrice);
       await defaultVar.update({ price: finalPrice, compareAtPrice: autoCompare, stock: finalStock });
@@ -484,7 +487,7 @@ export async function getProductById(productId: string, clerkId?: string) {
         Product.findByPk(productId, {
           include: [
             { model: Category, as: "category" },
-            { model: ProductVariant, as: "variants" },
+            { model: ProductVariant, as: "variants", where: { isActive: true }, required: false },
           ],
         }),
       { label: "getProductById" },

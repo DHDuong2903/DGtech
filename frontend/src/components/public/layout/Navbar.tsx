@@ -4,7 +4,8 @@ import Image from "next/image";
 import { Cuboid, Home, LayoutDashboard, LogIn, MapPin, Package, Search, ShoppingCart, Star, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Badge } from "@/src/components/ui/badge";
@@ -17,6 +18,11 @@ import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { ThemeToggle } from "@/src/components/ThemeToggle";
 import { NavbarCategories } from "@/src/components/public/layout/NavbarCategories";
 import { useUserRank } from "@/src/hooks";
+import {
+  isGoldRank,
+  SHOWROOM_GOLD_REQUIRED_TOAST,
+  SHOWROOM_SIGN_IN_REQUIRED_TOAST,
+} from "@/src/lib/showroomAccess";
 
 const navUnderline =
   "group relative inline-flex items-center gap-1.5 text-sm text-foreground/80 transition-colors hover:text-foreground " +
@@ -62,8 +68,20 @@ export const Navbar = () => {
     typeof metadataRankRaw === "string" && metadataRankRaw.trim().length > 0 ? metadataRankRaw.trim() : null;
   const menuRankLabel =
     rank ? rank.currentRank.charAt(0).toUpperCase() + rank.currentRank.slice(1) : metadataRank;
-  const canAccessShowroom =
-    rank?.currentRank === "gold" || (typeof metadataRank === "string" && metadataRank.toLowerCase() === "gold");
+  const canAccessShowroom = isGoldRank(rank, metadataRank);
+
+  const handleShowroomClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (!isSignedIn) {
+      toast.error(SHOWROOM_SIGN_IN_REQUIRED_TOAST);
+      return;
+    }
+    if (!canAccessShowroom) {
+      toast.error(SHOWROOM_GOLD_REQUIRED_TOAST);
+      return;
+    }
+    router.push("/showroom-3d");
+  };
 
   useEffect(() => {
     if (!isLoaded || !user?.id) return;
@@ -113,14 +131,12 @@ export const Navbar = () => {
               </NavLink>
             </li>
             <NavbarCategories />
-            {isSignedIn && canAccessShowroom && (
-              <li>
-                <NavLink href="/showroom-3d">
-                  <Cuboid className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
-                  <span className="hidden sm:inline">Showroom</span>
-                </NavLink>
-              </li>
-            )}
+            <li>
+              <Link href="/showroom-3d" onClick={handleShowroomClick} className={navUnderline}>
+                <Cuboid className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
+                <span className="hidden sm:inline">Showroom</span>
+              </Link>
+            </li>
             {!isLoading && isAdmin && (
               <li>
                 <NavLink href="/admin">

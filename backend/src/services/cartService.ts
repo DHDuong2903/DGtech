@@ -216,10 +216,10 @@ export async function addToCart(clerkId: string, body: Record<string, unknown>) 
 
   let selectedVariant;
   if (variantId) {
-    selectedVariant = await ProductVariant.findOne({ where: { variantId, productId } });
+    selectedVariant = await ProductVariant.findOne({ where: { variantId, productId, isActive: true } });
     if (!selectedVariant) throw Object.assign(new Error("Product variant not found"), { status: 404 });
   } else {
-    selectedVariant = await ProductVariant.findOne({ where: { productId, isDefault: true } });
+    selectedVariant = await ProductVariant.findOne({ where: { productId, isDefault: true, isActive: true } });
     if (!selectedVariant) throw Object.assign(new Error("Please select a product variant"), { status: 400 });
   }
 

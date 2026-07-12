@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { Spinner } from "@/src/components/ui/spinner";
 import { ShowroomProductPreview } from "@/src/components/public/showroom/ShowroomProductPreview";
 import { useUserRank } from "@/src/hooks";
+import { isGoldRank, SHOWROOM_GOLD_REQUIRED_TOAST } from "@/src/lib/showroomAccess";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 
 type SlotSelectionMap = Record<string, string>;
@@ -109,7 +110,7 @@ export default function Showroom3DPage() {
       };
     }
 
-    if (!rank || rank.currentRank !== "gold") {
+    if (!isGoldRank(rank)) {
       if (userId && rankRefreshAttemptedRef.current !== userId) {
         rankRefreshAttemptedRef.current = userId;
         void refresh();
@@ -118,7 +119,8 @@ export default function Showroom3DPage() {
         };
       }
 
-      router.replace("/membership");
+      toast.error(SHOWROOM_GOLD_REQUIRED_TOAST);
+      router.replace("/");
       return () => {
         active = false;
       };
@@ -161,7 +163,7 @@ export default function Showroom3DPage() {
 
   useEffect(() => {
     let active = true;
-    if (!activeSceneKey || !rank || rank.currentRank !== "gold") {
+    if (!activeSceneKey || !isGoldRank(rank)) {
       return () => {
         active = false;
       };
