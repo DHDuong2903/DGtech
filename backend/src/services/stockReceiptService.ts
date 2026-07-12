@@ -82,6 +82,7 @@ export async function searchVariantsForReceipt(q: string, limit = 40) {
       },
     ],
     where: {
+      isActive: true,
       [Op.or]: [{ sku: { [Op.iLike]: like } }, { "$product.name$": { [Op.iLike]: like } }],
     },
     order: [[Product, "name", "ASC"]],

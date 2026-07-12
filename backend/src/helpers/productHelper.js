@@ -13,6 +13,8 @@ export const getProductWithCategory = async (Product, productId) => {
       {
         model: ProductVariant,
         as: "variants",
+        where: { isActive: true },
+        required: false,
       },
     ],
   });
@@ -28,6 +30,8 @@ export const productIncludeOptions = [
   {
     model: ProductVariant,
     as: "variants",
+    where: { isActive: true },
+    required: false,
     attributes: ["variantId", "price", "stock", "attributes", "isDefault"],
   },
 ];
