@@ -107,6 +107,11 @@ function determineRetrievalConfidence(message: string, catalogContext: CatalogCo
   if (!catalogContext.shouldUseCatalogContext) return "none";
   if (catalogContext.matchedProducts.length === 0) return "low";
 
+  // Discount/campaign/bundle discovery already returns curated products — treat as strong enough to answer.
+  if (catalogContext.isPromotionIntent && catalogContext.matchedProducts.length > 0) {
+    return catalogContext.matchedProducts.length >= 2 ? "high" : "medium";
+  }
+
   const exactMatches = catalogContext.matchedProducts.filter((product) => isExactProductMatch(message, product)).length;
   if (exactMatches > 0) return "high";
 
@@ -128,6 +133,11 @@ function buildCategoryLabel(categories: CatalogCategory[]) {
 
 function buildClarificationQuestion(message: string, catalogContext: CatalogContextResult, confidence: RetrievalConfidence) {
   if (!catalogContext.shouldUseCatalogContext) return null;
+
+  // For sale/campaign/bundle browsing, list what we have instead of asking clarifying questions first.
+  if (catalogContext.isPromotionIntent && catalogContext.matchedProducts.length > 0) {
+    return null;
+  }
 
   const searchTermsLabel =
     catalogContext.searchTerms.length > 0 ? catalogContext.searchTerms.slice(0, 4).join(", ") : "tu khoa hien tai";
@@ -162,12 +172,15 @@ function buildClarificationQuestion(message: string, catalogContext: CatalogCont
   return null;
 }
 
-function buildProductBlocks(products: CatalogProduct[]) {
+function buildProductBlocks(products: CatalogProduct[], options?: { isPromotionIntent?: boolean }) {
   if (products.length === 0) {
     return ["- Khong co san pham duoc xac nhan la match manh o turn nay."];
   }
 
-  return products.slice(0, 3).flatMap((product, index) => {
+  const isPromotionIntent = Boolean(options?.isPromotionIntent);
+  const limit = isPromotionIntent ? 8 : 3;
+
+  return products.slice(0, limit).flatMap((product, index) => {
     const lines = [
       `${index + 1}. ${product.name}`,
       `- Danh muc: ${product.category?.name || "Khong ro"}`,
@@ -177,6 +190,21 @@ function buildProductBlocks(products: CatalogProduct[]) {
 
     if (product.compareAtPrice !== undefined && product.compareAtPrice !== null) {
       lines.push(`- Gia goc: ${formatPrice(product.compareAtPrice)}`);
+    }
+
+    if (Array.isArray(product.appliedCampaigns) && product.appliedCampaigns.length > 0) {
+      const campaignNames = product.appliedCampaigns
+        .map((campaign) => campaign?.name?.trim() || "")
+        .filter(Boolean)
+        .join(", ");
+      if (campaignNames) {
+        lines.push(`- Chuong trinh: ${campaignNames}`);
+      }
+    }
+
+    // Promotion browsing needs a longer product list, not deep variant dumps.
+    if (isPromotionIntent) {
+      return lines;
     }
 
     return [...lines, ...formatVariantSummary(product)];
@@ -191,24 +219,32 @@ function buildStructuredCatalogToolBlock(
 ) {
   if (!catalogContext.shouldUseCatalogContext) return "";
 
+  const productLimit = catalogContext.isPromotionIntent ? 8 : 3;
+
   return [
     "AI tool result: search_catalog",
     `- answer_mode: ${answerMode}`,
     `- retrieval_confidence: ${confidence}`,
     `- variant_intent: ${catalogContext.isVariantIntent ? "yes" : "no"}`,
+    `- promotion_intent: ${catalogContext.isPromotionIntent ? "yes" : "no"}`,
     `- search_terms: ${catalogContext.searchTerms.length > 0 ? catalogContext.searchTerms.join(", ") : "khong co"}`,
     `- matched_categories: ${buildCategoryLabel(catalogContext.matchedCategories)}`,
     `- matched_products_count: ${catalogContext.matchedProducts.length}`,
+    `- list_up_to: ${productLimit}`,
     clarificationQuestion ? `- clarification_question: ${clarificationQuestion}` : "- clarification_question: khong can",
     "",
-    "Top confirmed products:",
-    ...buildProductBlocks(catalogContext.matchedProducts),
+    catalogContext.isPromotionIntent ? "Top discounted / campaign products:" : "Top confirmed products:",
+    ...buildProductBlocks(catalogContext.matchedProducts, {
+      isPromotionIntent: catalogContext.isPromotionIntent,
+    }),
     "",
     "Tool response contract:",
     clarificationQuestion
       ? "- Vi query hien tai chua du ro, uu tien dat dung 1 cau hoi lam ro thay vi khang dinh qua som."
       : "- Neu khong can hoi lai, tra loi truc tiep tu cac san pham da duoc xac nhan o tren.",
-    "- Khong duoc bien cac ket qua gan dung thanh khang dinh tuyet doi.",
+    catalogContext.isPromotionIntent
+      ? `- Day la danh sach san pham dang giam gia/campaign da curated; liet ke day du toi da ${productLimit} san pham (ten + gia + chuong trinh), khong rut gon xuong 1-2 muc neu con nhieu hon trong list.`
+      : "- Khong duoc bien cac ket qua gan dung thanh khang dinh tuyet doi.",
     "- Neu chi co goi y gan dung, phai noi ro do la goi y tham khao tu catalog hien tai.",
   ].join("\n");
 }

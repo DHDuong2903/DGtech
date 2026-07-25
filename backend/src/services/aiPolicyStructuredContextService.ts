@@ -1,11 +1,26 @@
 import { Op } from "sequelize";
 import { cacheGetJson, cacheSetJson } from "../libs/cache.js";
 import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
-import { ShippingMethod, ShippingProvinceZone, ShippingZone, Voucher, DiscountCampaign, Product, Category } from "../models/associationsModel.js";
+import {
+  Bundle,
+  BundleItem,
+  ShippingMethod,
+  ShippingProvinceZone,
+  ShippingZone,
+  Voucher,
+  DiscountCampaign,
+  Product,
+  ProductVariant,
+  Category,
+} from "../models/associationsModel.js";
 import { getShippingSettings } from "./shippingService.js";
 import { getRankSettings, serializeRankSettings } from "./rankSettingService.js";
 import { getTaxSettings, serializeTaxSettings } from "./taxService.js";
 import { getMyRank } from "./userService.js";
+import {
+  discountedTotalFromOrigin,
+  originTotalFromBundleItems,
+} from "./bundlePricingService.js";
 import type { AiIntent, WebsiteKnowledgeContextResult } from "./aiWebsiteKnowledgeService.js";
 
 type BuildStructuredPolicyContextOptions = {
@@ -51,6 +66,12 @@ export type PromotionsSnapshot = {
     scope: string;
     endsAt: string;
   }>;
+  bundleSummaries: Array<{
+    name: string;
+    discountLabel: string;
+    discountedTotal: number;
+    productNames: string[];
+  }>;
 };
 
 export type AuthenticatedMembershipSnapshot = {
@@ -66,8 +87,8 @@ const PAYMENT_POLICY_CACHE_KEY = "ai-policy:payment:v1";
 const PAYMENT_POLICY_STALE_CACHE_KEY = "ai-policy:payment:stale:v1";
 const MEMBERSHIP_POLICY_CACHE_KEY = "ai-policy:membership:v1";
 const MEMBERSHIP_POLICY_STALE_CACHE_KEY = "ai-policy:membership:stale:v1";
-const PROMOTIONS_POLICY_CACHE_KEY = "ai-policy:promotions:v1";
-const PROMOTIONS_POLICY_STALE_CACHE_KEY = "ai-policy:promotions:stale:v1";
+const PROMOTIONS_POLICY_CACHE_KEY = "ai-policy:promotions:v2";
+const PROMOTIONS_POLICY_STALE_CACHE_KEY = "ai-policy:promotions:stale:v2";
 const POLICY_CACHE_TTL_MS = 2 * 60 * 1000;
 const POLICY_STALE_TTL_MS = 15 * 60 * 1000;
 
@@ -195,7 +216,7 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
     label: "aiPolicy.promotions",
     loader: async () => {
       const now = new Date();
-      const [activeVoucherRows, activeCampaignRows] = await Promise.all([
+      const [activeVoucherRows, activeCampaignRows, activeBundleRows] = await Promise.all([
         withDbRetry(
           () =>
             Voucher.findAll({
@@ -226,6 +247,30 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
             }),
           { label: "aiPolicy.promotions.campaigns" },
         ),
+        withDbRetry(
+          () =>
+            Bundle.findAll({
+              where: { isEnabled: true },
+              include: [
+                {
+                  model: BundleItem,
+                  as: "items",
+                  attributes: ["quantity"],
+                  include: [
+                    {
+                      model: ProductVariant,
+                      as: "variant",
+                      attributes: ["price"],
+                      include: [{ model: Product, as: "product", attributes: ["name"] }],
+                    },
+                  ],
+                },
+              ],
+              order: [["updatedAt", "DESC"]],
+              limit: 5,
+            }),
+          { label: "aiPolicy.promotions.bundles" },
+        ),
       ]);
 
       const voucherTypes = Array.from(
@@ -246,7 +291,10 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
                 : "Dieu chinh gia storefront";
         const scope = row.appliesToAllProducts
           ? "Toan shop"
-          : [products.length > 0 ? `San pham: ${products.slice(0, 2).join(", ")}` : "", categories.length > 0 ? `Danh muc: ${categories.slice(0, 2).join(", ")}` : ""]
+          : [
+              products.length > 0 ? `San pham: ${products.slice(0, 5).join(", ")}` : "",
+              categories.length > 0 ? `Danh muc: ${categories.slice(0, 3).join(", ")}` : "",
+            ]
               .filter(Boolean)
               .join("; ") || "Pham vi hep";
 
@@ -258,10 +306,40 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
         };
       });
 
+      const bundleSummaries = activeBundleRows
+        .map((row: any) => {
+          const plain = row.get ? row.get({ plain: true }) : row;
+          const items = Array.isArray(plain.items) ? plain.items : [];
+          const originTotal = originTotalFromBundleItems(items);
+          const discountedTotal = discountedTotalFromOrigin(originTotal, plain.discountKind, plain.discountValue);
+          const discountLabel =
+            String(plain.discountKind || "").toUpperCase() === "PERCENT"
+              ? `Giam ${plain.discountValue}%`
+              : `Giam ${formatPrice(plain.discountValue)}`;
+          const productNames: string[] = [];
+          const seenNames = new Set<string>();
+          for (const item of items) {
+            const name = String((item as any)?.variant?.product?.name || "").trim();
+            if (!name || seenNames.has(name)) continue;
+            seenNames.add(name);
+            productNames.push(name);
+            if (productNames.length >= 4) break;
+          }
+
+          return {
+            name: String(plain.name || "Bundle"),
+            discountLabel,
+            discountedTotal: Number(discountedTotal) || 0,
+            productNames,
+          };
+        })
+        .filter((bundle: { discountedTotal: number }) => Number(bundle.discountedTotal) > 0);
+
       return {
         activeVoucherCount: Number(activeVoucherRows.length || 0),
         voucherTypes,
         campaignSummaries,
+        bundleSummaries,
       };
     },
   });
@@ -350,23 +428,37 @@ function buildPromotionsToolBlock(snapshot: PromotionsSnapshot) {
         )
       : ["Khong thay campaign active ro rang."];
 
+  const bundleLines =
+    snapshot.bundleSummaries.length > 0
+      ? snapshot.bundleSummaries.map((item, index) => {
+          const productsLabel = item.productNames.length > 0 ? item.productNames.join(", ") : "Khong ro";
+          return `${index + 1}. ${item.name} | ${item.discountLabel} | Gia bundle: ${formatPrice(item.discountedTotal)} | SP: ${productsLabel}`;
+        })
+      : ["Khong thay bundle dang bat."];
+
   return [
     "AI tool result: get_active_promotions",
     `- active_voucher_count: ${snapshot.activeVoucherCount}`,
     `- voucher_types: ${snapshot.voucherTypes.length > 0 ? snapshot.voucherTypes.join(", ") : "Khong co"}`,
     "- active_campaigns:",
     ...campaignLines,
-    "- rule: neu user hoi uu dai cu the, chi neu campaign/voucher neu tool block xac nhan duoc.",
+    "- active_bundles:",
+    ...bundleLines,
+    "- rule: neu user hoi uu dai/voucher theo policy, chi neu campaign/voucher/bundle neu tool block xac nhan duoc.",
+    "- rule: neu user hoi san pham giam gia noi bat, uu tien doi chieu voi catalog context (san pham dang giam gia) thay vi chi bao xem tren shop.",
   ].join("\n");
 }
 
 function shouldIncludePolicyTool(intent: AiIntent, targetIntent: AiIntent) {
+  if (targetIntent === "voucher_policy" && intent === "promotion_products") return true;
   return intent === targetIntent || intent === "general_support";
 }
 
 function shouldUseCompactPolicyOnly(result: WebsiteKnowledgeContextResult) {
   if (result.sourceTypes.includes("admin_question_blocker")) return false;
   if (result.sourceTypes.includes("authenticated_user_context")) return false;
+  // Keep verbose campaign product lists for sale-product discovery.
+  if (result.intent === "promotion_products") return false;
   return ["shipping_policy", "payment_policy", "membership_policy", "voucher_policy"].includes(result.intent);
 }
 
@@ -429,5 +521,12 @@ export function shouldUseCompactPolicyContextOnly(websiteKnowledgeContext: Websi
 }
 
 function shouldUsePolicyTool(intent: AiIntent) {
-  return ["shipping_policy", "payment_policy", "membership_policy", "voucher_policy", "general_support"].includes(intent);
+  return [
+    "shipping_policy",
+    "payment_policy",
+    "membership_policy",
+    "voucher_policy",
+    "promotion_products",
+    "general_support",
+  ].includes(intent);
 }

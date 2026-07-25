@@ -78,6 +78,28 @@ function shouldRestoreStockWhenCancelled(order: any, payment: any) {
   return hasAllocatedStock(order, payment);
 }
 
+const USER_ORDER_PAYMENT_INCLUDE = {
+  model: Payment,
+  as: "payment",
+  attributes: ["status", "paymentMethod", "paidAt"],
+  required: false,
+};
+
+const USER_ORDER_ITEM_INCLUDE = {
+  model: OrderItem,
+  as: "items",
+  include: [{ model: Product, as: "product", attributes: ["productId", "name", "price", "imageUrl"] }],
+};
+
+const USER_ORDER_DETAIL_ITEM_INCLUDE = {
+  model: OrderItem,
+  as: "items",
+  include: [
+    { model: Product, as: "product", attributes: ["productId", "name", "price", "imageUrl", "description"] },
+    { model: ProductVariant, as: "variant" },
+  ],
+};
+
 export async function fetchOrderAdminDetail(orderId: string) {
   const order = await Order.findByPk(orderId, {
     include: [
@@ -365,7 +387,7 @@ export async function getOrders(clerkId: string, query: Record<string, unknown>)
 
   const { count, rows: orders } = await Order.findAndCountAll({
     where: whereClause,
-    include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product", attributes: ["productId", "name", "price", "imageUrl"] }] }],
+    include: [USER_ORDER_PAYMENT_INCLUDE, USER_ORDER_ITEM_INCLUDE],
     order: [["createdAt", "DESC"]],
     limit: parseInt(limit), offset: parseInt(offset),
     distinct: true, col: "orderId",
@@ -380,15 +402,7 @@ export async function getOrders(clerkId: string, query: Record<string, unknown>)
 export async function getOrderById(clerkId: string, orderId: string) {
   const order = await Order.findOne({
     where: { orderId, clerkId },
-    include: [
-      {
-        model: OrderItem, as: "items",
-        include: [
-          { model: Product, as: "product", attributes: ["productId", "name", "price", "imageUrl", "description"] },
-          { model: ProductVariant, as: "variant" },
-        ],
-      },
-    ],
+    include: [USER_ORDER_PAYMENT_INCLUDE, USER_ORDER_DETAIL_ITEM_INCLUDE],
   });
   if (!order) throw Object.assign(new Error("Order not found"), { status: 404 });
   return order;
