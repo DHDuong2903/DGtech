@@ -32,6 +32,16 @@ export function ProductMediaThumb({
         <ShowroomProductPreview
           src={model3dUrl}
           className={cn("h-full w-full rounded-none border-0", previewClassName)}
+          fallback={
+            imageUrl ? (
+              <Image src={imageUrl} alt={alt} fill sizes={sizes} className={cn("object-contain", imageClassName)} />
+            ) : (
+              <ProductImageFallback
+                className="absolute inset-0"
+                iconClassName={fallbackIconClassName ?? "h-6 w-6 md:h-7 md:w-7"}
+              />
+            )
+          }
         />
       ) : imageUrl ? (
         <Image src={imageUrl} alt={alt} fill sizes={sizes} className={cn("object-contain", imageClassName)} />

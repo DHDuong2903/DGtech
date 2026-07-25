@@ -27,7 +27,10 @@ export const showroomApi = {
     };
   },
 
-  saveSceneSetup: async (sceneKey: string, payload: { selectedBySlot: Record<string, string> }) => {
+  saveSceneSetup: async (
+    sceneKey: string,
+    payload: { selectedBySlot: Record<string, string>; colorByProductId?: Record<string, string> },
+  ) => {
     const { data } = await axiosInstance.put<{
       message: string;
       savedSetup: ShowroomSavedSetup | null;

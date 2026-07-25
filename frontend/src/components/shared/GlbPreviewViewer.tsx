@@ -7,6 +7,7 @@ import { Cuboid, RotateCcw } from "lucide-react";
 import { Mesh, Object3D, Quaternion, Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { cn } from "@/src/lib/utils";
+import { applyVariantColorTintToScene } from "@/src/lib/colorVariantTint";
 import { ModelLoadBoundary } from "@/src/components/shared/ModelLoadBoundary";
 
 type SlotMarker = {
@@ -85,6 +86,7 @@ function GlbScene({
   onMarkerClick,
   onSlotMarkersChange,
   onCameraMarkersChange,
+  tintHex = null,
 }: {
   src: string;
   showNamedMarkers?: boolean;
@@ -95,6 +97,7 @@ function GlbScene({
   onMarkerClick?: (markerId: string) => void;
   onSlotMarkersChange?: (markers: SlotMarker[]) => void;
   onCameraMarkersChange?: (markers: CameraMarker[]) => void;
+  tintHex?: string | null;
 }) {
   const gltf = useGLTF(src);
 
@@ -148,8 +151,10 @@ function GlbScene({
       }
     });
 
+    applyVariantColorTintToScene(next, tintHex);
+
     return { scene: next, slotMarkers: nextSlotMarkers, cameraMarkers: nextCameraMarkers };
-  }, [cameraMarkerPrefix, gltf.scene, markerPrefix, showNamedMarkers, useEmbeddedCameraMarkers]);
+  }, [cameraMarkerPrefix, gltf.scene, markerPrefix, showNamedMarkers, tintHex, useEmbeddedCameraMarkers]);
 
   useEffect(() => {
     onSlotMarkersChange?.(slotMarkers);
@@ -192,11 +197,13 @@ function MarkerFocusController({
   focusedView,
   defaultView,
   resetVersion,
+  userInteractingRef,
 }: {
   controlsRef: MutableRefObject<OrbitControlsImpl | null>;
   focusedView: CameraView | null;
   defaultView: CameraView | null;
   resetVersion: number;
+  userInteractingRef: MutableRefObject<boolean>;
 }) {
   const { camera } = useThree();
   const desiredPositionRef = useRef<Vector3 | null>(null);
@@ -206,6 +213,8 @@ function MarkerFocusController({
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls) return;
+
+    userInteractingRef.current = false;
 
     if (!focusedView) {
       if (!defaultView) {
@@ -224,11 +233,18 @@ function MarkerFocusController({
     desiredTargetRef.current = new Vector3(...focusedView.target);
     desiredPositionRef.current = new Vector3(...focusedView.position);
     isAnimatingRef.current = true;
-  }, [controlsRef, defaultView, focusedView, resetVersion]);
+  }, [controlsRef, defaultView, focusedView, resetVersion, userInteractingRef]);
 
   useFrame((_, delta) => {
     const controls = controlsRef.current;
-    if (!controls || !isAnimatingRef.current) return;
+    if (!controls) return;
+
+    if (userInteractingRef.current) {
+      isAnimatingRef.current = false;
+      return;
+    }
+
+    if (!isAnimatingRef.current) return;
 
     const target = desiredTargetRef.current;
     if (target) {
@@ -269,6 +285,7 @@ export function GlbPreviewViewer({
   cameraMarkerOverrides,
   defaultOverview,
   showResetViewButton = false,
+  tintHex = null,
   fallback,
 }: {
   src?: string | null;
@@ -296,9 +313,12 @@ export function GlbPreviewViewer({
     polarAngle?: number;
   };
   showResetViewButton?: boolean;
+  /** Hex color from Color variant — tints GLB materials on the product preview. */
+  tintHex?: string | null;
   fallback?: ReactNode;
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+  const userInteractingRef = useRef(false);
   const [slotMarkers, setSlotMarkers] = useState<SlotMarker[]>([]);
   const [cameraMarkers, setCameraMarkers] = useState<CameraMarker[]>([]);
   const [focusedMarkerId, setFocusedMarkerId] = useState<string | null>(null);
@@ -472,21 +492,26 @@ export function GlbPreviewViewer({
                 onMarkerClick={(markerId) => setFocusedMarkerId(markerId)}
                 onSlotMarkersChange={setSlotMarkers}
                 onCameraMarkersChange={setCameraMarkers}
+                tintHex={tintHex}
               />
             </Bounds>
           </ModelLoadBoundary>
         </Suspense>
-        {!allowFreeNavigation ? (
+        {!allowFreeNavigation || showNamedMarkers ? (
           <MarkerFocusController
             controlsRef={controlsRef}
             focusedView={resolvedFocusedView}
             defaultView={resolvedDefaultView}
             resetVersion={resetVersion}
+            userInteractingRef={userInteractingRef}
           />
         ) : null}
         <OrbitControls
           ref={controlsRef}
           enablePan={allowFreeNavigation}
+          enableDamping
+          dampingFactor={0.08}
+          screenSpacePanning={allowFreeNavigation}
           minDistance={allowFreeNavigation ? 0.35 : 1.5}
           maxDistance={allowFreeNavigation ? 60 : 12}
           minPolarAngle={allowFreeNavigation ? 0 : undefined}
@@ -496,6 +521,12 @@ export function GlbPreviewViewer({
           autoRotate={allowFreeNavigation ? false : autoRotate && !focusedSlotMarker}
           autoRotateSpeed={0.85}
           makeDefault
+          onStart={() => {
+            userInteractingRef.current = true;
+          }}
+          onEnd={() => {
+            userInteractingRef.current = false;
+          }}
         />
       </Canvas>
       {showResetViewButton ? (

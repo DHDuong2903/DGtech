@@ -20,6 +20,7 @@ import {
 import { bundleApi } from "@/src/apis/bundleApi";
 import type { StorefrontBundleForPdp } from "@/src/types/bundleType";
 import { cn } from "@/src/lib/utils";
+import { resolveVariantColorTintHex } from "@/src/lib/colorVariantTint";
 import { toMoneyNumber } from "@/src/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import type { Product } from "@/src/types";
@@ -118,6 +119,11 @@ const ProductDetailPage = () => {
   const selectedVariant = useMemo(
     () => resolveStorefrontSelectedVariant(product, userSelectedVariantId),
     [product, userSelectedVariantId],
+  );
+
+  const variantTintHex = useMemo(
+    () => resolveVariantColorTintHex(selectedVariant?.attributes ?? null),
+    [selectedVariant?.attributes],
   );
 
   const handleVariantSelect = useCallback((v: ProductVariant | null) => {
@@ -322,7 +328,12 @@ const ProductDetailPage = () => {
         </button>
 
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,min(48vw,30rem))_minmax(0,1fr)] lg:gap-5">
-          <ProductImage imageUrl={product.imageUrl} model3dUrl={product.model3dUrl} name={product.name} />
+          <ProductImage
+            imageUrl={product.imageUrl}
+            model3dUrl={product.model3dUrl}
+            name={product.name}
+            tintHex={variantTintHex}
+          />
 
           <div className="flex min-w-0 flex-col gap-3 py-1 lg:py-1">
             <ProductInfo

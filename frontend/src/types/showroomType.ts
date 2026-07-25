@@ -49,6 +49,7 @@ export interface ShowroomSavedSetup {
   sceneId: string;
   clerkId: string;
   selectedBySlot: Record<string, string>;
+  colorByProductId?: Record<string, string>;
   updatedAt: string;
 }
 

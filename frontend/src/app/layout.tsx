@@ -10,7 +10,7 @@ import { Toaster } from "@/src/components/ui/sonner";
 import { ThemeProvider } from "@/src/components/ThemeProvider";
 import { Navbar } from "../components/public";
 import { CartDrawer } from "@/src/components/public/cart/CartDrawer";
-import { FloatingAIWidget } from "@/src/components/public";
+import { FloatingAIWidgetLazy } from "../components/public/FloatingAIWidgetLazy";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,7 +52,7 @@ export default function RootLayout({
                   <main className="flex min-h-0 flex-1 flex-col">{children}</main>
                   <ConditionalFooter />
                   <Toaster />
-                  <FloatingAIWidget />
+                  <FloatingAIWidgetLazy />
                 </StoreInitializer>
               </AxiosInterceptorSetup>
             </AuthProvider>

@@ -135,7 +135,6 @@ export function VoucherForm({ mode, initialVoucher, submitting, onSubmit }: Prop
               <SelectItem value="PERCENT_DISCOUNT">Percent discount</SelectItem>
               <SelectItem value="FIXED_DISCOUNT">Fixed discount</SelectItem>
               <SelectItem value="FREE_SHIPPING">Free shipping</SelectItem>
-              <SelectItem value="BONUS_POINTS">Bonus points</SelectItem>
             </SelectContent>
           </Select>
         </div>

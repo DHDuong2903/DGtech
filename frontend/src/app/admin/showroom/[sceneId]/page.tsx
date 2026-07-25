@@ -84,6 +84,7 @@ export default function AdminShowroomDetailPage() {
                   description="No 3D model uploaded yet."
                   className="aspect-[1/1.02]"
                   autoRotate={false}
+                  allowFreeNavigation
                   showNamedMarkers
                   cameraMarkerOverrides={ROOM_CAMERA_SLOT_OVERRIDES}
                   showResetViewButton
