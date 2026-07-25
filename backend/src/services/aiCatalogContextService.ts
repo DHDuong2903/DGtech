@@ -1,11 +1,22 @@
 import { Op } from "sequelize";
-import { Category, Product, ProductVariant } from "../models/associationsModel.js";
+import {
+  Bundle,
+  BundleItem,
+  Category,
+  DiscountCampaign,
+  Product,
+  ProductVariant,
+} from "../models/associationsModel.js";
 import { cacheGetJson, cacheSetJson } from "../libs/cache.js";
 import {
   getStorefrontUserTier,
   resolveVariantPricingBatch,
   type VariantPricingContext,
 } from "./discountCampaignResolveService.js";
+import {
+  discountedTotalFromOrigin,
+  originTotalFromBundleItems,
+} from "./bundlePricingService.js";
 import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
 
 type CatalogVariantRow = {
@@ -52,6 +63,7 @@ type CatalogCategoryRow = {
 export type CatalogContextResult = {
   shouldUseCatalogContext: boolean;
   isVariantIntent: boolean;
+  isPromotionIntent: boolean;
   searchTerms: string[];
   matchedProducts: CatalogProductRow[];
   matchedCategories: CatalogCategoryRow[];
@@ -61,6 +73,16 @@ export type CatalogContextResult = {
 type BuildCatalogContextOptions = {
   recentUserMessages?: string[];
   userId?: string | null;
+  forcePromotionProducts?: boolean;
+};
+
+type AiBundleSummary = {
+  bundleId: string;
+  name: string;
+  discountLabel: string;
+  originTotal: number;
+  discountedTotal: number;
+  productNames: string[];
 };
 
 const AI_CATALOG_SUMMARY_CACHE_KEY = "ai-catalog:summary:v1";
@@ -68,6 +90,7 @@ const AI_CATALOG_SUMMARY_STALE_CACHE_KEY = "ai-catalog:summary:stale:v1";
 const AI_CATALOG_SUMMARY_CACHE_TTL_MS = 2 * 60 * 1000;
 const AI_CATALOG_SUMMARY_STALE_TTL_MS = 15 * 60 * 1000;
 const AI_CATALOG_FALLBACK_FEATURED_LIMIT = 6;
+const AI_PROMOTION_PRODUCTS_LIMIT = 10;
 
 const CATALOG_HINT_PATTERNS = [
   /\bsan pham\b/i,
@@ -83,6 +106,28 @@ const CATALOG_HINT_PATTERNS = [
   /\bmua\b/i,
   /\bban\b/i,
   /\bhang\b/i,
+  /\bgiam gia\b/i,
+  /\bkhuyen mai\b/i,
+  /\buu dai\b/i,
+  /\bsale\b/i,
+  /\bbundle\b/i,
+  /\bcombo\b/i,
+];
+
+const PROMOTION_PRODUCT_HINT_PATTERNS = [
+  /\bsan pham.{0,40}(giam gia|khuyen mai|uu dai|sale|discount|campaign)\b/i,
+  /\b(giam gia|khuyen mai|uu dai|sale|discount).{0,40}(san pham|hang|noi bat|hot)\b/i,
+  /\bhang giam\b/i,
+  /\bdang giam\b/i,
+  /\bdang sale\b/i,
+  /\bflash.?sale\b/i,
+  /\bdeal\b/i,
+  /\bbundle\b/i,
+  /\bcombo\b/i,
+  /\bgiam gia noi bat\b/i,
+  /\buu dai noi bat\b/i,
+  /\bsan pham sale\b/i,
+  /\bsan pham khuyen mai\b/i,
 ];
 
 const VARIANT_HINT_PATTERNS = [
@@ -188,9 +233,41 @@ function looksLikeCatalogQuery(message: string, searchTerms: string[]) {
   return searchTerms.length > 0;
 }
 
+export function looksLikePromotionProductQuery(message: string) {
+  const normalizedMessage = normalizeText(message);
+  return PROMOTION_PRODUCT_HINT_PATTERNS.some((pattern) => pattern.test(normalizedMessage));
+}
+
 function looksLikeVariantQuery(message: string) {
   const normalizedMessage = normalizeText(message);
   return VARIANT_HINT_PATTERNS.some((pattern) => pattern.test(normalizedMessage));
+}
+
+function isDiscountedProduct(product: CatalogProductRow) {
+  const compareAt = toFiniteNumber(product.compareAtPrice);
+  const salePrice = toFiniteNumber(product.price);
+  if (compareAt !== null && salePrice !== null && compareAt > salePrice) return true;
+  return Array.isArray(product.appliedCampaigns) && product.appliedCampaigns.length > 0;
+}
+
+function sortPromotionProducts(products: CatalogProductRow[]) {
+  return [...products].sort((left, right) => {
+    const leftDiscounted = isDiscountedProduct(left) ? 1 : 0;
+    const rightDiscounted = isDiscountedProduct(right) ? 1 : 0;
+    if (rightDiscounted !== leftDiscounted) return rightDiscounted - leftDiscounted;
+
+    const leftCompare = toFiniteNumber(left.compareAtPrice);
+    const leftPrice = toFiniteNumber(left.price);
+    const rightCompare = toFiniteNumber(right.compareAtPrice);
+    const rightPrice = toFiniteNumber(right.price);
+    const leftSave =
+      leftCompare !== null && leftPrice !== null && leftCompare > leftPrice ? leftCompare - leftPrice : 0;
+    const rightSave =
+      rightCompare !== null && rightPrice !== null && rightCompare > rightPrice ? rightCompare - rightPrice : 0;
+    if (rightSave !== leftSave) return rightSave - leftSave;
+
+    return Number(right.stock || 0) - Number(left.stock || 0);
+  });
 }
 
 function buildDescriptionPreview(description?: string | null) {
@@ -544,7 +621,13 @@ function buildCatalogContextText(
   isVariantIntent: boolean,
   allCategories?: CatalogCategoryRow[],
   featuredProducts?: CatalogProductRow[],
+  options?: {
+    isPromotionIntent?: boolean;
+    bundles?: AiBundleSummary[];
+  },
 ) {
+  const isPromotionIntent = Boolean(options?.isPromotionIntent);
+  const bundles = Array.isArray(options?.bundles) ? options!.bundles! : [];
   const productLines =
     matchedProducts.length > 0
       ? matchedProducts.map((product, index) => buildProductSummaryLine(product, index))
@@ -565,14 +648,20 @@ function buildCatalogContextText(
     ? featuredProducts.map((product, index) => buildProductSummaryLine(product, index))
     : [];
 
-  const focusedProducts = isVariantIntent ? matchedProducts.slice(0, 3) : matchedProducts.slice(0, 1);
+  const focusedProducts = isPromotionIntent
+    ? []
+    : isVariantIntent
+      ? matchedProducts.slice(0, 3)
+      : matchedProducts.slice(0, 1);
   const variantBlocks =
     focusedProducts.length > 0
       ? focusedProducts.flatMap((product, index) => [
           `San pham can tap trung ${index + 1}: ${product.name}`,
           ...buildVariantLines(product),
         ])
-      : ["Khong co product focus nao de liet ke variant."];
+      : isPromotionIntent
+        ? ["Bo qua chi tiet bien the vi cau hoi dang can danh sach san pham giam gia."]
+        : ["Khong co product focus nao de liet ke variant."];
 
   const contextLines: string[] = [
     "Thong tin catalog hien tai cua website:",
@@ -580,10 +669,11 @@ function buildCatalogContextText(
     `- So luong danh muc: ${totalCategories}`,
     `- Tu khoa AI dang doi chieu: ${searchTerms.length > 0 ? searchTerms.join(", ") : "khong co"}`,
     `- Cau hoi co can phan biet phien ban chi tiet khong: ${isVariantIntent ? "Co" : "Khong"}`,
+    `- Cau hoi dang tim san pham giam gia/campaign/bundle: ${isPromotionIntent ? "Co" : "Khong"}`,
   ];
 
-  // Add all categories section if provided
-  if (allCategoriesLines.length > 0) {
+  // Add all categories section if provided (skip for promotion lists to keep room for products)
+  if (!isPromotionIntent && allCategoriesLines.length > 0) {
     contextLines.push(
       "",
       "Tat ca danh muc:",
@@ -600,7 +690,13 @@ function buildCatalogContextText(
     );
   }
 
-  if (featuredProductsLines.length > 0 && matchedProducts.length === 0) {
+  if (isPromotionIntent && matchedProducts.length > 0) {
+    contextLines.push(
+      "",
+      "San pham dang giam gia / thuoc campaign (uu tien liet ke cho user):",
+      ...productLines,
+    );
+  } else if (featuredProductsLines.length > 0 && matchedProducts.length === 0) {
     contextLines.push(
       "",
       "San pham goi y de tham khao:",
@@ -614,13 +710,37 @@ function buildCatalogContextText(
     );
   }
 
+  if (bundles.length > 0) {
+    contextLines.push(
+      "",
+      "Bundle/combo dang bat:",
+      ...bundles.map((bundle, index) => {
+        const productsLabel = bundle.productNames.length > 0 ? bundle.productNames.join(", ") : "Khong ro";
+        return [
+          `${index + 1}. ${bundle.name}`,
+          `- Muc giam: ${bundle.discountLabel}`,
+          `- Gia goc goi: ${formatPrice(bundle.originTotal)}`,
+          `- Gia bundle: ${formatPrice(bundle.discountedTotal)}`,
+          `- San pham trong bundle: ${productsLabel}`,
+        ].join("\n");
+      }),
+    );
+  }
+
+  if (!isPromotionIntent) {
+    contextLines.push(
+      "",
+      "Chi tiet phien ban can uu tien doc:",
+      ...variantBlocks,
+    );
+  }
+
   contextLines.push(
     "",
-    "Chi tiet phien ban can uu tien doc:",
-    ...variantBlocks,
-    "",
     "Quy tac tra loi:",
-    "- Chi duoc khang dinh shop co san pham neu no xuat hien trong phan san pham lien quan hoac san pham goi y.",
+    "- Chi duoc khang dinh shop co san pham neu no xuat hien trong phan san pham lien quan, san pham dang giam gia, bundle/combo, hoac san pham goi y.",
+    "- Khi user hoi san pham giam gia/noi bat/sale/bundle, uu tien liet ke cac muc trong 'San pham dang giam gia' va 'Bundle/combo dang bat' voi ten + gia.",
+    "- Khi liet ke san pham giam gia, hay liet ke day du cac muc co trong context (toi da ~8-10), khong dung o 1-2 san pham neu con nhieu hon.",
     "- Khi user hoi loai, mau, kich thuoc, phien ban hoac thuoc tinh, phai uu tien doc phan chi tiet phien ban can uu tien doc.",
     "- Neu san pham co nhieu phien ban, hay tra loi theo tung phien ban ve thuoc tinh, gia va tinh trang con hang/hết hang thay vi noi chung chung.",
     "- Khi co gia goc lon hon gia hien tai, hay hieu do la san pham dang co gia uu dai tren storefront.",
@@ -683,23 +803,207 @@ function mergeSearchTerms(primaryTerms: string[], fallbackTerms: string[]) {
   return Array.from(merged.values()).slice(0, 10);
 }
 
+async function loadActiveBundlesForAi(limit = 5): Promise<AiBundleSummary[]> {
+  try {
+    const rows = await withDbRetry(
+      () =>
+        Bundle.findAll({
+          where: { isEnabled: true },
+          include: [
+            {
+              model: BundleItem,
+              as: "items",
+              attributes: ["variantId", "quantity"],
+              include: [
+                {
+                  model: ProductVariant,
+                  as: "variant",
+                  attributes: ["variantId", "price", "productId"],
+                  include: [
+                    {
+                      model: Product,
+                      as: "product",
+                      attributes: ["productId", "name", "status"],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          order: [["updatedAt", "DESC"]],
+          limit,
+        }),
+      { label: "aiCatalog.activeBundles" },
+    );
+
+    return rows
+      .map((row: any) => {
+        const plain = row.get({ plain: true }) as any;
+        const items = Array.isArray(plain.items) ? plain.items : [];
+        const originTotal = originTotalFromBundleItems(items);
+        const discountedTotal = discountedTotalFromOrigin(originTotal, plain.discountKind, plain.discountValue);
+        const discountLabel =
+          String(plain.discountKind || "").toUpperCase() === "PERCENT"
+            ? `Giam ${plain.discountValue}%`
+            : `Giam ${formatPrice(plain.discountValue)}`;
+        const productNames: string[] = [];
+        const seenNames = new Set<string>();
+        for (const item of items) {
+          const name = String((item as any)?.variant?.product?.name || "").trim();
+          if (!name || seenNames.has(name)) continue;
+          seenNames.add(name);
+          productNames.push(name);
+          if (productNames.length >= 4) break;
+        }
+
+        return {
+          bundleId: String(plain.bundleId),
+          name: String(plain.name || "Bundle"),
+          discountLabel,
+          originTotal: Number(originTotal) || 0,
+          discountedTotal: Number(discountedTotal) || 0,
+          productNames,
+        } satisfies AiBundleSummary;
+      })
+      .filter((bundle: AiBundleSummary) => bundle.originTotal > 0);
+  } catch (error) {
+    console.warn("loadActiveBundlesForAi failed:", error instanceof Error ? error.message : error);
+    return [];
+  }
+}
+
+async function loadPromotionFeaturedProducts(userId?: string | null, limit = AI_PROMOTION_PRODUCTS_LIMIT) {
+  const now = new Date();
+  const activeCampaigns = await withDbRetry(
+    () =>
+      DiscountCampaign.findAll({
+        where: {
+          startsAt: { [Op.lte]: now },
+          endsAt: { [Op.gte]: now },
+          isEnabled: true,
+        },
+        include: [
+          { model: Product, as: "products", attributes: ["productId"], through: { attributes: [] } },
+          { model: Category, as: "categories", attributes: ["categoryId"], through: { attributes: [] } },
+        ],
+        order: [["priority", "ASC"], ["createdAt", "DESC"]],
+        limit: 10,
+      }),
+    { label: "aiCatalog.activeCampaignsForPromotion" },
+  );
+
+  const productIds = new Set<string>();
+  const categoryIds = new Set<number>();
+  let hasShopWideCampaign = false;
+
+  for (const row of activeCampaigns) {
+    const campaign = row.get({ plain: true }) as any;
+    if (campaign.appliesToAllProducts) {
+      hasShopWideCampaign = true;
+      continue;
+    }
+    for (const product of Array.isArray(campaign.products) ? campaign.products : []) {
+      if (product?.productId) productIds.add(String(product.productId));
+    }
+    for (const category of Array.isArray(campaign.categories) ? campaign.categories : []) {
+      const categoryId = Number(category?.categoryId);
+      if (Number.isFinite(categoryId)) categoryIds.add(categoryId);
+    }
+  }
+
+  const productMap = new Map<string, CatalogProductRow>();
+
+  if (productIds.size > 0) {
+    const scopedProducts = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: {
+            status: "ACTIVE",
+            productId: { [Op.in]: Array.from(productIds) },
+          },
+          include: productInclude,
+          order: [["stock", "DESC"], ["updatedAt", "DESC"]],
+          limit,
+        }),
+      { label: "aiCatalog.campaignScopedProducts" },
+    );
+    for (const row of scopedProducts) {
+      const plain = row.get({ plain: true }) as CatalogProductRow;
+      productMap.set(plain.productId, plain);
+    }
+  }
+
+  if (categoryIds.size > 0 && productMap.size < limit) {
+    const categoryProducts = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: {
+            status: "ACTIVE",
+            categoryId: { [Op.in]: Array.from(categoryIds) },
+          },
+          include: productInclude,
+          order: [["stock", "DESC"], ["updatedAt", "DESC"]],
+          limit: Math.max(1, limit - productMap.size),
+        }),
+      { label: "aiCatalog.campaignCategoryProducts" },
+    );
+    for (const row of categoryProducts) {
+      const plain = row.get({ plain: true }) as CatalogProductRow;
+      productMap.set(plain.productId, plain);
+    }
+  }
+
+  if ((hasShopWideCampaign || productMap.size < 3) && productMap.size < limit) {
+    const fillerProducts = await withDbRetry(
+      () =>
+        Product.findAll({
+          where: { status: "ACTIVE" },
+          include: productInclude,
+          order: [["stock", "DESC"], ["updatedAt", "DESC"]],
+          limit: Math.max(limit, 12),
+        }),
+      { label: "aiCatalog.promotionFillerProducts" },
+    );
+    for (const row of fillerProducts) {
+      const plain = row.get({ plain: true }) as CatalogProductRow;
+      productMap.set(plain.productId, plain);
+      if (productMap.size >= Math.max(limit, 12)) break;
+    }
+  }
+
+  const candidates = Array.from(productMap.values()).map((product) => ({
+    ...product,
+    variants: Array.isArray(product.variants) ? product.variants.map((variant) => ({ ...variant })) : [],
+  }));
+  await applyDiscountContextToProducts(candidates, userId);
+
+  const discounted = sortPromotionProducts(candidates.filter((product) => isDiscountedProduct(product)));
+  if (discounted.length > 0) {
+    return discounted.slice(0, limit);
+  }
+
+  return sortPromotionProducts(candidates).slice(0, limit);
+}
+
 export async function buildCatalogContext(
   message: string,
   options?: BuildCatalogContextOptions,
 ): Promise<CatalogContextResult> {
   const primarySearchTerms = extractSearchTerms(message);
   const isVariantIntent = looksLikeVariantQuery(message);
+  const isPromotionIntent = Boolean(options?.forcePromotionProducts) || looksLikePromotionProductQuery(message);
   const shouldBorrowHistoryTerms = isVariantIntent || primarySearchTerms.length <= 2;
   const fallbackSearchTerms = shouldBorrowHistoryTerms
     ? (options?.recentUserMessages || []).flatMap((item) => extractSearchTerms(item))
     : [];
   const searchTerms = mergeSearchTerms(primarySearchTerms, fallbackSearchTerms);
-  const shouldUseCatalogContext = looksLikeCatalogQuery(message, searchTerms);
+  const shouldUseCatalogContext = isPromotionIntent || looksLikeCatalogQuery(message, searchTerms);
 
   if (!shouldUseCatalogContext) {
     return {
       shouldUseCatalogContext,
       isVariantIntent,
+      isPromotionIntent,
       searchTerms,
       matchedProducts: [],
       matchedCategories: [],
@@ -712,6 +1016,33 @@ export async function buildCatalogContext(
   const totalCategories = summary.totalCategories;
   const allCategories = summary.allCategories;
 
+  if (isPromotionIntent) {
+    const [promotionProducts, bundles] = await Promise.all([
+      loadPromotionFeaturedProducts(options?.userId, AI_PROMOTION_PRODUCTS_LIMIT),
+      loadActiveBundlesForAi(5),
+    ]);
+
+    return {
+      shouldUseCatalogContext: true,
+      isVariantIntent,
+      isPromotionIntent: true,
+      searchTerms,
+      matchedProducts: promotionProducts,
+      matchedCategories: allCategories.slice(0, 5),
+      contextText: buildCatalogContextText(
+        searchTerms,
+        promotionProducts,
+        allCategories.slice(0, 5),
+        totalActiveProducts,
+        totalCategories,
+        isVariantIntent,
+        allCategories,
+        undefined,
+        { isPromotionIntent: true, bundles },
+      ),
+    };
+  }
+
   if (searchTerms.length === 0) {
     const featuredProducts = summary.fallbackFeaturedProducts.map((row) => ({
       ...row,
@@ -721,6 +1052,7 @@ export async function buildCatalogContext(
     return {
       shouldUseCatalogContext,
       isVariantIntent,
+      isPromotionIntent,
       searchTerms,
       matchedProducts: featuredProducts.slice(0, 5),
       matchedCategories: allCategories.slice(0, 5),
@@ -733,6 +1065,7 @@ export async function buildCatalogContext(
         isVariantIntent,
         allCategories,
         featuredProducts.slice(0, 5),
+        { isPromotionIntent },
       ),
     };
   }
@@ -799,6 +1132,7 @@ export async function buildCatalogContext(
   return {
     shouldUseCatalogContext,
     isVariantIntent,
+    isPromotionIntent,
     searchTerms,
     matchedProducts,
     matchedCategories,
@@ -811,6 +1145,7 @@ export async function buildCatalogContext(
       isVariantIntent,
       allCategories,
       featuredProducts,
+      { isPromotionIntent },
     ),
   };
 }

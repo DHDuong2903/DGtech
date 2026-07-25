@@ -4,7 +4,7 @@ import { User, UserVoucherRedemption, Voucher } from "../models/associationsMode
 import { buildShippingQuoteForProvince, normalizeShippingMethodCode } from "./shippingService.js";
 
 const USER_TIERS = new Set(["bronze", "silver", "gold"]);
-const VOUCHER_TYPES = new Set(["PERCENT_DISCOUNT", "FIXED_DISCOUNT", "FREE_SHIPPING", "BONUS_POINTS"]);
+const VOUCHER_TYPES = new Set(["PERCENT_DISCOUNT", "FIXED_DISCOUNT", "FREE_SHIPPING"]);
 
 function roundMoney(n: number) {
   return Math.round(Number(n) * 100) / 100;

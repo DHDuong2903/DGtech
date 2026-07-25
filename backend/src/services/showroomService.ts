@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { randomUUID } from "crypto";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Op } from "sequelize";
 import { sequelize } from "../libs/db.js";
-import { Category } from "../models/associationsModel.js";
+import { Category, ProductVariant } from "../models/associationsModel.js";
 import { Room } from "../models/roomModel.js";
 import { destroyCloudinaryAsset, uploadShowroomRoomBuffer } from "../helpers/uploadProductMedia.js";
 
@@ -63,7 +63,7 @@ function normalizeSlotRow(row: any) {
   };
 }
 
-function normalizeEligibleProduct(row: any) {
+function normalizeEligibleProduct(row: any, variants: any[] = []) {
   return {
     productId: row.productId,
     name: row.name,
@@ -82,6 +82,20 @@ function normalizeEligibleProduct(row: any) {
     stock: Number(row.stock || 0),
     status: row.status,
     showroomEligible: true,
+    variants: variants.map((variant) => ({
+      variantId: variant.variantId,
+      productId: variant.productId,
+      sku: variant.sku ?? null,
+      attributes:
+        variant.attributes && typeof variant.attributes === "object" && !Array.isArray(variant.attributes)
+          ? variant.attributes
+          : {},
+      isDefault: Boolean(variant.isDefault),
+      isActive: variant.isActive !== false,
+      price: Number(variant.price || 0),
+      compareAtPrice: variant.compareAtPrice == null ? null : Number(variant.compareAtPrice),
+      stock: Number(variant.stock || 0),
+    })),
   };
 }
 
@@ -90,12 +104,17 @@ function normalizeSavedSetupRow(row: any) {
     row?.selectedBySlot && typeof row.selectedBySlot === "object" && !Array.isArray(row.selectedBySlot)
       ? row.selectedBySlot
       : {};
+  const colorByProductId =
+    row?.colorByProductId && typeof row.colorByProductId === "object" && !Array.isArray(row.colorByProductId)
+      ? row.colorByProductId
+      : {};
 
   return {
     setupId: row.setupId,
     sceneId: row.sceneId,
     clerkId: row.clerkId,
     selectedBySlot,
+    colorByProductId,
     updatedAt: row.updatedAt,
   };
 }
@@ -137,6 +156,73 @@ function normalizeSelectedBySlotPayload(value: unknown) {
     normalized[normalizedSlotId] = normalizedProductId;
   }
   return normalized;
+}
+
+function normalizeColorByProductIdPayload(value: unknown) {
+  const raw =
+    typeof value === "string" && value.trim().length > 0
+      ? (() => {
+          try {
+            return JSON.parse(value);
+          } catch {
+            throw Object.assign(new Error("Invalid colorByProductId payload"), { status: 400 });
+          }
+        })()
+      : value;
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+
+  const normalized: Record<string, string> = {};
+  for (const [productId, colorLabel] of Object.entries(raw as Record<string, unknown>)) {
+    const normalizedProductId = String(productId ?? "").trim();
+    const normalizedColor = String(colorLabel ?? "").trim();
+    if (!normalizedProductId || !normalizedColor) continue;
+    normalized[normalizedProductId] = normalizedColor;
+  }
+  return normalized;
+}
+
+function getVariantColorLabel(attributes: unknown) {
+  if (!attributes || typeof attributes !== "object" || Array.isArray(attributes)) return null;
+  const entry = Object.entries(attributes as Record<string, unknown>).find(([key]) => {
+    const normalized = String(key || "")
+      .trim()
+      .toLowerCase();
+    return normalized === "color" || normalized === "colour";
+  });
+  const value = entry?.[1];
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function sanitizeColorByProductId(
+  colorByProductId: Record<string, string>,
+  selectedBySlot: Record<string, string>,
+  eligibleProducts: any[],
+) {
+  const placedProductIds = new Set(Object.values(selectedBySlot || {}));
+  const productsById = new Map(eligibleProducts.map((product) => [product.productId, product]));
+  const sanitized: Record<string, string> = {};
+
+  for (const [productId, colorLabel] of Object.entries(colorByProductId || {})) {
+    if (!placedProductIds.has(productId)) continue;
+    const product = productsById.get(productId);
+    if (!product) continue;
+
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const allowedColors = new Set(
+      variants
+        .map((variant: any) => getVariantColorLabel(variant?.attributes))
+        .filter((label: string | null): label is string => Boolean(label)),
+    );
+    if (!allowedColors.has(colorLabel)) continue;
+    sanitized[productId] = colorLabel;
+  }
+
+  return sanitized;
 }
 
 function normalizeCategoryId(value: unknown) {
@@ -778,7 +864,46 @@ async function loadEligibleProductsForScene(sceneId: string) {
     },
   );
 
-  return (rows as any[]).map(normalizeEligibleProduct);
+  const productRows = rows as any[];
+  const productIds = productRows.map((row) => row.productId).filter(Boolean);
+  const variantRows =
+    productIds.length > 0
+      ? await ProductVariant.findAll({
+          where: {
+            productId: { [Op.in]: productIds },
+            isActive: true,
+          },
+          attributes: [
+            "variantId",
+            "productId",
+            "sku",
+            "attributes",
+            "isDefault",
+            "isActive",
+            "price",
+            "compareAtPrice",
+            "stock",
+          ],
+          order: [
+            ["isDefault", "DESC"],
+            ["createdAt", "ASC"],
+          ],
+        })
+      : [];
+
+  const variantsByProductId = new Map<string, any[]>();
+  for (const row of variantRows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const productId = String(plain.productId || "");
+    if (!productId) continue;
+    const list = variantsByProductId.get(productId) || [];
+    list.push(plain);
+    variantsByProductId.set(productId, list);
+  }
+
+  return productRows.map((row) =>
+    normalizeEligibleProduct(row, variantsByProductId.get(String(row.productId)) || []),
+  );
 }
 
 async function loadSavedSetupForScene(clerkId: string, sceneId: string) {
@@ -789,6 +914,7 @@ async function loadSavedSetupForScene(clerkId: string, sceneId: string) {
         "sceneId",
         "clerkId",
         "selectedBySlot",
+        "colorByProductId",
         "updatedAt"
       FROM "showroom_saved_setups"
       WHERE "clerkId" = :clerkId
@@ -855,6 +981,11 @@ export async function getGoldShowroomSceneByKey(sceneKey: string, clerkId?: stri
   ]);
 
   const sanitizedSavedSelection = sanitizeSelectedBySlot(savedSetup?.selectedBySlot ?? {}, slots, eligibleProducts);
+  const sanitizedSavedColors = sanitizeColorByProductId(
+    savedSetup?.colorByProductId ?? {},
+    sanitizedSavedSelection,
+    eligibleProducts,
+  );
 
   return {
     message: "Showroom scene retrieved successfully",
@@ -865,6 +996,7 @@ export async function getGoldShowroomSceneByKey(sceneKey: string, clerkId?: stri
       ? {
           ...savedSetup,
           selectedBySlot: sanitizedSavedSelection,
+          colorByProductId: sanitizedSavedColors,
         }
       : null,
   };
@@ -893,6 +1025,11 @@ export async function saveGoldShowroomSceneSetup(
     slots,
     eligibleProducts,
   );
+  const colorByProductId = sanitizeColorByProductId(
+    normalizeColorByProductIdPayload(body.colorByProductId),
+    selectedBySlot,
+    eligibleProducts,
+  );
 
   if (existingSetup) {
     await sequelize.query(
@@ -900,6 +1037,7 @@ export async function saveGoldShowroomSceneSetup(
         UPDATE "showroom_saved_setups"
         SET
           "selectedBySlot" = CAST(:selectedBySlot AS jsonb),
+          "colorByProductId" = CAST(:colorByProductId AS jsonb),
           "updatedAt" = NOW()
         WHERE "setupId" = :setupId
       `,
@@ -907,6 +1045,7 @@ export async function saveGoldShowroomSceneSetup(
         replacements: {
           setupId: existingSetup.setupId,
           selectedBySlot: JSON.stringify(selectedBySlot),
+          colorByProductId: JSON.stringify(colorByProductId),
         },
         type: QueryTypes.UPDATE,
       },
@@ -919,6 +1058,7 @@ export async function saveGoldShowroomSceneSetup(
           "clerkId",
           "sceneId",
           "selectedBySlot",
+          "colorByProductId",
           "createdAt",
           "updatedAt"
         )
@@ -927,6 +1067,7 @@ export async function saveGoldShowroomSceneSetup(
           :clerkId,
           :sceneId,
           CAST(:selectedBySlot AS jsonb),
+          CAST(:colorByProductId AS jsonb),
           NOW(),
           NOW()
         )
@@ -937,6 +1078,7 @@ export async function saveGoldShowroomSceneSetup(
           clerkId,
           sceneId: scene.sceneId,
           selectedBySlot: JSON.stringify(selectedBySlot),
+          colorByProductId: JSON.stringify(colorByProductId),
         },
         type: QueryTypes.INSERT,
       },
@@ -950,6 +1092,7 @@ export async function saveGoldShowroomSceneSetup(
       ? {
           ...savedSetup,
           selectedBySlot,
+          colorByProductId,
         }
       : null,
   };

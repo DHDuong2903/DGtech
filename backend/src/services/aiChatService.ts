@@ -121,6 +121,7 @@ function buildProductLinks(catalogContext: Awaited<ReturnType<typeof buildCatalo
     return [];
   }
 
+  const linkLimit = catalogContext.isPromotionIntent ? 8 : 5;
   const seenProductIds = new Set<string>();
   return catalogContext.matchedProducts
     .filter((product) => product.productId && product.name)
@@ -129,7 +130,7 @@ function buildProductLinks(catalogContext: Awaited<ReturnType<typeof buildCatalo
       seenProductIds.add(product.productId);
       return true;
     })
-    .slice(0, 5)
+    .slice(0, linkLimit)
     .map((product) => ({
       productId: product.productId,
       name: product.name,
@@ -182,12 +183,18 @@ export async function generateChatReply(
     },
   );
 
+  const forcePromotionProducts = websiteKnowledgeContext.intent === "promotion_products";
   const catalogContext = await buildCatalogContext(normalizedMessage, {
     recentUserMessages,
     userId: options?.userId,
+    forcePromotionProducts,
   });
 
-  const shouldSuppressCatalogContext = POLICY_ONLY_INTENTS.has(websiteKnowledgeContext.intent);
+  // Keep catalog for promotion product discovery; only suppress for pure policy intents.
+  const shouldSuppressCatalogContext =
+    POLICY_ONLY_INTENTS.has(websiteKnowledgeContext.intent) &&
+    !forcePromotionProducts &&
+    !catalogContext.isPromotionIntent;
 
   const effectiveCatalogContext = shouldSuppressCatalogContext
     ? {
@@ -242,6 +249,9 @@ export async function generateChatReply(
     effectiveCatalogContext.shouldUseCatalogContext
       ? "When website catalog context is provided, treat it as the source of truth for product availability, pricing, and categories."
       : "No website catalog context was provided for this question, so avoid claiming exact product availability unless the user already gave that information.",
+    effectiveCatalogContext.isPromotionIntent
+      ? "When the user asks about discounted, featured sale, campaign, or bundle products, list concrete items from catalog context with current price and campaign/bundle name. List as many discounted products as provided in context (up to 8), not just the first 1-2. Do not answer vaguely with only 'check the shop' if products or bundles are present in context."
+      : null,
     effectiveCatalogContext.isVariantIntent
       ? "If the question asks about variants, types, colors, sizes, or attributes, answer from Focused product variants first and enumerate the concrete variants you see there."
       : "If Focused product variants are present, use them when they materially improve product-detail accuracy.",
@@ -251,7 +261,7 @@ export async function generateChatReply(
     options?.userId
       ? "Authenticated user context may be present. If so, you may use it to answer about the current signed-in user's own rank or recent orders."
       : "No authenticated user context is available in this request, so do not claim to know the user's private rank or order history.",
-  ];
+  ].filter((item): item is string => typeof item === "string" && item.length > 0);
   const contextParts = [
     structuredContext.contextText,
     policyStructuredContext.contextText,
@@ -285,6 +295,7 @@ export async function generateChatReply(
   ];
 
   console.log("[AI Chat] Step 5/6: Sending request to Gemini API");
+  const maxOutputTokens = effectiveCatalogContext.isPromotionIntent ? 1400 : 768;
   const response = await fetch(`${GEMINI_API_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: "POST",
     headers: {
@@ -301,7 +312,7 @@ export async function generateChatReply(
       contents,
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 768,
+        maxOutputTokens,
       },
     }),
   });

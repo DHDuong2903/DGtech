@@ -60,6 +60,18 @@
     ]
   },
   {
+    "id": "promotion-products-001",
+    "category": "promotion_products",
+    "description": "Hoi san pham giam gia noi bat / campaign",
+    "turns": [
+      {
+        "message": "cac san pham giam gia noi bat",
+        "expectedAny": ["giam", "gia", "VND", "san pham", "uu dai", "khuyen mai", "bundle"],
+        "disallowed": ["productId", "variantId", "database", "schema"]
+      }
+    ]
+  },
+  {
     "id": "voucher-policy-001",
     "category": "promotion_policy",
     "description": "Hoi voucher hien tai",

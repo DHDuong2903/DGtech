@@ -22,6 +22,7 @@ export type AiIntent =
   | "shipping_policy"
   | "payment_policy"
   | "voucher_policy"
+  | "promotion_products"
   | "order_support"
   | "store_capability"
   | "general_support";
@@ -83,16 +84,36 @@ const INTENT_RULES: Array<{ intent: AiIntent; patterns: RegExp[] }> = [
     ],
   },
   {
+    intent: "promotion_products",
+    patterns: [
+      /\bsan pham.{0,40}(giam gia|khuyen mai|uu dai|sale|discount|campaign)\b/i,
+      /\b(giam gia|khuyen mai|uu dai|sale|discount).{0,40}(san pham|hang|noi bat|hot)\b/i,
+      /\bhang giam\b/i,
+      /\bdang giam\b/i,
+      /\bdang sale\b/i,
+      /\bflash.?sale\b/i,
+      /\bdeal\b/i,
+      /\bbundle\b/i,
+      /\bcombo\b/i,
+      /\bgiam gia noi bat\b/i,
+      /\buu dai noi bat\b/i,
+      /\bsan pham sale\b/i,
+      /\bsan pham khuyen mai\b/i,
+    ],
+  },
+  {
     intent: "voucher_policy",
     patterns: [
       /\bvoucher\b/i,
       /\bma giam gia\b/i,
+      /\bma uu dai\b/i,
+      /\bcach dung voucher\b/i,
+      /\bdieu kien voucher\b/i,
       /\bkhuyen mai\b/i,
       /\buu dai\b/i,
       /\bgiam gia\b/i,
       /\bdiscount\b/i,
       /\bcampaign\b/i,
-      /\bbundle\b/i,
     ],
   },
   {
@@ -235,6 +256,15 @@ export function detectAiIntent(message: string, options?: BuildWebsiteKnowledgeC
   for (const historyMessage of recentMessages.slice(-3)) {
     for (const rule of INTENT_RULES) {
       scores.set(rule.intent, (scores.get(rule.intent) || 0) + scoreIntent(rule.intent, historyMessage) * 0.35);
+    }
+  }
+
+  // Prefer product-on-sale discovery over generic voucher/policy intent.
+  const promotionScore = Number(scores.get("promotion_products") || 0);
+  if (promotionScore > 0) {
+    const voucherScore = Number(scores.get("voucher_policy") || 0);
+    if (promotionScore >= voucherScore * 0.5) {
+      scores.set("promotion_products", promotionScore + 2);
     }
   }
 
@@ -615,6 +645,10 @@ function buildResponseRules(intent: AiIntent, isAdminQuestion?: boolean) {
     baseRules.push("- Khi hoi da thanh toan chua, khong duoc xac nhan neu khong co payment record cu the.");
   } else if (intent === "voucher_policy") {
     baseRules.push("- Khong duoc hua co voucher phu hop cho moi user; eligibility con phu thuoc tier, usage va expiry.");
+  } else if (intent === "promotion_products") {
+    baseRules.push("- Khi user hoi san pham giam gia/noi bat/bundle, uu tien liet ke san pham cu the tu catalog context (ten, gia, chuong trinh).");
+    baseRules.push("- Neu context co san pham dang giam gia hoac bundle, phai neu ro tung muc thay vi chi bao 'xem tren shop'.");
+    baseRules.push("- Co the nhac ten chuong trinh khuyen mai/bundle dang ap dung bang ngon ngu tu van.");
   } else if (intent === "order_support") {
     baseRules.push("- Neu user muon biet don cu the, hay yeu cau ma don hang va noi rang can endpoint tra cuu/xac thuc phu hop.");
   }
@@ -658,7 +692,7 @@ export async function buildWebsiteKnowledgeContext(
     sourceTypes.push("payment_rules", "tax_settings");
   }
 
-  if (intent === "voucher_policy" || intent === "general_support") {
+  if (intent === "voucher_policy" || intent === "promotion_products" || intent === "general_support") {
     blocks.push("", ...(await buildVoucherBlock()), "", ...(await buildDiscountCampaignsBlock()));
     sourceTypes.push("voucher_rules", "discount_campaigns");
   }
