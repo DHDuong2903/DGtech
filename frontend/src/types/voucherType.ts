@@ -1,4 +1,4 @@
-export type VoucherType = "PERCENT_DISCOUNT" | "FIXED_DISCOUNT" | "FREE_SHIPPING" | "BONUS_POINTS";
+export type VoucherType = "PERCENT_DISCOUNT" | "FIXED_DISCOUNT" | "FREE_SHIPPING";
 export type VoucherAudience = "ALL_USERS" | "TIER_USERS";
 export type VoucherTierOption = "bronze" | "silver" | "gold";
 

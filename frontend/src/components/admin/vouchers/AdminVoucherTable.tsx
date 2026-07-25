@@ -19,7 +19,7 @@ function typeLabel(v: Voucher) {
   if (v.voucherType === "PERCENT_DISCOUNT") return `${v.discountPercent}% off`;
   if (v.voucherType === "FIXED_DISCOUNT") return `${v.discountAmount.toFixed(2)} off`;
   if (v.voucherType === "FREE_SHIPPING") return "Free shipping";
-  return "Bonus points";
+  return String(v.voucherType || "Other");
 }
 
 export function createAdminVoucherColumns(handlers: {

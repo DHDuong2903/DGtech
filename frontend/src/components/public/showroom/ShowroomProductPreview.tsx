@@ -6,9 +6,10 @@ import { Bounds, OrbitControls, useGLTF } from "@react-three/drei";
 import { Cuboid } from "lucide-react";
 import { Mesh, Object3D } from "three";
 import { cn } from "@/src/lib/utils";
+import { applyVariantColorTintToScene } from "@/src/lib/colorVariantTint";
 import { ModelLoadBoundary } from "@/src/components/shared/ModelLoadBoundary";
 
-function ProductScene({ src }: { src: string }) {
+function ProductScene({ src, tintHex }: { src: string; tintHex?: string | null }) {
   const gltf = useGLTF(src);
 
   const scene = useMemo(() => {
@@ -19,8 +20,9 @@ function ProductScene({ src }: { src: string }) {
         child.receiveShadow = false;
       }
     });
+    applyVariantColorTintToScene(next, tintHex);
     return next;
-  }, [gltf.scene]);
+  }, [gltf.scene, tintHex]);
 
   return <primitive object={scene} />;
 }
@@ -29,10 +31,12 @@ export function ShowroomProductPreview({
   src,
   className,
   fallback,
+  tintHex = null,
 }: {
   src?: string | null;
   className?: string;
   fallback?: ReactNode;
+  tintHex?: string | null;
 }) {
   useEffect(() => {
     if (src) {
@@ -74,13 +78,18 @@ export function ShowroomProductPreview({
       )}
     >
       <ModelLoadBoundary fallback={fallbackNode}>
-        <Canvas camera={{ position: [2.8, 2.1, 3.1], fov: 34 }} dpr={[1, 1.1]} frameloop="demand">
+        <Canvas
+          key={`${src}:${tintHex || "default"}`}
+          camera={{ position: [2.8, 2.1, 3.1], fov: 34 }}
+          dpr={[1, 1.1]}
+          frameloop="demand"
+        >
           <ambientLight intensity={1.2} />
           <directionalLight position={[3, 5, 4]} intensity={1} />
           <directionalLight position={[-2, 2, -2]} intensity={0.35} />
           <Suspense fallback={null}>
             <Bounds fit clip margin={1.18}>
-              <ProductScene src={src} />
+              <ProductScene src={src} tintHex={tintHex} />
             </Bounds>
           </Suspense>
           <OrbitControls

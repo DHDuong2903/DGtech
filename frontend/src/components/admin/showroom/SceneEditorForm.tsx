@@ -195,6 +195,7 @@ export function SceneEditorForm({
             description="Upload a .glb room model to preview it here."
             className="aspect-[1/1.02]"
             autoRotate={false}
+            allowFreeNavigation
             showNamedMarkers
             cameraMarkerOverrides={ROOM_CAMERA_SLOT_OVERRIDES}
             showResetViewButton

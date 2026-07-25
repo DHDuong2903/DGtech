@@ -24,8 +24,18 @@ import { ShowroomProductPreview } from "@/src/components/public/showroom/Showroo
 import { useUserRank } from "@/src/hooks";
 import { isGoldRank, SHOWROOM_GOLD_REQUIRED_TOAST } from "@/src/lib/showroomAccess";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import {
+  listProductColorOptions,
+  resolveColorLabelToHex,
+  type ProductColorOption,
+} from "@/src/lib/colorVariantTint";
 
 type SlotSelectionMap = Record<string, string>;
+type ProductColorMap = Record<string, string>;
+
+function getProductColors(product: ShowroomEligibleProduct): ProductColorOption[] {
+  return listProductColorOptions(product.variants);
+}
 
 function stableSelectionKey(value: SlotSelectionMap) {
   return JSON.stringify(
@@ -36,6 +46,27 @@ function stableSelectionKey(value: SlotSelectionMap) {
         return acc;
       }, {}),
   );
+}
+
+function stableColorKey(value: ProductColorMap) {
+  return JSON.stringify(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .reduce<Record<string, string>>((acc, [productId, color]) => {
+        acc[productId] = color;
+        return acc;
+      }, {}),
+  );
+}
+
+function colorsForPlacedProducts(selectedBySlot: SlotSelectionMap, colorByProductId: ProductColorMap) {
+  const placedProductIds = new Set(Object.values(selectedBySlot));
+  const next: ProductColorMap = {};
+  for (const [productId, color] of Object.entries(colorByProductId)) {
+    if (!placedProductIds.has(productId) || !color.trim()) continue;
+    next[productId] = color;
+  }
+  return next;
 }
 
 function groupSceneCategories(slots: ShowroomSceneSlot[], products: ShowroomEligibleProduct[]) {
@@ -89,6 +120,7 @@ export default function Showroom3DPage() {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [activeSelectionProductId, setActiveSelectionProductId] = useState<string | null>(null);
   const [pendingPlacementByProduct, setPendingPlacementByProduct] = useState<Record<string, string | null>>({});
+  const [colorByProductId, setColorByProductId] = useState<ProductColorMap>({});
   const [savingSetup, setSavingSetup] = useState(false);
 
   useEffect(() => {
@@ -176,12 +208,14 @@ export default function Showroom3DPage() {
       setSelectedProductIds([]);
       setActiveSelectionProductId(null);
       setPendingPlacementByProduct({});
+      setColorByProductId({});
       try {
         const detail = await showroomApi.getSceneByKey(activeSceneKey);
         if (!active) return;
         setSceneDetail(detail);
         setSavedSetup(detail.savedSetup ?? null);
         setSelectedBySlot(detail.savedSetup?.selectedBySlot ?? {});
+        setColorByProductId(detail.savedSetup?.colorByProductId ?? {});
         setFocusedSlotId(null);
         setError(null);
       } catch (err: unknown) {
@@ -215,10 +249,32 @@ export default function Showroom3DPage() {
         const productId = selectedBySlot[slot.slotId];
         const product = sceneDetail.eligibleProducts.find((item) => item.productId === productId);
         if (!product) return null;
-        return { slot, product };
+        const selectedColor = colorByProductId[product.productId];
+        const colors = getProductColors(product);
+        const tintHex =
+          resolveColorLabelToHex(selectedColor) ??
+          colors[0]?.hex ??
+          null;
+        return { slot, product, tintHex };
       })
-      .filter(Boolean) as Array<{ slot: ShowroomSceneSlot; product: ShowroomEligibleProduct }>;
-  }, [sceneDetail, selectedBySlot]);
+      .filter(Boolean) as Array<{
+      slot: ShowroomSceneSlot;
+      product: ShowroomEligibleProduct;
+      tintHex?: string | null;
+    }>;
+  }, [colorByProductId, sceneDetail, selectedBySlot]);
+
+  const getSelectedColorForProduct = (product: ShowroomEligibleProduct) => {
+    const colors = getProductColors(product);
+    if (colors.length === 0) return null;
+    const current = colorByProductId[product.productId];
+    if (current && colors.some((item) => item.label === current)) return current;
+    return colors[0]?.label ?? null;
+  };
+
+  const handleSelectProductColor = (productId: string, colorLabel: string) => {
+    setColorByProductId((prev) => ({ ...prev, [productId]: colorLabel }));
+  };
 
   const selectedProducts = useMemo(
     () =>
@@ -233,10 +289,17 @@ export default function Showroom3DPage() {
     () => selectedProducts.filter((product) => Boolean(pendingPlacementByProduct[product.productId])).length,
     [pendingPlacementByProduct, selectedProducts],
   );
-  const hasUnsavedSetupChanges = useMemo(
-    () => stableSelectionKey(selectedBySlot) !== stableSelectionKey(savedSetup?.selectedBySlot ?? {}),
-    [savedSetup?.selectedBySlot, selectedBySlot],
-  );
+  const hasUnsavedSetupChanges = useMemo(() => {
+    const savedColors = colorsForPlacedProducts(
+      savedSetup?.selectedBySlot ?? {},
+      savedSetup?.colorByProductId ?? {},
+    );
+    const currentColors = colorsForPlacedProducts(selectedBySlot, colorByProductId);
+    return (
+      stableSelectionKey(selectedBySlot) !== stableSelectionKey(savedSetup?.selectedBySlot ?? {}) ||
+      stableColorKey(currentColors) !== stableColorKey(savedColors)
+    );
+  }, [colorByProductId, savedSetup?.colorByProductId, savedSetup?.selectedBySlot, selectedBySlot]);
 
   const assignPendingPlacement = (productId: string, slotId: string | null) => {
     setPendingPlacementByProduct((prev) => {
@@ -303,8 +366,13 @@ export default function Showroom3DPage() {
     if (!activeSceneKey) return;
     setSavingSetup(true);
     try {
-      const nextSavedSetup = await showroomApi.saveSceneSetup(activeSceneKey, { selectedBySlot });
+      const colorPayload = colorsForPlacedProducts(selectedBySlot, colorByProductId);
+      const nextSavedSetup = await showroomApi.saveSceneSetup(activeSceneKey, {
+        selectedBySlot,
+        colorByProductId: colorPayload,
+      });
       setSavedSetup(nextSavedSetup);
+      setColorByProductId(nextSavedSetup?.colorByProductId ?? colorPayload);
       toast.success("Showroom setup saved.");
     } catch (err: unknown) {
       console.error("Failed to save showroom setup:", err);
@@ -469,7 +537,7 @@ export default function Showroom3DPage() {
               <div>
                 <h2 className="text-base font-semibold">Products</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Only products with saved 3D models appear here.
+                  Only products with saved 3D models appear here. Pick a color to preview it in the card and in the room.
                 </p>
               </div>
             </div>
@@ -500,6 +568,9 @@ export default function Showroom3DPage() {
                         const placedInSlot =
                           group.slots.find((slot) => selectedBySlot[slot.slotId] === product.productId) ?? null;
                         const isSelected = selectedProductIds.includes(product.productId);
+                        const colorOptions = getProductColors(product);
+                        const selectedColorLabel = getSelectedColorForProduct(product);
+                        const previewTintHex = resolveColorLabelToHex(selectedColorLabel);
 
                         return (
                           <article
@@ -510,12 +581,56 @@ export default function Showroom3DPage() {
                             )}
                           >
                             <div className="space-y-3">
-                              <ShowroomProductPreview src={product.model3dUrl} className="rounded-[18px]" />
+                              <ShowroomProductPreview
+                                src={product.model3dUrl}
+                                tintHex={previewTintHex}
+                                className="rounded-[18px]"
+                              />
                               <div className="min-w-0 space-y-2">
                                 <div className="flex items-start justify-between gap-2">
                                   <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
+                                  {placedInSlot ? (
+                                    <Badge variant="secondary" className="shrink-0 font-normal">
+                                      {placedInSlot.label}
+                                    </Badge>
+                                  ) : null}
                                 </div>
-                                <p className="line-clamp-3 text-xs leading-5 text-muted-foreground">{product.description}</p>
+
+                                {colorOptions.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                                      Color{selectedColorLabel ? `: ${selectedColorLabel}` : ""}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {colorOptions.map((option) => {
+                                        const isActive = option.label === selectedColorLabel;
+                                        return (
+                                          <button
+                                            key={option.label}
+                                            type="button"
+                                            title={option.label}
+                                            aria-label={`Color ${option.label}`}
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              handleSelectProductColor(product.productId, option.label);
+                                            }}
+                                            className={cn(
+                                              "h-6 w-6 rounded-full border shadow-sm transition",
+                                              isActive
+                                                ? "border-primary ring-2 ring-primary/35 scale-105"
+                                                : "border-border hover:border-foreground/40",
+                                            )}
+                                            style={{
+                                              backgroundColor: option.hex || "#d4d4d8",
+                                            }}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ) : null}
+
+                                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">{product.description}</p>
                                 <div
                                   className={cn(
                                     "grid gap-2",

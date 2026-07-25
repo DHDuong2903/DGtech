@@ -8,11 +8,13 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { ShowroomEligibleProduct, ShowroomSceneSlot } from "@/src/types";
 import { Box3, Group, MathUtils, Mesh, Object3D, Quaternion, Vector3 } from "three";
 import { ROOM_CAMERA_SLOT_OVERRIDES } from "@/src/components/admin/showroom/constants";
+import { applyVariantColorTintToScene } from "@/src/lib/colorVariantTint";
 import { cn } from "@/src/lib/utils";
 
 type Occupant = {
   slot: ShowroomSceneSlot;
   product: ShowroomEligibleProduct;
+  tintHex?: string | null;
 };
 
 type CameraMarker = {
@@ -191,6 +193,7 @@ function SlotMarker({
 function AnimatedProductModel({ occupant, highlighted }: { occupant: Occupant; highlighted: boolean }) {
   const groupRef = useRef<Group>(null);
   const gltf = useGLTF(occupant.product.model3dUrl);
+  const tintHex = occupant.tintHex ?? null;
 
   const clonedScene = useMemo(() => {
     const next = gltf.scene.clone(true);
@@ -200,8 +203,9 @@ function AnimatedProductModel({ occupant, highlighted }: { occupant: Occupant; h
         child.receiveShadow = true;
       }
     });
+    applyVariantColorTintToScene(next, tintHex);
     return next;
-  }, [gltf.scene]);
+  }, [gltf.scene, tintHex]);
 
   const sceneOffset = useMemo(() => {
     const bounds = new Box3().setFromObject(clonedScene);
@@ -257,6 +261,7 @@ function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | nu
   const endPositionRef = useRef<Vector3 | null>(null);
   const endTargetRef = useRef<Vector3 | null>(null);
   const progressRef = useRef(1);
+  const userInteractingRef = useRef(false);
   const desiredCameraPosition = useMemo(
     () => (desiredView ? new Vector3(...desiredView.position) : null),
     [desiredView],
@@ -298,6 +303,8 @@ function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | nu
       return;
     }
 
+    userInteractingRef.current = false;
+
     const currentPosition = camera.position.clone();
     const currentTarget = controls.target.clone();
     const nextPosition = desiredCameraPosition.clone();
@@ -317,7 +324,7 @@ function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | nu
       .lerp(nextTarget, 0.5)
       .add(new Vector3(0, midpointLift * 0.35, 0));
     progressRef.current = 0;
-  }, [desiredCameraPosition, desiredTarget, resetVersion]);
+  }, [camera, desiredCameraPosition, desiredTarget, resetVersion]);
 
   useFrame((_, delta) => {
     const controls = controlsRef.current;
@@ -329,6 +336,16 @@ function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | nu
     const endTarget = endTargetRef.current;
 
     if (!controls || !startPosition || !startTarget || !midPosition || !midTarget || !endPosition || !endTarget) {
+      return;
+    }
+
+    if (userInteractingRef.current) {
+      progressRef.current = 1;
+      return;
+    }
+
+    // Stop after the fly-to finishes so the user can orbit/pan freely.
+    if (progressRef.current >= 1) {
       return;
     }
 
@@ -346,11 +363,10 @@ function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | nu
     }
     controls.update();
 
-    if (
-      progress >= 1 &&
-      camera.position.distanceTo(endPosition) < 0.01 &&
-      controls.target.distanceTo(endTarget) < 0.01
-    ) {
+    if (progress >= 1) {
+      camera.position.copy(endPosition);
+      controls.target.copy(endTarget);
+      controls.update();
       progressRef.current = 1;
     }
   });
@@ -359,10 +375,17 @@ function CameraRig({ desiredView, resetVersion }: { desiredView: CameraView | nu
     <OrbitControls
       ref={controlsRef}
       enablePan
+      enableDamping
+      dampingFactor={0.08}
+      screenSpacePanning
       minDistance={2}
       maxDistance={24}
       minPolarAngle={0}
       maxPolarAngle={Math.PI}
+      onStart={() => {
+        userInteractingRef.current = true;
+        progressRef.current = 1;
+      }}
     />
   );
 }
@@ -468,7 +491,7 @@ export function ShowroomCanvas({
           ))}
           {occupants.map((occupant) => (
             <AnimatedProductModel
-              key={`${occupant.slot.slotId}-${occupant.product.productId}`}
+              key={`${occupant.slot.slotId}-${occupant.product.productId}-${occupant.tintHex || "default"}`}
               occupant={occupant}
               highlighted={occupant.slot.slotId === focusedSlotId}
             />

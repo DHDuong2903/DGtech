@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Removed output: "standalone" - using default Next.js server
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
@@ -20,6 +21,9 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "@clerk/nextjs", "date-fns"],
   },
   // Tắt error overlay cho runtime errors đã được xử lý
   reactStrictMode: true,

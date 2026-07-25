@@ -4,11 +4,17 @@ import { ProductVariant } from "@/src/types/productType";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
+import { resolveColorLabelToHex } from "@/src/lib/colorVariantTint";
 
 interface VariantSelectorProps {
   variants: ProductVariant[];
   selectedVariant: ProductVariant | null;
   onSelect: (variant: ProductVariant | null) => void;
+}
+
+function isColorAttributeName(name: string) {
+  const normalized = name.trim().toLowerCase();
+  return normalized === "color" || normalized === "colour";
 }
 
 export const VariantSelector = (props: VariantSelectorProps) => {
@@ -56,18 +62,44 @@ export const VariantSelector = (props: VariantSelectorProps) => {
   return (
     <div className="space-y-4">
       {attributeNames.map((name) => {
-        const values = Array.from(new Set(realVariants.map((v) => v.attributes[name])));
+        const values = Array.from(new Set(realVariants.map((v) => v.attributes[name]).filter(Boolean)));
+        const isColorAttr = isColorAttributeName(name);
 
         return (
           <div key={name} className="space-y-2">
             <h3 className="text-muted-foreground text-xs font-semibold capitalize tracking-wide">
               {name}
+              {isColorAttr && selectedAttrs[name] ? (
+                <span className="ml-2 font-normal normal-case tracking-normal text-foreground/80">
+                  {selectedAttrs[name]}
+                </span>
+              ) : null}
             </h3>
             <div className="flex flex-wrap gap-2">
               {values.map((val) => {
                 const isActive = selectedAttrs[name] === val;
-
                 const isPossible = realVariants.some((v) => v.attributes[name] === val);
+
+                if (isColorAttr) {
+                  const hex = resolveColorLabelToHex(val) || "#d4d4d8";
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      title={val}
+                      aria-label={`${name} ${val}`}
+                      disabled={!isPossible}
+                      onClick={() => handleAttrSelect(name, val)}
+                      className={cn(
+                        "h-8 w-8 rounded-full border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40",
+                        isActive
+                          ? "border-primary ring-2 ring-primary/35 scale-105"
+                          : "border-border hover:border-foreground/40",
+                      )}
+                      style={{ backgroundColor: hex }}
+                    />
+                  );
+                }
 
                 return (
                   <Button
