@@ -10,7 +10,9 @@ import {
   ShippingZone,
   Voucher,
   DiscountCampaign,
+  UserVoucherRedemption,
 } from "../models/associationsModel.js";
+import { ShowroomScene } from "../models/showroomSceneModel.js";
 import { getRankSettings, serializeRankSettings } from "./rankSettingService.js";
 import { getShippingSettings } from "./shippingService.js";
 import { getTaxSettings, serializeTaxSettings } from "./taxService.js";
@@ -126,6 +128,8 @@ const INTENT_RULES: Array<{ intent: AiIntent; patterns: RegExp[] }> = [
       /\btracking\b/i,
       /\bvan don\b/i,
       /\bgiao toi dau\b/i,
+      /\bma don\b/i,
+      /\btra cuu don\b/i,
     ],
   },
   {
@@ -153,6 +157,12 @@ const INTENT_RULES: Array<{ intent: AiIntent; patterns: RegExp[] }> = [
       /\bco gi\b/i,
       /\bho tro gi\b/i,
       /\btinh nang\b/i,
+      /\bgio hang\b/i,
+      /\bcart\b/i,
+      /\bcheckout\b/i,
+      /\bthanh toan nhu the nao\b/i,
+      /\bcach mua\b/i,
+      /\bdat hang\b/i,
     ],
   },
 ];
@@ -268,6 +278,11 @@ export function detectAiIntent(message: string, options?: BuildWebsiteKnowledgeC
     }
   }
 
+  // UUID-looking order id in the message → strongly prefer order support.
+  if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(message)) {
+    scores.set("order_support", Number(scores.get("order_support") || 0) + 5);
+  }
+
   let bestIntent: AiIntent = "general_support";
   let bestScore = 0;
 
@@ -307,7 +322,19 @@ function buildCapabilitiesBlock() {
     "- Website co catalog san pham, category, product variants, reviews, cart, checkout, dia chi giao hang, voucher, bundle va theo doi don hang.",
     "- Website co tinh nang Showroom 3D (danh rieng cho Gold members) de sap xep san pham noi that trong khong gian phong ao.",
     "- Widget chat AI hien la tro ly tu van, khong phai he thong thao tac truc tiep tren tai khoan khach hang.",
-    "- Neu can xem chi tiet don hang ca nhan, thanh toan da tra hay voucher cua rieng tung user, AI phai noi ro rang can du lieu/xac thuc bo sung.",
+    "- Khi da dang nhap, AI co the tham chieu hang thanh vien, voucher phu hop tier, va don hang cua chinh user do neu co trong context.",
+  ];
+}
+
+function buildCartCheckoutHelpBlock() {
+  return [
+    "Huong dan gio hang va checkout (storefront):",
+    "- Them san pham/variant vao gio tai trang san pham, roi mo /cart de xem lai.",
+    "- Tai /cart: chon san pham muon mua, ap dung voucher neu co, roi bam Checkout.",
+    "- Tai /checkout: chon dia chi giao hang, phuong thuc van chuyen, va hinh thuc thanh toan (COD hoac chuyen khoan ngan hang).",
+    "- Chuyen khoan ngan hang se tao QR/thanh toan de theo doi trang thai; COD khong can chuyen khoan truoc.",
+    "- Dia chi giao hang quan ly tai /addresses.",
+    "- AI khong tu them hang, khong tu dat don, va khong tu ap dung voucher thay khach.",
   ];
 }
 
@@ -344,6 +371,37 @@ async function buildShippingBlock() {
 async function buildMembershipBlock() {
   try {
     const settings = serializeRankSettings(await getRankSettings());
+    let showroomLines: string[] = [
+      "Tinh nang Showroom 3D (Gold exclusive):",
+      "- Showroom 3D la tinh nang danh rieng cho thanh vien Gold.",
+      "- Cho phep sap xep san pham noi that trong khong gian phong ao 3D truoc khi mua.",
+      "- Chi hien thi san pham co mo hinh 3D da duoc upload (dinh dang GLB/GLTF).",
+      "- Moi phong co cac vi tri (slots) de dat san pham theo category tuong ung.",
+      "- Gold member co the luu lai bo cuc phong da sap xep de xem lai sau.",
+      "- Truy cap tai trang /showroom-3d (can dang nhap voi tai khoan Gold).",
+      "- Day la cong cu xem truoc, khong phai gio hang. Mua san pham van thuc hien o trang catalog binh thuong.",
+    ];
+
+    try {
+      const scenes = await ShowroomScene.findAll({
+        where: { isActive: true },
+        attributes: ["name", "sceneKey"],
+        order: [
+          ["sortOrder", "ASC"],
+          ["name", "ASC"],
+        ],
+        limit: 12,
+      });
+      if (scenes.length > 0) {
+        const sceneNames = scenes.map((row: any) => String(row.name || "").trim()).filter(Boolean);
+        showroomLines.push(`- Cac khong gian showroom dang mo: ${formatList(sceneNames)}`);
+      } else {
+        showroomLines.push("- Hien chua co scene showroom nao dang mo tren storefront.");
+      }
+    } catch {
+      showroomLines.push("- Tam thoi khong tai duoc danh sach scene showroom.");
+    }
+
     return [
       "Quy tac hang thanh vien:",
       `- Cac hang thanh vien hien co: ${formatList(["Bronze", "Silver", "Gold"])}`,
@@ -357,15 +415,7 @@ async function buildMembershipBlock() {
       "- Navbar co hien badge rank va website co trang /membership de xem tien do len hang.",
       "- Membership UI hien co mo ta: Silver mo rong kha nang duoc ap dung member discount campaigns, cai thien voucher privilege va tang kha nang mo free shipping theo dieu kien; Gold co uu dai giam gia/voucher tot hon Silver va uu tien tiep can mot so campaign.",
       "",
-      "Tinh nang Showroom 3D (Gold exclusive):",
-      "- Showroom 3D la tinh nang danh rieng cho thanh vien Gold.",
-      "- Cho phep sap xep san pham noi that trong khong gian phong ao 3D truoc khi mua.",
-      "- Chi hien thi san pham co mo hinh 3D da duoc upload (dinh dang GLB/GLTF).",
-      "- Co the chon nhieu khong gian phong (living room, bedroom, office, v.v.).",
-      "- Moi phong co cac vi tri (slots/positions) de dat san pham, moi vi tri chi chap nhan san pham thuoc category cu the.",
-      "- Gold member co the luu lai bo cuc phong da sap xep de xem lai sau.",
-      "- Truy cap tai trang /showroom-3d (can dang nhap voi tai khoan Gold).",
-      "- Day la cong cu xem truoc, khong phai gio hang. Mua san pham van thuc hien o trang catalog binh thuong.",
+      ...showroomLines,
     ];
   } catch (error) {
     return [
@@ -375,11 +425,45 @@ async function buildMembershipBlock() {
   }
 }
 
-async function buildAuthenticatedUserBlock(userId: string, intent: AiIntent) {
+function extractOrderIdCandidates(...texts: Array<string | undefined | null>) {
+  const joined = texts.filter(Boolean).join(" ");
+  const matches = joined.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi) || [];
+  return Array.from(new Set(matches.map((id) => id.toLowerCase())));
+}
+
+function formatOrderSummary(order: any, index?: number) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const productPreview = items
+    .slice(0, 2)
+    .map((item: any) => item?.product?.name)
+    .filter(Boolean)
+    .join(", ");
+  const prefix = typeof index === "number" ? `${index + 1}. ` : "";
+  return [
+    `${prefix}Ma don: ${order.orderId}`,
+    `- Ngay tao: ${formatDate(order.createdAt)}`,
+    `- Trang thai don: ${order.status || "Khong ro"}`,
+    `- Tong tien: ${formatPrice(order.totalPrice || 0)}`,
+    `- Trang thai thanh toan: ${order.payment?.status || "Khong ro"}`,
+    `- Hinh thuc thanh toan: ${order.payment?.paymentMethod || "Khong ro"}`,
+    `- Cach giao hang: ${order.shippingMethodName || "Khong ro"}`,
+    `- Ma van don: ${order.trackingNumber || "Chua co"}`,
+    `- Don vi van chuyen: ${order.carrierName || "Chua co"}`,
+    `- San pham tieu bieu: ${productPreview || "Khong co"}`,
+  ].join("\n");
+}
+
+async function buildAuthenticatedUserBlock(
+  userId: string,
+  intent: AiIntent,
+  options?: { message?: string; recentUserMessages?: string[] },
+) {
   const blocks: string[] = ["Thong tin da xac thuc cua khach hang hien tai:"];
 
+  let userTier = "bronze";
   try {
     const rank = await getMyRank(userId);
+    userTier = String(rank.currentRank || "bronze").toLowerCase();
     blocks.push(`- Hang hien tai: ${String(rank.currentRank || "").toUpperCase() || "Khong ro"}`);
     blocks.push(`- Hang tiep theo: ${rank.nextRank ? String(rank.nextRank).toUpperCase() : "Khong co"}`);
     blocks.push(`- Diem tich luy hien tai: ${Number(rank.score || 0)}`);
@@ -392,7 +476,108 @@ async function buildAuthenticatedUserBlock(userId: string, intent: AiIntent) {
     blocks.push(`- Tam thoi khong tai duoc thong tin hang thanh vien cua khach: ${error instanceof Error ? error.message : "unknown error"}`);
   }
 
-  if (intent === "order_support" || intent === "general_support") {
+  if (intent === "voucher_policy" || intent === "membership_policy") {
+    try {
+      const now = new Date();
+      const vouchers = await Voucher.findAll({
+        where: {
+          isActive: true,
+          [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: now } }],
+        },
+        attributes: [
+          "voucherId",
+          "name",
+          "voucherType",
+          "audience",
+          "tierTargets",
+          "discountPercent",
+          "discountAmount",
+          "maxUsesPerUser",
+          "expiresAt",
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: 20,
+      });
+
+      const eligible: string[] = [];
+      for (const row of vouchers) {
+        const voucher = row.get({ plain: true }) as any;
+        const audience = String(voucher.audience || "ALL_USERS");
+        const tierTargets = Array.isArray(voucher.tierTargets) ? voucher.tierTargets.map((t: any) => String(t).toLowerCase()) : [];
+        if (audience === "TIER_USERS" && !tierTargets.includes(userTier)) continue;
+
+        const usedCount = await UserVoucherRedemption.count({
+          where: { clerkId: userId, voucherId: voucher.voucherId },
+        });
+        const maxUses = Math.max(1, parseInt(String(voucher.maxUsesPerUser || 1), 10) || 1);
+        if (usedCount >= maxUses) continue;
+
+        const benefit =
+          voucher.voucherType === "PERCENT_DISCOUNT"
+            ? `Giam ${voucher.discountPercent || 0}%`
+            : voucher.voucherType === "FIXED_AMOUNT"
+              ? `Giam ${formatPrice(voucher.discountAmount || 0)}`
+              : voucher.voucherType === "FREE_SHIPPING"
+                ? "Mien phi van chuyen"
+                : String(voucher.voucherType || "Uu dai");
+
+        eligible.push(
+          `- "${voucher.name}": ${benefit}; con ${Math.max(0, maxUses - usedCount)}/${maxUses} luot; het han: ${formatDate(voucher.expiresAt)}`,
+        );
+        if (eligible.length >= 6) break;
+      }
+
+      if (eligible.length === 0) {
+        blocks.push("- Voucher phu hop hang hien tai: khong thay voucher con luot dung.");
+      } else {
+        blocks.push("- Voucher dang phu hop hang hien tai (tham khao, van phu thuoc gio hang luc checkout):");
+        blocks.push(...eligible);
+      }
+    } catch (error) {
+      blocks.push(`- Tam thoi khong tai duoc voucher cua khach: ${error instanceof Error ? error.message : "unknown error"}`);
+    }
+  }
+
+  if (intent === "order_support") {
+    const orderIds = extractOrderIdCandidates(options?.message, ...(options?.recentUserMessages || []));
+    if (orderIds.length > 0) {
+      try {
+        const lookedUp = await Order.findAll({
+          where: { clerkId: userId, orderId: { [Op.in]: orderIds } },
+          include: [
+            { model: Payment, as: "payment", attributes: ["status", "paymentMethod", "paidAt"], required: false },
+            {
+              model: OrderItem,
+              as: "items",
+              attributes: ["quantity"],
+              include: [{ model: Product, as: "product", attributes: ["name"] }],
+            },
+          ],
+          attributes: [
+            "orderId",
+            "status",
+            "totalPrice",
+            "createdAt",
+            "shippingMethodName",
+            "shippingMethodEtaNote",
+            "trackingNumber",
+            "carrierName",
+          ],
+        });
+
+        if (lookedUp.length === 0) {
+          blocks.push("- Tra cuu theo ma don trong tin nhan: khong tim thay don thuoc tai khoan nay.");
+        } else {
+          blocks.push("- Ket qua tra cuu don theo ma trong tin nhan:");
+          for (const row of lookedUp) {
+            blocks.push(formatOrderSummary(row.get({ plain: true })));
+          }
+        }
+      } catch (error) {
+        blocks.push(`- Tam thoi khong tra cuu duoc don theo ma: ${error instanceof Error ? error.message : "unknown error"}`);
+      }
+    }
+
     try {
       const recentOrders = await Order.findAll({
         where: { clerkId: userId },
@@ -424,27 +609,7 @@ async function buildAuthenticatedUserBlock(userId: string, intent: AiIntent) {
       } else {
         blocks.push("- Tom tat toi da 3 don gan day:");
         for (const [index, row] of recentOrders.entries()) {
-          const order = row.get({ plain: true }) as any;
-          const items = Array.isArray(order.items) ? order.items : [];
-          const productPreview = items
-            .slice(0, 2)
-            .map((item: any) => item?.product?.name)
-            .filter(Boolean)
-            .join(", ");
-          blocks.push(
-            [
-              `${index + 1}. Don hang gan day`,
-              `- Ngay tao: ${formatDate(order.createdAt)}`,
-              `- Trang thai don: ${order.status || "Khong ro"}`,
-              `- Tong tien: ${formatPrice(order.totalPrice || 0)}`,
-              `- Trang thai thanh toan: ${order.payment?.status || "Khong ro"}`,
-              `- Hinh thuc thanh toan: ${order.payment?.paymentMethod || "Khong ro"}`,
-              `- Cach giao hang: ${order.shippingMethodName || "Khong ro"}`,
-              `- Ma van don: ${order.trackingNumber || "Chua co"}`,
-              `- Don vi van chuyen: ${order.carrierName || "Chua co"}`,
-              `- San pham tieu bieu: ${productPreview || "Khong co"}`,
-            ].join("\n"),
-          );
+          blocks.push(formatOrderSummary(row.get({ plain: true }), index));
         }
       }
     } catch (error) {
@@ -461,10 +626,11 @@ async function buildAuthenticatedUserBlock(userId: string, intent: AiIntent) {
 async function buildPaymentBlock() {
   return [
     "Thong tin thanh toan hien tai:",
-    `- Cac hinh thuc thanh toan dang ho tro: ${formatList(["COD", "Chuyen khoan ngan hang"])}`,
-    "- Don chuyen khoan ngan hang co the tao QR thanh toan va duoc theo doi theo tien trinh cho xac nhan, da thanh toan, that bai hoac hoan tien.",
+    `- Cac hinh thuc thanh toan dang ho tro tren checkout: ${formatList(["COD", "Chuyen khoan ngan hang"])}`,
+    "- Chuyen khoan ngan hang: he thong tao QR/thanh toan (SePay) de khach thanh toan va theo doi trang thai cho xac nhan / da thanh toan / that bai.",
     "- COD khong yeu cau xac nhan chuyen khoan truoc khi tao don.",
     "- AI khong duoc xac nhan mot giao dich da thanh toan neu khong co du lieu payment/order cu the.",
+    "- AI khong duoc tu y huong dan quy trinh hoan tien hay doi/tra hang neu khong co policy do trong context.",
   ];
 }
 
@@ -475,20 +641,49 @@ async function buildVoucherBlock() {
       isActive: true,
       [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: now } }],
     },
-    attributes: ["voucherType", "audience", "tierTargets", "name", "expiresAt"],
+    attributes: [
+      "voucherType",
+      "audience",
+      "tierTargets",
+      "name",
+      "expiresAt",
+      "discountPercent",
+      "discountAmount",
+      "maxUsesPerUser",
+    ],
     order: [["createdAt", "DESC"]],
-    limit: 6,
+    limit: 8,
   });
 
   const types = Array.from(new Set(activeVouchers.map((voucher: any) => String(voucher.voucherType || "")))).filter(Boolean);
+  const voucherLines =
+    activeVouchers.length > 0
+      ? activeVouchers.map((row: any) => {
+          const voucher = row.get ? row.get({ plain: true }) : row;
+          const benefit =
+            voucher.voucherType === "PERCENT_DISCOUNT"
+              ? `Giam ${voucher.discountPercent || 0}%`
+              : voucher.voucherType === "FIXED_AMOUNT"
+                ? `Giam ${formatPrice(voucher.discountAmount || 0)}`
+                : voucher.voucherType === "FREE_SHIPPING"
+                  ? "Mien phi van chuyen"
+                  : String(voucher.voucherType || "Uu dai");
+          const audience =
+            voucher.audience === "TIER_USERS"
+              ? `Chi hang: ${(Array.isArray(voucher.tierTargets) ? voucher.tierTargets : []).join(", ") || "khong ro"}`
+              : "Tat ca khach";
+          return `- "${voucher.name}": ${benefit}; ${audience}; toi da ${voucher.maxUsesPerUser || 1} luot/user; het han: ${formatDate(voucher.expiresAt)}`;
+        })
+      : ["- Khong co voucher dang kich hoat."];
 
   return [
     "Thong tin voucher va uu dai hien tai:",
     `- So voucher dang kich hoat ma AI nhin thay: ${activeVouchers.length}`,
     `- Nhom voucher dang co: ${types.length > 0 ? types.join(", ") : "Khong co"}`,
-    "- Mot so voucher co the dung cho tat ca khach, mot so khac chi danh cho nhom khach du dieu kien.",
-    "- Gia tri giam co the theo percent, fixed amount hoac free shipping.",
-    "- AI chi nen noi theo tong quan tru khi co voucher cu the trong DB context hoac nguoi dung dua ma/ten ro rang.",
+    "- Danh sach voucher cong khai:",
+    ...voucherLines,
+    "- Mot so voucher chi danh cho hang thanh vien cu the; eligibility con phu thuoc luot dung va gio hang luc checkout.",
+    "- AI chi nen noi theo voucher/campaign co trong context, khong bia ma giam gia.",
   ];
 }
 
@@ -619,11 +814,12 @@ function buildResponseRules(intent: AiIntent, isAdminQuestion?: boolean) {
     "AI response rules:",
     "- Luon uu tien du lieu website context trong turn nay hon kien thuc nen chung cua model.",
     "- Neu khong thay du lieu trong context, phai noi ro chua co thong tin thay vi suy doan.",
-    "- Neu cau hoi can du lieu ca nhan cua user (don hang, thanh toan, voucher da dung), phai noi ro AI chat cong khai hien chua co quyen tra cuu truc tiep.",
-    "- Khong duoc noi ra ten bien, ten field, ten bang DB, schema, API payload, id noi bo, hay thuat ngu ky thuat trong cau tra loi cho khach hang.",
+    "- Khong duoc noi ra ten bien, ten field, ten bang DB, schema, API payload, id noi bo, hay thuat ngu ky thuat trong cau tra loi cho khach hang (tru ma don hang khi dang ho tro tra cuu don).",
     "- Neu context ben trong co dang key=value hoac chua thong tin ky thuat, AI phai tu dien dat lai thanh ngon ngu tu nhien, huong toi khach hang.",
     "- Khong duoc noi nhung cum tu nhu compareAtPrice, catalogPrice, targetTiers, pricingMode, productId, variantId, metadata, database, table, enum cho khach hang.",
     "- Khong duoc tiet lo so luong ton kho cu the cho khach. Khi can, chi noi san pham con hang hoac tam het hang.",
+    "- Website hien chua ho tro tinh nang doi/tra hang (return). Neu khach hoi, noi ro chua ho tro va khong duoc tu bia quy trinh hoan hang.",
+    "- Khong duoc huong dan hoac cam doan quy trinh hoan tien neu khong co du lieu/policy hoan tien trong context.",
   ];
 
   // Admin question blocking rules
@@ -641,16 +837,23 @@ function buildResponseRules(intent: AiIntent, isAdminQuestion?: boolean) {
   } else if (intent === "membership_policy") {
     baseRules.push("- Khi user hoi Bronze/Silver/Gold la gi hoac len rank nhu the nao, phai tra loi bang membership rules trong context nay, khong duoc suy doan.");
     baseRules.push("- Neu user hoi rank ca nhan hien tai cua ho, AI khong duoc tu nhan da biet neu khong co user-specific rank payload trong context.");
+    baseRules.push("- Khi hoi Showroom 3D, uu tien mo ta theo scene dang mo trong context va dieu kien Gold.");
   } else if (intent === "payment_policy") {
+    baseRules.push("- Khi mo ta thanh toan, chi noi COD va chuyen khoan ngan hang (QR/SePay). Khong bia them cong thanh toan khac.");
     baseRules.push("- Khi hoi da thanh toan chua, khong duoc xac nhan neu khong co payment record cu the.");
   } else if (intent === "voucher_policy") {
-    baseRules.push("- Khong duoc hua co voucher phu hop cho moi user; eligibility con phu thuoc tier, usage va expiry.");
+    baseRules.push("- Khong duoc hua co voucher phu hop cho moi user; eligibility con phu thuoc tier, usage va checkout.");
+    baseRules.push("- Khi co danh sach voucher trong context, neu ten + muc giam + doi tuong, khong bia ma bi mat.");
   } else if (intent === "promotion_products") {
     baseRules.push("- Khi user hoi san pham giam gia/noi bat/bundle, uu tien liet ke san pham cu the tu catalog context (ten, gia, chuong trinh).");
     baseRules.push("- Neu context co san pham dang giam gia hoac bundle, phai neu ro tung muc thay vi chi bao 'xem tren shop'.");
     baseRules.push("- Co the nhac ten chuong trinh khuyen mai/bundle dang ap dung bang ngon ngu tu van.");
   } else if (intent === "order_support") {
-    baseRules.push("- Neu user muon biet don cu the, hay yeu cau ma don hang va noi rang can endpoint tra cuu/xac thuc phu hop.");
+    baseRules.push("- Neu user da dang nhap va context co don/tra cuu theo ma, uu tien tra loi tu du lieu do.");
+    baseRules.push("- Neu user chua cung cap ma don va context khong co don gan day, hay xin ma don hang (UUID) de tra cuu.");
+    baseRules.push("- Khong duoc noi tinh trang don cua nguoi khac.");
+  } else if (intent === "store_capability" || intent === "general_support") {
+    baseRules.push("- Khi hoi cach mua hang/gio hang/checkout, uu tien huong dan theo cart/checkout help trong context.");
   }
 
   return baseRules;
@@ -677,27 +880,36 @@ export async function buildWebsiteKnowledgeContext(
     };
   }
 
-  if (intent === "membership_policy" || intent === "general_support") {
+  // Keep general_support light: capabilities + cart/checkout help + auth rank.
+  // Domain-heavy blocks load only for matching intents (policy tools still cover general fallback).
+  if (intent === "general_support" || intent === "store_capability") {
+    blocks.push("", ...buildCartCheckoutHelpBlock());
+    sourceTypes.push("cart_checkout_help");
+  }
+
+  if (intent === "membership_policy") {
     blocks.push("", ...(await buildMembershipBlock()));
     sourceTypes.push("membership_rules");
   }
 
-  if (intent === "shipping_policy" || intent === "general_support") {
+  if (intent === "shipping_policy") {
     blocks.push("", ...(await buildShippingBlock()));
     sourceTypes.push("shipping_settings");
   }
 
-  if (intent === "payment_policy" || intent === "general_support") {
-    blocks.push("", ...(await buildPaymentBlock()), "", ...(await buildTaxBlock()));
+  if (intent === "payment_policy") {
+    const [paymentBlock, taxBlock] = await Promise.all([buildPaymentBlock(), buildTaxBlock()]);
+    blocks.push("", ...paymentBlock, "", ...taxBlock);
     sourceTypes.push("payment_rules", "tax_settings");
   }
 
-  if (intent === "voucher_policy" || intent === "promotion_products" || intent === "general_support") {
-    blocks.push("", ...(await buildVoucherBlock()), "", ...(await buildDiscountCampaignsBlock()));
+  if (intent === "voucher_policy" || intent === "promotion_products") {
+    const [voucherBlock, campaignBlock] = await Promise.all([buildVoucherBlock(), buildDiscountCampaignsBlock()]);
+    blocks.push("", ...voucherBlock, "", ...campaignBlock);
     sourceTypes.push("voucher_rules", "discount_campaigns");
   }
 
-  if (intent === "order_support" || intent === "general_support") {
+  if (intent === "order_support") {
     blocks.push("", ...(await buildOrderBlock()));
     sourceTypes.push("order_rules");
   }
@@ -712,7 +924,13 @@ export async function buildWebsiteKnowledgeContext(
   }
 
   if (options?.userId) {
-    blocks.push("", ...(await buildAuthenticatedUserBlock(options.userId, intent)));
+    blocks.push(
+      "",
+      ...(await buildAuthenticatedUserBlock(options.userId, intent, {
+        message,
+        recentUserMessages: options.recentUserMessages,
+      })),
+    );
     sourceTypes.push("authenticated_user_context");
   }
 

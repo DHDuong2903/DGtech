@@ -175,20 +175,24 @@ export async function generateChatReply(
     recentUserMessages,
     userId: options?.userId,
   });
-  const policyStructuredContext: StructuredPolicyContextResult = await buildStructuredPolicyContext(
-    websiteKnowledgeContext,
-    {
-      userId: options?.userId,
-      sourceTypes: websiteKnowledgeContext.sourceTypes,
-    },
-  );
 
   const forcePromotionProducts = websiteKnowledgeContext.intent === "promotion_products";
-  const catalogContext = await buildCatalogContext(normalizedMessage, {
-    recentUserMessages,
-    userId: options?.userId,
-    forcePromotionProducts,
-  });
+
+  // Policy snapshots and catalog retrieval are independent after intent is known.
+  const [policyStructuredContext, catalogContext]: [
+    StructuredPolicyContextResult,
+    Awaited<ReturnType<typeof buildCatalogContext>>,
+  ] = await Promise.all([
+    buildStructuredPolicyContext(websiteKnowledgeContext, {
+      userId: options?.userId,
+      sourceTypes: websiteKnowledgeContext.sourceTypes,
+    }),
+    buildCatalogContext(normalizedMessage, {
+      recentUserMessages,
+      userId: options?.userId,
+      forcePromotionProducts,
+    }),
+  ]);
 
   // Keep catalog for promotion product discovery; only suppress for pure policy intents.
   const shouldSuppressCatalogContext =
@@ -223,10 +227,11 @@ export async function generateChatReply(
     "Be concise, helpful, and commerce-support oriented.",
     "Help with products, orders, shipping, payment, promotions, and store guidance.",
     "If you do not know a specific store policy or order detail, say so clearly and avoid inventing facts.",
+    "Do not invent return/exchange (doi tra hang) or refund (hoan tien) workflows — the storefront does not currently offer returns, and refunds must not be taught unless explicitly present in context.",
     "Do not claim to have performed actions in external systems.",
     "Treat the provided website knowledge context as source of truth for store capabilities, payment rules, shipping behavior, tax settings, and general store guidance.",
     "Treat any AI tool result block as higher priority than verbose context if they disagree.",
-    "Never expose internal field names, database table names, schema names, raw identifiers, or implementation details to customers.",
+    "Never expose internal field names, database table names, schema names, raw identifiers, or implementation details to customers — except order IDs when helping with order lookup.",
     "Rewrite technical context into natural Vietnamese suitable for customers.",
     "If the AI tool result says answer_mode=clarify, ask exactly one short clarification question first and do not pretend to know the exact product yet.",
     "If retrieval_confidence=low, present uncertain results as suggestions only and avoid definitive claims unless the context explicitly confirms them.",
@@ -256,11 +261,11 @@ export async function generateChatReply(
       ? "If the question asks about variants, types, colors, sizes, or attributes, answer from Focused product variants first and enumerate the concrete variants you see there."
       : "If Focused product variants are present, use them when they materially improve product-detail accuracy.",
     websiteKnowledgeContext.intent === "order_support"
-      ? "For order-specific questions, explain the order flow and limitations clearly, but do not claim to see a user's private order unless that data is explicitly provided in context."
+      ? "For order-specific questions, use authenticated order lookup/recent-order context when present. If the user provides an order ID and it is not in context, say you could not find it for this account. Do not invent order status."
       : "If the user asks about store operations, policies, shipping, payment, or promotions, ground the answer in website knowledge context first.",
     options?.userId
-      ? "Authenticated user context may be present. If so, you may use it to answer about the current signed-in user's own rank or recent orders."
-      : "No authenticated user context is available in this request, so do not claim to know the user's private rank or order history.",
+      ? "Authenticated user context may be present. If so, you may use it to answer about the current signed-in user's own rank, eligible vouchers, or orders."
+      : "No authenticated user context is available in this request, so do not claim to know the user's private rank, vouchers, or order history.",
   ].filter((item): item is string => typeof item === "string" && item.length > 0);
   const contextParts = [
     structuredContext.contextText,

@@ -575,10 +575,13 @@ export async function getAllProducts(query: Record<string, unknown>, clerkId?: s
   }
 }
 
+/** Admin inventory may load the full catalog into the DataTable; keep a high but finite ceiling. */
+const ADMIN_INVENTORY_MAX_LIMIT = 5000;
+
 export async function getAdminInventory(query: Record<string, unknown>) {
   const { page = 1, limit = 10, sortBy = "createdAt", order = "DESC" } = query as any;
   const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
-  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
+  const limitNum = Math.min(ADMIN_INVENTORY_MAX_LIMIT, Math.max(1, parseInt(String(limit), 10) || 10));
   const offset = (pageNum - 1) * limitNum;
 
   const where = buildProductListWhere(query);

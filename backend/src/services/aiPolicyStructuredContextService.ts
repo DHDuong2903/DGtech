@@ -60,6 +60,12 @@ export type MembershipPolicySnapshot = {
 export type PromotionsSnapshot = {
   activeVoucherCount: number;
   voucherTypes: string[];
+  voucherSummaries: Array<{
+    name: string;
+    benefit: string;
+    audience: string;
+    expiresAt: string;
+  }>;
   campaignSummaries: Array<{
     name: string;
     description: string;
@@ -83,12 +89,12 @@ export type AuthenticatedMembershipSnapshot = {
 
 const SHIPPING_POLICY_CACHE_KEY = "ai-policy:shipping:v1";
 const SHIPPING_POLICY_STALE_CACHE_KEY = "ai-policy:shipping:stale:v1";
-const PAYMENT_POLICY_CACHE_KEY = "ai-policy:payment:v1";
-const PAYMENT_POLICY_STALE_CACHE_KEY = "ai-policy:payment:stale:v1";
+const PAYMENT_POLICY_CACHE_KEY = "ai-policy:payment:v2";
+const PAYMENT_POLICY_STALE_CACHE_KEY = "ai-policy:payment:stale:v2";
 const MEMBERSHIP_POLICY_CACHE_KEY = "ai-policy:membership:v1";
 const MEMBERSHIP_POLICY_STALE_CACHE_KEY = "ai-policy:membership:stale:v1";
-const PROMOTIONS_POLICY_CACHE_KEY = "ai-policy:promotions:v2";
-const PROMOTIONS_POLICY_STALE_CACHE_KEY = "ai-policy:promotions:stale:v2";
+const PROMOTIONS_POLICY_CACHE_KEY = "ai-policy:promotions:v3";
+const PROMOTIONS_POLICY_STALE_CACHE_KEY = "ai-policy:promotions:stale:v3";
 const POLICY_CACHE_TTL_MS = 2 * 60 * 1000;
 const POLICY_STALE_TTL_MS = 15 * 60 * 1000;
 
@@ -184,7 +190,7 @@ export async function loadPaymentPolicySnapshot(): Promise<PaymentPolicySnapshot
     loader: async () => {
       const taxSettings = serializeTaxSettings(await withDbRetry(() => getTaxSettings(), { label: "aiPolicy.payment.tax" }));
       return {
-        supportedMethods: ["COD", "Chuyen khoan ngan hang"],
+        supportedMethods: ["COD", "Chuyen khoan ngan hang (QR/SePay)"],
         enableTax: Boolean(taxSettings.enableTax),
         taxRate: Number(taxSettings.taxRate || 0),
         taxIncluded: Boolean(taxSettings.taxIncluded),
@@ -224,7 +230,15 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
                 isActive: true,
                 [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: now } }],
               },
-              attributes: ["voucherType"],
+              attributes: [
+                "name",
+                "voucherType",
+                "audience",
+                "tierTargets",
+                "discountPercent",
+                "discountAmount",
+                "expiresAt",
+              ],
               order: [["createdAt", "DESC"]],
               limit: 10,
             }),
@@ -276,6 +290,28 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
       const voucherTypes = Array.from(
         new Set(activeVoucherRows.map((row: any) => String(row.voucherType || "")).filter(Boolean)),
       ) as string[];
+
+      const voucherSummaries = activeVoucherRows.map((row: any) => {
+        const voucher = row.get ? row.get({ plain: true }) : row;
+        const benefit =
+          voucher.voucherType === "PERCENT_DISCOUNT"
+            ? `Giam ${voucher.discountPercent || 0}%`
+            : voucher.voucherType === "FIXED_AMOUNT"
+              ? `Giam ${formatPrice(voucher.discountAmount || 0)}`
+              : voucher.voucherType === "FREE_SHIPPING"
+                ? "Mien phi van chuyen"
+                : String(voucher.voucherType || "Uu dai");
+        const audience =
+          voucher.audience === "TIER_USERS"
+            ? `Hang: ${(Array.isArray(voucher.tierTargets) ? voucher.tierTargets : []).join(", ") || "khong ro"}`
+            : "Tat ca khach";
+        return {
+          name: String(voucher.name || "Voucher"),
+          benefit,
+          audience,
+          expiresAt: formatDate(voucher.expiresAt),
+        };
+      });
 
       const campaignSummaries = activeCampaignRows.map((row: any) => {
         const products = Array.isArray(row.products) ? row.products.map((item: any) => item.name).filter(Boolean) : [];
@@ -338,6 +374,7 @@ export async function loadPromotionsSnapshot(): Promise<PromotionsSnapshot> {
       return {
         activeVoucherCount: Number(activeVoucherRows.length || 0),
         voucherTypes,
+        voucherSummaries,
         campaignSummaries,
         bundleSummaries,
       };
@@ -385,12 +422,13 @@ function buildPaymentToolBlock(snapshot: PaymentPolicySnapshot) {
   return [
     "AI tool result: get_payment_policy",
     `- supported_methods: ${snapshot.supportedMethods.join(", ")}`,
-    "- bank_transfer_flow: co QR/chuyen khoan va can xac nhan thanh toan.",
+    "- bank_transfer_flow: chuyen khoan ngan hang qua QR/SePay, can theo doi trang thai thanh toan.",
     "- cod_flow: co the dat don ma khong can chuyen khoan truoc.",
     `- tax_enabled: ${snapshot.enableTax ? "co" : "khong"}`,
     `- tax_rate: ${formatPercent(snapshot.taxRate)}`,
     `- tax_included_in_price: ${snapshot.taxIncluded ? "co" : "khong"}`,
     "- rule: khong duoc xac nhan mot giao dich da thanh toan neu khong co du lieu don/payments cu the.",
+    "- rule: khong huong dan hoan tien/doi tra hang neu khong co policy trong context.",
   ].join("\n");
 }
 
@@ -421,6 +459,14 @@ function buildMembershipToolBlock(
 }
 
 function buildPromotionsToolBlock(snapshot: PromotionsSnapshot) {
+  const voucherLines =
+    snapshot.voucherSummaries.length > 0
+      ? snapshot.voucherSummaries.map(
+          (item, index) =>
+            `${index + 1}. ${item.name} | ${item.benefit} | ${item.audience} | Het han: ${item.expiresAt}`,
+        )
+      : ["Khong thay voucher dang bat."];
+
   const campaignLines =
     snapshot.campaignSummaries.length > 0
       ? snapshot.campaignSummaries.map(
@@ -440,6 +486,8 @@ function buildPromotionsToolBlock(snapshot: PromotionsSnapshot) {
     "AI tool result: get_active_promotions",
     `- active_voucher_count: ${snapshot.activeVoucherCount}`,
     `- voucher_types: ${snapshot.voucherTypes.length > 0 ? snapshot.voucherTypes.join(", ") : "Khong co"}`,
+    "- active_vouchers:",
+    ...voucherLines,
     "- active_campaigns:",
     ...campaignLines,
     "- active_bundles:",
@@ -456,9 +504,9 @@ function shouldIncludePolicyTool(intent: AiIntent, targetIntent: AiIntent) {
 
 function shouldUseCompactPolicyOnly(result: WebsiteKnowledgeContextResult) {
   if (result.sourceTypes.includes("admin_question_blocker")) return false;
-  if (result.sourceTypes.includes("authenticated_user_context")) return false;
   // Keep verbose campaign product lists for sale-product discovery.
   if (result.intent === "promotion_products") return false;
+  // Auth membership/voucher details already live in tool or auth blocks; prefer compact policy text.
   return ["shipping_policy", "payment_policy", "membership_policy", "voucher_policy"].includes(result.intent);
 }
 
@@ -469,23 +517,31 @@ export async function buildStructuredPolicyContext(
   const blocks: string[] = [];
   const toolNames: string[] = [];
 
-  if (shouldIncludePolicyTool(websiteKnowledgeContext.intent, "shipping_policy")) {
-    const shippingSnapshot = await loadShippingPolicySnapshot();
+  const wantShipping = shouldIncludePolicyTool(websiteKnowledgeContext.intent, "shipping_policy");
+  const wantPayment = shouldIncludePolicyTool(websiteKnowledgeContext.intent, "payment_policy");
+  const wantMembership = shouldIncludePolicyTool(websiteKnowledgeContext.intent, "membership_policy");
+  const wantPromotions = shouldIncludePolicyTool(websiteKnowledgeContext.intent, "voucher_policy");
+
+  const [shippingSnapshot, paymentSnapshot, membershipSnapshot, authenticatedMembershipSnapshot, promotionsSnapshot] =
+    await Promise.all([
+      wantShipping ? loadShippingPolicySnapshot() : Promise.resolve(null),
+      wantPayment ? loadPaymentPolicySnapshot() : Promise.resolve(null),
+      wantMembership ? loadMembershipPolicySnapshot() : Promise.resolve(null),
+      wantMembership && options?.userId ? loadAuthenticatedMembershipSnapshot(options.userId) : Promise.resolve(null),
+      wantPromotions ? loadPromotionsSnapshot() : Promise.resolve(null),
+    ]);
+
+  if (shippingSnapshot) {
     blocks.push(buildShippingToolBlock(shippingSnapshot));
     toolNames.push("get_shipping_policy");
   }
 
-  if (shouldIncludePolicyTool(websiteKnowledgeContext.intent, "payment_policy")) {
-    const paymentSnapshot = await loadPaymentPolicySnapshot();
+  if (paymentSnapshot) {
     blocks.push(buildPaymentToolBlock(paymentSnapshot));
     toolNames.push("get_payment_policy");
   }
 
-  if (shouldIncludePolicyTool(websiteKnowledgeContext.intent, "membership_policy")) {
-    const membershipSnapshot = await loadMembershipPolicySnapshot();
-    const authenticatedMembershipSnapshot = options?.userId
-      ? await loadAuthenticatedMembershipSnapshot(options.userId)
-      : null;
+  if (membershipSnapshot) {
     blocks.push(buildMembershipToolBlock(membershipSnapshot, authenticatedMembershipSnapshot));
     toolNames.push("get_membership_policy");
     if (authenticatedMembershipSnapshot) {
@@ -493,8 +549,7 @@ export async function buildStructuredPolicyContext(
     }
   }
 
-  if (shouldIncludePolicyTool(websiteKnowledgeContext.intent, "voucher_policy")) {
-    const promotionsSnapshot = await loadPromotionsSnapshot();
+  if (promotionsSnapshot) {
     blocks.push(buildPromotionsToolBlock(promotionsSnapshot));
     toolNames.push("get_active_promotions");
   }
