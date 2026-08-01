@@ -173,7 +173,8 @@ function SlotMarker({
 }) {
   return (
     <group position={slot.anchorPosition as [number, number, number]}>
-      <Html position={[0, 0.36, 0]} center>
+      {/* Keep labels below page chrome (chatbot ~z-100); drei default zIndexRange is ~16M. */}
+      <Html position={[0, 0.36, 0]} center zIndexRange={[20, 1]}>
         <button
           type="button"
           onClick={() => onSelect?.(slot.slotId)}
@@ -458,7 +459,7 @@ export function ShowroomCanvas({
   return (
     <div
       className={cn(
-        "relative h-[min(44dvh,420px)] cursor-grab overflow-hidden rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fff7ed,transparent_35%),linear-gradient(160deg,#f9f4ed,#e9dcc8)] shadow-inner active:cursor-grabbing md:h-[min(52dvh,560px)] xl:h-full",
+        "relative isolate z-0 h-[min(44dvh,420px)] cursor-grab overflow-hidden rounded-[24px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fff7ed,transparent_35%),linear-gradient(160deg,#f9f4ed,#e9dcc8)] shadow-inner active:cursor-grabbing md:h-[min(52dvh,560px)] xl:h-full",
         className,
       )}
     >
@@ -477,7 +478,7 @@ export function ShowroomCanvas({
         </mesh>
         {!desiredView ? (
           <group position={DIAGNOSTIC_CAMERA_TARGET}>
-            <Html center>
+            <Html center zIndexRange={[20, 1]}>
               <div className="rounded-full border border-red-300 bg-white/90 px-3 py-1 text-[11px] font-medium text-red-600 shadow-sm">
                 CAM_OVERVIEW not found
               </div>
