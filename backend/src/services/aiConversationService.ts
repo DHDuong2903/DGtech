@@ -195,7 +195,7 @@ export async function getAiConversationDetail(conversationId: string, actor: Con
 }
 
 export async function sendAiConversationMessage(params: ConversationActor & { conversationId?: string | null; message: string }) {
-  const ownerWhere = requireConversationActor(params);
+  requireConversationActor(params);
   const normalizedMessage = String(params.message || "").trim();
   if (!normalizedMessage) {
     throw Object.assign(new Error("Message is required"), { status: 400 });
@@ -247,15 +247,8 @@ export async function sendAiConversationMessage(params: ConversationActor & { co
 
   await conversation.update({ updatedAt: new Date() });
 
-  const refreshedConversation = await AiConversation.findOne({
-    where: {
-      conversationId: conversation.conversationId,
-      ...ownerWhere,
-    },
-  });
-
   return {
-    conversation: normalizeConversationRow((refreshedConversation || conversation).get({ plain: true }), assistantMessageRow.get({ plain: true })),
+    conversation: normalizeConversationRow(conversation.get({ plain: true }), assistantMessageRow.get({ plain: true })),
     userMessage: normalizeMessageRow(userMessageRow.get({ plain: true })),
     assistantMessage: normalizeMessageRow(assistantMessageRow.get({ plain: true })),
   };

@@ -4,10 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ArrowUp, History, MessageCirclePlus, X } from "lucide-react";
+import { ArrowUp, History, Maximize2, MessageCirclePlus, Minimize2, X } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { Spinner } from "@/src/components/ui/spinner";
 import { aiChatApi } from "@/src/apis";
 import type { AiChatProductLink, AiConversationListItem, AiConversationMessage } from "@/src/types";
 import { cn } from "@/src/lib/utils";
@@ -103,16 +104,20 @@ export const FloatingAIWidget = () => {
 
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [conversations, setConversations] = useState<AiConversationListItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AiConversationMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const messagesRef = useRef<HTMLDivElement | null>(null);
+  const suppressDetailLoadRef = useRef(false);
 
   const resolvedGuestSessionId = guestSessionId;
   const showHistorySidebar = isSignedIn;
@@ -163,48 +168,70 @@ export const FloatingAIWidget = () => {
   };
 
   const handleNewChat = async () => {
+    if (isCreatingChat) return;
     setLoadError(null);
-    if (!isSignedIn) {
-      setActiveConversationId(null);
-      setMessages([]);
-      return;
-    }
+    // Instant local reset — don't wait on the network for the empty thread.
+    setMessages([]);
+    setActiveConversationId(null);
+
+    if (!isSignedIn) return;
+
+    setIsCreatingChat(true);
     try {
       const conversation = await aiChatApi.createConversation(resolvedGuestSessionId);
+      suppressDetailLoadRef.current = true;
       setConversations((prev) => [
         conversation,
         ...prev.filter((item) => item.conversationId !== conversation.conversationId),
       ]);
       setActiveConversationId(conversation.conversationId);
       setIsHistoryOpen(true);
-      setMessages([]);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Could not create a new chat.");
+    } finally {
+      setIsCreatingChat(false);
     }
   };
 
   const handleSelectConversation = async (conversationId: string) => {
+    if (deletingConversationId === conversationId || isCreatingChat) return;
     setActiveConversationId(conversationId);
     await loadConversationDetail(conversationId);
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || deletingConversationId) return;
     setLoadError(null);
+    setDeletingConversationId(conversationId);
+
+    const previousConversations = conversations;
+    const previousActiveId = activeConversationId;
+    const previousMessages = messages;
+    const nextConversations = conversations.filter((item) => item.conversationId !== conversationId);
+
+    setConversations(nextConversations);
+    setIsHistoryOpen(nextConversations.length > 0);
+    if (activeConversationId === conversationId) {
+      const nextActiveId = nextConversations[0]?.conversationId || null;
+      suppressDetailLoadRef.current = true;
+      setActiveConversationId(nextActiveId);
+      if (!nextActiveId) {
+        setMessages([]);
+      } else {
+        void loadConversationDetail(nextActiveId);
+      }
+    }
+
     try {
       await aiChatApi.deleteConversation(conversationId);
-      const nextConversations = conversations.filter((item) => item.conversationId !== conversationId);
-      setConversations(nextConversations);
-      setIsHistoryOpen(nextConversations.length > 0);
-      if (activeConversationId === conversationId) {
-        const nextActiveId = nextConversations[0]?.conversationId || null;
-        setActiveConversationId(nextActiveId);
-        if (!nextActiveId) {
-          setMessages([]);
-        }
-      }
     } catch (error) {
+      setConversations(previousConversations);
+      setActiveConversationId(previousActiveId);
+      setMessages(previousMessages);
+      setIsHistoryOpen(previousConversations.length > 0);
       setLoadError(error instanceof Error ? error.message : "Could not delete conversation.");
+    } finally {
+      setDeletingConversationId(null);
     }
   };
 
@@ -266,6 +293,7 @@ export const FloatingAIWidget = () => {
           result.userMessage,
           result.assistantMessage,
         ]);
+        suppressDetailLoadRef.current = true;
         setConversations((prev) => [
           result.conversation,
           ...prev.filter((item) => item.conversationId !== result.conversation.conversationId),
@@ -305,6 +333,10 @@ export const FloatingAIWidget = () => {
 
   useEffect(() => {
     if (!isOpen || !isSignedIn || !activeConversationId) return;
+    if (suppressDetailLoadRef.current) {
+      suppressDetailLoadRef.current = false;
+      return;
+    }
     const hasSelectedConversation = conversations.some((item) => item.conversationId === activeConversationId);
     if (!hasSelectedConversation) return;
     void loadConversationDetail(activeConversationId);
@@ -324,7 +356,14 @@ export const FloatingAIWidget = () => {
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-4">
       {isOpen && (
-        <div className="flex h-128 w-104 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+        <div
+          className={cn(
+            "flex overflow-hidden rounded-2xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-4 duration-300",
+            isExpanded
+              ? "fixed inset-3 z-50 h-auto w-auto max-h-none sm:inset-4"
+              : "h-128 w-104",
+          )}
+        >
           <section className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div>
@@ -345,27 +384,64 @@ export const FloatingAIWidget = () => {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8"
+                  className="h-8 w-8 cursor-pointer"
                   onClick={() => void handleNewChat()}
+                  disabled={isCreatingChat || isSending}
                   aria-label="New chat"
                 >
-                  <MessageCirclePlus className="h-4 w-4" />
+                  {isCreatingChat ? <Spinner className="h-4 w-4" /> : <MessageCirclePlus className="h-4 w-4" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 cursor-pointer"
+                  onClick={() => setIsExpanded((prev) => !prev)}
+                  aria-label={isExpanded ? "Exit fullscreen" : "Expand to fullscreen"}
+                >
+                  {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 cursor-pointer"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsExpanded(false);
+                  }}
+                  aria-label="Close chat"
+                >
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
             <div className="min-h-0 flex flex-1">
               {showHistorySidebar && isHistoryOpen && (
-                <aside className="flex w-24 flex-col border-r border-border bg-muted/20">
+                <aside
+                  className={cn(
+                    "flex flex-col border-r border-border bg-muted/20",
+                    isExpanded ? "w-56" : "w-24",
+                  )}
+                >
                   <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
                     {isLoadingConversations ? (
-                      <div className="px-2 py-3 text-xs text-muted-foreground">Loading chats...</div>
-                    ) : conversations.length === 0 ? (
-                      <div className="px-2 py-3 text-xs leading-relaxed text-muted-foreground">
-                        No saved chats yet. Start a new one.
+                      <div className="flex items-center gap-2 px-2 py-3 text-xs text-muted-foreground">
+                        <Spinner className="h-3.5 w-3.5" />
+                        Loading chats...
                       </div>
                     ) : (
                       <div className="space-y-1.5">
+                        {isCreatingChat ? (
+                          <div className="flex items-center gap-2 rounded-xl border border-dashed border-orange-300/70 bg-orange-50/60 px-2.5 py-2 text-xs text-muted-foreground dark:bg-orange-950/20">
+                            <Spinner className="h-3.5 w-3.5" />
+                            Creating chat...
+                          </div>
+                        ) : null}
+                        {conversations.length === 0 && !isCreatingChat ? (
+                          <div className="px-2 py-3 text-xs leading-relaxed text-muted-foreground">
+                            No saved chats yet. Start a new one.
+                          </div>
+                        ) : null}
                         {conversations.map((conversation) => {
                           const isActive = conversation.conversationId === activeConversationId;
                           return (
@@ -382,7 +458,8 @@ export const FloatingAIWidget = () => {
                                 <button
                                   type="button"
                                   onClick={() => void handleSelectConversation(conversation.conversationId)}
-                                  className="min-w-0 flex-1 cursor-pointer text-left"
+                                  disabled={!!deletingConversationId}
+                                  className="min-w-0 flex-1 cursor-pointer text-left disabled:cursor-not-allowed"
                                 >
                                   <div className="truncate text-xs font-medium">{conversation.title}</div>
                                   <div className="mt-1 text-[10px] text-muted-foreground">
@@ -391,11 +468,12 @@ export const FloatingAIWidget = () => {
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={!!deletingConversationId}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     void handleDeleteConversation(conversation.conversationId);
                                   }}
-                                  className="cursor-pointer text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                                  className="cursor-pointer text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:cursor-not-allowed"
                                   aria-label="Delete conversation"
                                 >
                                   <X className="h-3.5 w-3.5" />
@@ -421,7 +499,8 @@ export const FloatingAIWidget = () => {
                     >
                       <div
                         className={cn(
-                          "max-w-60 break-words whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                          "break-words whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                          isExpanded ? "max-w-[min(42rem,85%)]" : "max-w-60",
                           message.role === "user" ? "bg-orange-500 text-white" : "bg-muted text-foreground",
                         )}
                       >
@@ -430,9 +509,7 @@ export const FloatingAIWidget = () => {
                     </div>
                   ))
                 )}
-                {isSending && (
-                  <ThinkingIndicator />
-                )}
+                {isSending && <ThinkingIndicator />}
                 {loadError && <div className="text-xs text-destructive">{loadError}</div>}
               </div>
             </div>
@@ -462,12 +539,19 @@ export const FloatingAIWidget = () => {
         </div>
       )}
 
-      <div
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="relative h-12 w-12 shrink-0 cursor-pointer transition-transform duration-300 ease-out hover:scale-110 active:scale-95"
-      >
-        <Image src="/logodg.png" alt="DGTech" fill className="object-contain" priority />
-      </div>
+      {!isExpanded && (
+        <div
+          onClick={() => {
+            setIsOpen((prev) => {
+              if (prev) setIsExpanded(false);
+              return !prev;
+            });
+          }}
+          className="relative h-12 w-12 shrink-0 cursor-pointer transition-transform duration-300 ease-out hover:scale-110 active:scale-95"
+        >
+          <Image src="/logodg.png" alt="DGTech" fill className="object-contain" priority />
+        </div>
+      )}
     </div>
   );
 };

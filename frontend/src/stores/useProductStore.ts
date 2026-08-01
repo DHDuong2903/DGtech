@@ -92,9 +92,44 @@ export const useProductStore = create<ProductState>()(
       ) => {
         set({ loading: true, error: null });
         try {
-          const response = options?.adminCatalog
-            ? await productsApi.getAdminInventory(params)
-            : await productsApi.getAll(params);
+          if (options?.adminCatalog) {
+            // Admin Products DataTable paginates client-side — load the full filtered catalog.
+            const pageLimit = Math.min(Math.max(params?.limit ?? 1000, 1), 5000);
+            let page = 1;
+            let all: Product[] = [];
+            let totalItems = 0;
+            let apiTotalPages = 1;
+
+            for (;;) {
+              const response = await productsApi.getAdminInventory({
+                ...params,
+                page,
+                limit: pageLimit,
+              });
+              const chunk = response.data || [];
+              totalItems = response.totalItems || 0;
+              apiTotalPages = Math.max(1, response.totalPages || 1);
+              if (page === 1) {
+                all = chunk;
+              } else {
+                const seen = new Set(all.map((p) => p.productId));
+                all = [...all, ...chunk.filter((p) => !seen.has(p.productId))];
+              }
+              if (page >= apiTotalPages || chunk.length === 0 || all.length >= totalItems) break;
+              page += 1;
+            }
+
+            set({
+              products: all,
+              totalItems,
+              totalPages: apiTotalPages,
+              currentPage: 1,
+              loading: false,
+            });
+            return;
+          }
+
+          const response = await productsApi.getAll(params);
           set({
             products: response.data || [],
             totalItems: response.totalItems || 0,

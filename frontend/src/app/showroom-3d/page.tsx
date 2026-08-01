@@ -17,18 +17,13 @@ import { ShowroomCanvas } from "@/src/components/public/showroom/ShowroomCanvas"
 import { cn } from "@/src/lib/utils";
 import { STOREFRONT_H_PADDING } from "@/src/constant";
 import { Button } from "@/src/components/ui/button";
-import { Badge } from "@/src/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { Spinner } from "@/src/components/ui/spinner";
 import { ShowroomProductPreview } from "@/src/components/public/showroom/ShowroomProductPreview";
 import { useUserRank } from "@/src/hooks";
 import { isGoldRank, SHOWROOM_GOLD_REQUIRED_TOAST } from "@/src/lib/showroomAccess";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import {
-  listProductColorOptions,
-  resolveColorLabelToHex,
-  type ProductColorOption,
-} from "@/src/lib/colorVariantTint";
+import { listProductColorOptions, resolveColorLabelToHex, type ProductColorOption } from "@/src/lib/colorVariantTint";
 
 type SlotSelectionMap = Record<string, string>;
 type ProductColorMap = Record<string, string>;
@@ -251,10 +246,7 @@ export default function Showroom3DPage() {
         if (!product) return null;
         const selectedColor = colorByProductId[product.productId];
         const colors = getProductColors(product);
-        const tintHex =
-          resolveColorLabelToHex(selectedColor) ??
-          colors[0]?.hex ??
-          null;
+        const tintHex = resolveColorLabelToHex(selectedColor) ?? colors[0]?.hex ?? null;
         return { slot, product, tintHex };
       })
       .filter(Boolean) as Array<{
@@ -290,10 +282,7 @@ export default function Showroom3DPage() {
     [pendingPlacementByProduct, selectedProducts],
   );
   const hasUnsavedSetupChanges = useMemo(() => {
-    const savedColors = colorsForPlacedProducts(
-      savedSetup?.selectedBySlot ?? {},
-      savedSetup?.colorByProductId ?? {},
-    );
+    const savedColors = colorsForPlacedProducts(savedSetup?.selectedBySlot ?? {}, savedSetup?.colorByProductId ?? {});
     const currentColors = colorsForPlacedProducts(selectedBySlot, colorByProductId);
     return (
       stableSelectionKey(selectedBySlot) !== stableSelectionKey(savedSetup?.selectedBySlot ?? {}) ||
@@ -360,6 +349,15 @@ export default function Showroom3DPage() {
       delete next[slotId];
       return next;
     });
+  };
+
+  const handleDiscardSetup = () => {
+    setSelectedBySlot(savedSetup?.selectedBySlot ?? {});
+    setColorByProductId(savedSetup?.colorByProductId ?? {});
+    setSelectedProductIds([]);
+    setActiveSelectionProductId(null);
+    setPendingPlacementByProduct({});
+    setFocusedSlotId(null);
   };
 
   const handleSaveSetup = async () => {
@@ -470,6 +468,14 @@ export default function Showroom3DPage() {
                 </div>
                 <Button
                   type="button"
+                  variant="outline"
+                  disabled={savingSetup || !hasUnsavedSetupChanges}
+                  onClick={handleDiscardSetup}
+                >
+                  Discard
+                </Button>
+                <Button
+                  type="button"
                   variant={hasUnsavedSetupChanges ? "default" : "outline"}
                   disabled={savingSetup || !hasUnsavedSetupChanges}
                   onClick={() => void handleSaveSetup()}
@@ -477,46 +483,56 @@ export default function Showroom3DPage() {
                   {savingSetup ? (
                     <>
                       <Spinner data-icon="inline-start" />
-                      Save setup
+                      Save
                     </>
                   ) : (
-                    "Save setup"
+                    "Save"
                   )}
                 </Button>
               </div>
 
               {selectedProducts.length > 0 ? (
                 <div className="rounded-xl border bg-muted/30 p-4">
-                  <div className="mt-3 space-y-3">
-                    {activeSelectedProduct ? (
-                      <div className="space-y-2">
-                        {getMatchingSlotsForProduct(activeSelectedProduct, sceneDetail.slots).length > 1 ? (
-                          <>
-                            <p className="text-sm text-muted-foreground">Choose which position to place this product into.</p>
-                            <div className="flex flex-wrap gap-2">
-                              {getMatchingSlotsForProduct(activeSelectedProduct, sceneDetail.slots).map((slot) => (
-                                <Button
-                                  key={slot.slotId}
-                                  type="button"
-                                  size="sm"
-                                  variant={pendingPlacementByProduct[activeSelectedProduct.productId] === slot.slotId ? "default" : "outline"}
-                                  onClick={() => {
-                                    assignPendingPlacement(activeSelectedProduct.productId, slot.slotId);
-                                    setFocusedSlotId(slot.slotId);
-                                  }}
-                                >
-                                  {slot.label}
-                                </Button>
-                              ))}
-                            </div>
-                          </>
-                        ) : null}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold">
+                        Placing {selectedProducts.length} product{selectedProducts.length === 1 ? "" : "s"}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {activeSelectedProduct &&
+                        getMatchingSlotsForProduct(activeSelectedProduct, sceneDetail.slots).length > 1
+                          ? "Pick a position below or in the scene, then confirm."
+                          : "Confirm to put the selected product into the matching position."}
+                      </p>
+                    </div>
+
+                    {activeSelectedProduct &&
+                    getMatchingSlotsForProduct(activeSelectedProduct, sceneDetail.slots).length > 1 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {getMatchingSlotsForProduct(activeSelectedProduct, sceneDetail.slots).map((slot) => (
+                          <Button
+                            key={slot.slotId}
+                            type="button"
+                            size="sm"
+                            variant={
+                              pendingPlacementByProduct[activeSelectedProduct.productId] === slot.slotId
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() => {
+                              assignPendingPlacement(activeSelectedProduct.productId, slot.slotId);
+                              setFocusedSlotId(slot.slotId);
+                            }}
+                          >
+                            {slot.label}
+                          </Button>
+                        ))}
                       </div>
                     ) : null}
 
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" disabled={selectedReadyCount === 0} onClick={handleConfirmPlacement}>
-                        Fill placement
+                        Fill
                       </Button>
                       <Button
                         type="button"
@@ -527,7 +543,7 @@ export default function Showroom3DPage() {
                           setPendingPlacementByProduct({});
                         }}
                       >
-                        Clear selected
+                        Clear
                       </Button>
                     </div>
                   </div>
@@ -536,25 +552,18 @@ export default function Showroom3DPage() {
 
               <div>
                 <h2 className="text-base font-semibold">Products</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Only products with saved 3D models appear here. Pick a color to preview it in the card and in the room.
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">Select a product, confirm placement</p>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1">
               {sceneCategories.map((group) => (
                 <section key={group.categoryId} className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.16em]">{group.categoryName}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Positions: {group.slots.map((slot) => slot.label).join(", ")}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="font-normal">
-                      {group.products.length} items
-                    </Badge>
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.16em]">{group.categoryName}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Positions: {group.slots.map((slot) => slot.label).join(", ")}
+                    </p>
                   </div>
 
                   {group.products.length === 0 ? (
@@ -587,56 +596,52 @@ export default function Showroom3DPage() {
                                 className="rounded-[18px]"
                               />
                               <div className="min-w-0 space-y-2">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
+                                <div className="min-w-0 space-y-1">
+                                  <p className="line-clamp-2 text-sm font-semibold leading-snug">{product.name}</p>
                                   {placedInSlot ? (
-                                    <Badge variant="secondary" className="shrink-0 font-normal">
-                                      {placedInSlot.label}
-                                    </Badge>
+                                    <p className="text-xs text-orange-600/90">In scene · {placedInSlot.label}</p>
+                                  ) : isSelected ? (
+                                    <p className="text-xs text-primary">Selected for placement</p>
+                                  ) : matchingSlots.length > 1 ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      {matchingSlots.length} positions available
+                                    </p>
                                   ) : null}
                                 </div>
 
                                 {colorOptions.length > 0 ? (
-                                  <div className="space-y-1.5">
-                                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                                      Color{selectedColorLabel ? `: ${selectedColorLabel}` : ""}
-                                    </p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {colorOptions.map((option) => {
-                                        const isActive = option.label === selectedColorLabel;
-                                        return (
-                                          <button
-                                            key={option.label}
-                                            type="button"
-                                            title={option.label}
-                                            aria-label={`Color ${option.label}`}
-                                            onClick={(event) => {
-                                              event.stopPropagation();
-                                              handleSelectProductColor(product.productId, option.label);
-                                            }}
-                                            className={cn(
-                                              "h-6 w-6 rounded-full border shadow-sm transition",
-                                              isActive
-                                                ? "border-primary ring-2 ring-primary/35 scale-105"
-                                                : "border-border hover:border-foreground/40",
-                                            )}
-                                            style={{
-                                              backgroundColor: option.hex || "#d4d4d8",
-                                            }}
-                                          />
-                                        );
-                                      })}
-                                    </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {colorOptions.map((option) => {
+                                      const isActive = option.label === selectedColorLabel;
+                                      return (
+                                        <button
+                                          key={option.label}
+                                          type="button"
+                                          title={option.label}
+                                          aria-label={`Color ${option.label}`}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleSelectProductColor(product.productId, option.label);
+                                          }}
+                                          className={cn(
+                                            "h-6 w-6 cursor-pointer rounded-full border shadow-sm transition",
+                                            isActive
+                                              ? "border-primary ring-2 ring-primary/35 scale-105"
+                                              : "border-border hover:border-foreground/40",
+                                          )}
+                                          style={{
+                                            backgroundColor: option.hex || "#d4d4d8",
+                                          }}
+                                        />
+                                      );
+                                    })}
                                   </div>
                                 ) : null}
 
-                                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">{product.description}</p>
-                                <div
-                                  className={cn(
-                                    "grid gap-2",
-                                    placedInSlot ? "grid-cols-2" : "grid-cols-1",
-                                  )}
-                                >
+                                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                                  {product.description}
+                                </p>
+                                <div className={cn("grid gap-2", placedInSlot ? "grid-cols-2" : "grid-cols-1")}>
                                   <Button
                                     type="button"
                                     size="sm"
@@ -644,7 +649,7 @@ export default function Showroom3DPage() {
                                     variant={isSelected ? "default" : "outline"}
                                     onClick={() => handleToggleSelectedProduct(product)}
                                   >
-                                    {isSelected ? "Selected" : "Select"}
+                                    {isSelected ? "Deselect" : "Select"}
                                   </Button>
                                   {placedInSlot ? (
                                     <Button
@@ -658,11 +663,6 @@ export default function Showroom3DPage() {
                                     </Button>
                                   ) : null}
                                 </div>
-                                {matchingSlots.length > 1 && !placedInSlot ? (
-                                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                                    {matchingSlots.length} positions available
-                                  </p>
-                                ) : null}
                               </div>
                             </div>
                           </article>
@@ -697,30 +697,22 @@ export default function Showroom3DPage() {
             </div>
 
             <div className="max-h-[min(22dvh,220px)] overflow-y-auto rounded-xl border bg-card p-4 xl:max-h-[220px]">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h2 className="text-base font-semibold">Scene positions</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Click a position label in the scene or use the list below to focus it. If you are selecting a product with multiple matching positions, click the exact position you want.
-                  </p>
-                </div>
-              </div>
+              <h2 className="text-base font-semibold">Scene positions</h2>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {sceneDetail.slots.map((slot) => {
                   const placedProductId = selectedBySlot[slot.slotId] ?? null;
                   const isPendingPlacement = Object.values(pendingPlacementByProduct).includes(slot.slotId);
-                  const canReceiveActiveProduct =
-                    activeSelectedProduct != null && slot.isActive && slot.allowedCategoryId === activeSelectedProduct.categoryId;
                   return (
                     <button
                       key={slot.slotId}
                       type="button"
                       onClick={() => handleSelectSlot(slot.slotId)}
                       className={cn(
-                        "rounded-full border px-3 py-2 text-left text-sm transition-all",
-                        focusedSlotId === slot.slotId ? "border-primary bg-primary/8" : "border-border hover:bg-muted/40",
-                        canReceiveActiveProduct && "cursor-pointer",
+                        "cursor-pointer rounded-full border px-3 py-2 text-left text-sm transition-all",
+                        focusedSlotId === slot.slotId
+                          ? "border-primary bg-primary/8"
+                          : "border-border hover:bg-muted/40",
                         isPendingPlacement && "ring-2 ring-primary/30",
                       )}
                     >
