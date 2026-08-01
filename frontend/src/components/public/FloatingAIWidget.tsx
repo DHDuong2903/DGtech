@@ -354,13 +354,13 @@ export const FloatingAIWidget = () => {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-4">
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-4">
       {isOpen && (
         <div
           className={cn(
             "flex overflow-hidden rounded-2xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-4 duration-300",
             isExpanded
-              ? "fixed inset-3 z-50 h-auto w-auto max-h-none sm:inset-4"
+              ? "fixed inset-3 z-[110] h-auto w-auto max-h-none sm:inset-4"
               : "h-128 w-104",
           )}
         >
