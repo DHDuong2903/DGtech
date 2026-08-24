@@ -1,3 +1,11 @@
 export { FeaturedProducts } from "./FeaturedProducts";
 export { DiscountProducts } from "./DiscountProducts";
 export { Slideshows } from "./Slideshows";
+export { HomeHero } from "./HomeHero";
+export { HomePaletteStrip } from "./HomePaletteStrip";
+export { HomeShopByCategory } from "./HomeShopByCategory";
+export { HomeLookbook } from "./HomeLookbook";
+export { HomeShowroomBand } from "./HomeShowroomBand";
+export { HomeConciergeBand } from "./HomeConciergeBand";
+export { HomePromiseStrip } from "./HomePromiseStrip";
+export { HomeClosingCta } from "./HomeClosingCta";
