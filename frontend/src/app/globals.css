@@ -145,3 +145,10 @@
   animation-delay: 0.4s;
   opacity: 0;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-pulse {
+    animation: none !important;
+  }
+}
