@@ -146,6 +146,15 @@ const INTENT_RULES: Array<{ intent: AiIntent; patterns: RegExp[] }> = [
       /\bgia\b/i,
       /\bmau\b/i,
       /\bkich thuoc\b/i,
+      /\bsofa\b/i,
+      /\bghe\b/i,
+      /\bban\b/i,
+      /\bgiuong\b/i,
+      /\btu\b/i,
+      /\bden\b/i,
+      /\bnoi that\b/i,
+      /\btrang tri\b/i,
+      /\bgo\b/i,
     ],
   },
   {
@@ -316,7 +325,13 @@ function formatList(items: Array<string | number | null | undefined>) {
   return cleaned.length > 0 ? cleaned.join(", ") : "khong co";
 }
 
-function buildCapabilitiesBlock() {
+function buildCapabilitiesBlock(compact = false) {
+  if (compact) {
+    return [
+      "Tom tat shop (chi dung khi can):",
+      "- DGTech ban noi that / trang tri nha; co gio hang, checkout, voucher, hang thanh vien; Showroom 3D cho Gold.",
+    ];
+  }
   return [
     "Thong tin tong quan ve website:",
     "- Website co catalog san pham, category, product variants, reviews, cart, checkout, dia chi giao hang, voucher, bundle va theo doi don hang.",
@@ -812,8 +827,10 @@ async function buildOrderBlock() {
 function buildResponseRules(intent: AiIntent, isAdminQuestion?: boolean) {
   const baseRules = [
     "AI response rules:",
+    "- Tra loi thang cau hoi truoc; khong nhet them domain khac (ship/voucher/rank) neu khach khong hoi.",
     "- Luon uu tien du lieu website context trong turn nay hon kien thuc nen chung cua model.",
     "- Neu khong thay du lieu trong context, phai noi ro chua co thong tin thay vi suy doan.",
+    "- Viet tu nhien, gon; tranh giong checklist/bao cao.",
     "- Khong duoc noi ra ten bien, ten field, ten bang DB, schema, API payload, id noi bo, hay thuat ngu ky thuat trong cau tra loi cho khach hang (tru ma don hang khi dang ho tro tra cuu don).",
     "- Neu context ben trong co dang key=value hoac chua thong tin ky thuat, AI phai tu dien dat lai thanh ngon ngu tu nhien, huong toi khach hang.",
     "- Khong duoc noi nhung cum tu nhu compareAtPrice, catalogPrice, targetTiers, pricingMode, productId, variantId, metadata, database, table, enum cho khach hang.",
@@ -828,7 +845,7 @@ function buildResponseRules(intent: AiIntent, isAdminQuestion?: boolean) {
     baseRules.push("ADMIN QUESTION DETECTED:");
     baseRules.push("- This is a customer support chatbot and cannot assist with admin tasks.");
     baseRules.push("- Do not answer questions about: admin panel, shop settings, inventory management, payment configuration, shipping setup, user management, analytics, or any backend operations.");
-    baseRules.push("- Politely decline and redirect the user with message in Vietnamese: 'Xin loi, day la chatbot ho tro khach hang. Nhung cau hoi ve quan ly shop, cai dat admin khong duoc ho tro. Vui long dang nhap vao admin panel truc tiep hoac lien he support.'");
+    baseRules.push("- Politely decline and redirect the user with message in Vietnamese: 'Minh la tro ly ho tro khach hang nen khong xu ly viec quan tri shop. Ban vui long vao trang admin hoac lien he support nhe.'");
     return baseRules;
   }
 
@@ -852,6 +869,8 @@ function buildResponseRules(intent: AiIntent, isAdminQuestion?: boolean) {
     baseRules.push("- Neu user da dang nhap va context co don/tra cuu theo ma, uu tien tra loi tu du lieu do.");
     baseRules.push("- Neu user chua cung cap ma don va context khong co don gan day, hay xin ma don hang (UUID) de tra cuu.");
     baseRules.push("- Khong duoc noi tinh trang don cua nguoi khac.");
+  } else if (intent === "product_catalog") {
+    baseRules.push("- Chi noi ve san pham/gia/bien the khach dang hoi; khong mo rong sang ship hay hang thanh vien.");
   } else if (intent === "store_capability" || intent === "general_support") {
     baseRules.push("- Khi hoi cach mua hang/gio hang/checkout, uu tien huong dan theo cart/checkout help trong context.");
   }
@@ -866,13 +885,11 @@ export async function buildWebsiteKnowledgeContext(
   const intent = detectAiIntent(message, options);
   const isAdminQuestion = looksLikeAdminQuestion(message);
   const blocks: string[] = [];
-  const sourceTypes = ["codebase_capabilities"];
+  const sourceTypes: string[] = [];
 
-  blocks.push(...buildCapabilitiesBlock());
-
-  // If this is an admin question, just add the blocking rules and return
+  // Admin: short capabilities + blocker only
   if (isAdminQuestion) {
-    blocks.push("", ...buildResponseRules(intent, true));
+    blocks.push(...buildCapabilitiesBlock(true), "", ...buildResponseRules(intent, true));
     return {
       intent: "general_support",
       sourceTypes: ["admin_question_blocker"],
@@ -880,11 +897,16 @@ export async function buildWebsiteKnowledgeContext(
     };
   }
 
-  // Keep general_support light: capabilities + cart/checkout help + auth rank.
-  // Domain-heavy blocks load only for matching intents (policy tools still cover general fallback).
+  // Full shop overview only when user asks what the store can do / how to buy.
+  // Product/policy turns stay lean so the model does not dump every feature.
   if (intent === "general_support" || intent === "store_capability") {
+    blocks.push(...buildCapabilitiesBlock(false));
+    sourceTypes.push("codebase_capabilities");
     blocks.push("", ...buildCartCheckoutHelpBlock());
     sourceTypes.push("cart_checkout_help");
+  } else if (intent === "product_catalog" || intent === "promotion_products") {
+    blocks.push(...buildCapabilitiesBlock(true));
+    sourceTypes.push("codebase_capabilities");
   }
 
   if (intent === "membership_policy") {
@@ -924,21 +946,29 @@ export async function buildWebsiteKnowledgeContext(
   }
 
   if (options?.userId) {
-    blocks.push(
-      "",
-      ...(await buildAuthenticatedUserBlock(options.userId, intent, {
-        message,
-        recentUserMessages: options.recentUserMessages,
-      })),
-    );
-    sourceTypes.push("authenticated_user_context");
+    // Avoid attaching rank/voucher noise on pure product questions.
+    const includeAuth =
+      intent !== "product_catalog" ||
+      /\b(hang|rank|tier|voucher|ma giam|don hang|order)\b/i.test(
+        message.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      );
+    if (includeAuth) {
+      blocks.push(
+        "",
+        ...(await buildAuthenticatedUserBlock(options.userId, intent, {
+          message,
+          recentUserMessages: options.recentUserMessages,
+        })),
+      );
+      sourceTypes.push("authenticated_user_context");
+    }
   }
 
   blocks.push("", ...buildResponseRules(intent));
 
   return {
     intent,
-    sourceTypes,
+    sourceTypes: sourceTypes.length > 0 ? sourceTypes : ["response_rules"],
     contextText: blocks.join("\n"),
   };
 }

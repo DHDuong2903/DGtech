@@ -32,13 +32,13 @@ function formatStock(stock: number) {
   return Number(stock) > 0 ? "Con hang" : "Tam het hang";
 }
 
-function formatVariantSummary(product: CatalogProduct) {
+function formatVariantSummary(product: CatalogProduct, limit = 2) {
   const variants = Array.isArray(product.variants) ? product.variants : [];
   if (variants.length === 0) {
     return ["- Bien the: khong co du lieu chi tiet."];
   }
 
-  return variants.slice(0, 4).map((variant, index) => {
+  return variants.slice(0, limit).map((variant, index) => {
     const attributes =
       variant.attributes && typeof variant.attributes === "object"
         ? Object.entries(variant.attributes)
@@ -144,12 +144,12 @@ function buildClarificationQuestion(message: string, catalogContext: CatalogCont
 
   if (catalogContext.matchedProducts.length === 0) {
     if (catalogContext.matchedCategories.length > 0) {
-      return `Toi chua thay san pham khop ro rang. Ban muon xem san pham nao trong nhom ${buildCategoryLabel(
+      return `Chua thay san pham khop ro. Ban muon xem trong nhom ${buildCategoryLabel(
         catalogContext.matchedCategories,
-      )}?`;
+      )} khong?`;
     }
 
-    return `Toi chua tim thay san pham khop ro rang voi ${searchTermsLabel}. Ban co the noi ro hon ten san pham, mau, loai hoac muc gia?`;
+    return `Chua tim thay san pham khop voi ${searchTermsLabel}. Ban noi them ten, mau hoac ngan sach duoc khong?`;
   }
 
   if (catalogContext.isVariantIntent && confidence !== "high" && catalogContext.matchedProducts.length > 2) {
@@ -157,27 +157,28 @@ function buildClarificationQuestion(message: string, catalogContext: CatalogCont
       .slice(0, 3)
       .map((product) => product.name)
       .join(", ");
-    return `Toi dang thay nhieu san pham co the phu hop: ${names}. Ban dang muon hoi cu the san pham nao?`;
+    return `Dang co nhieu lua chon gan dung: ${names}. Ban dang nham san pham nao?`;
   }
 
   if (confidence === "low" && catalogContext.matchedProducts.length >= 4) {
     const categoriesLabel = buildCategoryLabel(catalogContext.matchedCategories);
-    return `Toi dang co vai ket qua gan dung trong ${categoriesLabel}. Ban muon xem ky hon theo ten san pham, danh muc hay mau/phien ban?`;
+    return `Co vai ket qua gan trong ${categoriesLabel}. Ban muon loc theo ten, danh muc hay mau?`;
   }
 
   if (normalizeText(message).length <= 4 && catalogContext.matchedProducts.length > 1) {
-    return "Ban co the noi ro hon ten san pham hoac danh muc ban dang tim de toi tra loi chinh xac hon?";
+    return "Ban noi ro hon ten san pham hoac danh muc de minh goi y chinh xac hon nhe?";
   }
 
   return null;
 }
 
-function buildProductBlocks(products: CatalogProduct[], options?: { isPromotionIntent?: boolean }) {
+function buildProductBlocks(products: CatalogProduct[], options?: { isPromotionIntent?: boolean; isVariantIntent?: boolean }) {
   if (products.length === 0) {
     return ["- Khong co san pham duoc xac nhan la match manh o turn nay."];
   }
 
   const isPromotionIntent = Boolean(options?.isPromotionIntent);
+  const isVariantIntent = Boolean(options?.isVariantIntent);
   const limit = isPromotionIntent ? 8 : 3;
 
   return products.slice(0, limit).flatMap((product, index) => {
@@ -207,7 +208,12 @@ function buildProductBlocks(products: CatalogProduct[], options?: { isPromotionI
       return lines;
     }
 
-    return [...lines, ...formatVariantSummary(product)];
+    // Only expand variants when the user asked about color/size/type — keeps answers focused.
+    if (!isVariantIntent) {
+      return lines;
+    }
+
+    return [...lines, ...formatVariantSummary(product, 4)];
   });
 }
 
@@ -236,9 +242,11 @@ function buildStructuredCatalogToolBlock(
     catalogContext.isPromotionIntent ? "Top discounted / campaign products:" : "Top confirmed products:",
     ...buildProductBlocks(catalogContext.matchedProducts, {
       isPromotionIntent: catalogContext.isPromotionIntent,
+      isVariantIntent: catalogContext.isVariantIntent,
     }),
     "",
     "Tool response contract:",
+    "- Tra loi thang cau hoi; khong mo rong sang ship/voucher/rank neu khong duoc hoi.",
     clarificationQuestion
       ? "- Vi query hien tai chua du ro, uu tien dat dung 1 cau hoi lam ro thay vi khang dinh qua som."
       : "- Neu khong can hoi lai, tra loi truc tiep tu cac san pham da duoc xac nhan o tren.",
@@ -255,6 +263,7 @@ function buildStructuredPolicyToolBlock(websiteKnowledgeContext: WebsiteKnowledg
     `- answer_mode: ${answerMode}`,
     `- detected_intent: ${websiteKnowledgeContext.intent}`,
     `- source_types: ${websiteKnowledgeContext.sourceTypes.join(", ") || "none"}`,
+    "- Chi tra loi dung domain cua intent; khong ke them policy khac.",
     "- uu tien tra loi theo policy context cua website neu cau hoi lien quan van chuyen, thanh toan, membership, voucher hoac don hang.",
     "- neu policy context khong xac nhan duoc mot chi tiet, phai noi chua co thong tin thay vi tu suy doan.",
   ].join("\n");

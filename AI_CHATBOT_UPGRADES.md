@@ -1,5 +1,19 @@
 # AI Chatbot Upgrades
 
+## 2026-09-02 — Tone & focus (core pipeline, no architecture change)
+
+### What changed
+- `aiChatService.ts`: persona tư vấn nội thất; **trả lời thẳng câu hỏi trước**; format bullet chỉ khi liệt kê; temperature 0.35 (clarify/order/payment) / 0.65 (còn lại); rút `maxOutputTokens` cho câu đơn giản.
+- `aiWebsiteKnowledgeService.ts`: không nhồi full capabilities mọi turn; auth context bỏ qua khi hỏi product thuần; thêm keyword nội thất cho `product_catalog`.
+- `aiStructuredContextService.ts`: chỉ dump variants khi `variant_intent`; câu clarify ngắn hơn; contract “đừng lan domain”.
+- `aiPolicyStructuredContextService.ts`: compact context thêm `product_catalog`.
+
+### Expected effect
+- Ít checklist cứng, ít lệch sang ship/voucher khi không hỏi.
+- Vẫn grounded catalog/policy như trước.
+
+---
+
 ## 2026-05-24
 
 ### UI

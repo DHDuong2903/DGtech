@@ -1,350 +1,282 @@
-# Tổng hợp source code DGtech (DGTech)
+# Tổng hợp chi tiết dự án DGtech
 
-## 1) Công nghệ website sử dụng (Backend / Frontend / DB / AI / 3D)
+DGtech là **nền tảng e-commerce nội thất / trang trí nhà** (không phải điện tử — một số tài liệu cũ còn lẫn domain). Monorepo gồm storefront + admin (Next.js) và REST API (Express), deploy hướng Render + Postgres hosted (Neon-compatible). Repo: `https://github.com/DHDuong2903/DGtech.git`.
 
-### Backend
-
-- **Node.js + Express** (EJS routes REST API dưới `/api/*`).
-- **TypeScript** (một số file có `// @ts-nocheck`).
-- **Sequelize** ORM + **PostgreSQL** database.
-- **Cloudinary**: lưu/serve media sản phẩm (file upload helper/libs).
-- **Clerk**: xác thực user (ở backend có `requireAuth/optionalAuth`).
-- **Cache**: dùng Redis-like hoặc cache layer nội bộ qua `backend/src/libs/cache.ts` (các service AI policy dùng TTL).
-- **Job/setup**: có các script seed, embed knowledge, evaluate AI.
-
-### Frontend
-
-- **Next.js (App Router)** + **TypeScript**.
-- **Clerk** (auth UI/hook `useUser`).
-- **Zustand**: quản lý state store (cart/product/rooms/showroom...).
-- **TailwindCSS** + **Radix UI** component (shadcn/ui style).
-- **Axios** client + interceptors.
-
-### DB schema (gợi ý từ migrations + models)
-
-- Dữ liệu e-commerce: users, addresses, categories, products, product variants, reviews, cart, orders, payments, vouchers/discount campaigns, shipping zones/methods, inventory/stock receipts.
-- Phần AI:
-  - `ai_conversations` và `ai_conversation_messages`.
-  - `ai_knowledge_embeddings` (model `aiKnowledgeEmbeddingModel.ts`), và có migration “setup pgvector for ai”.
-- Phần Showroom 3D:
-  - `showroom_scenes`, `showroom_scene_slots`, `showroom_saved_setups` (từ migration).
-
-### AI
-
-- **Gemini API** (dùng `GEMINI_API_KEY`, `GEMINI_MODEL`), request tới endpoint Google Generative Language.
-- Kiến trúc “AI e-commerce assistant”:
-  - Nhận message + history.
-  - Detect intent (keyword rules) từ `aiWebsiteKnowledgeService`.
-  - Lấy “catalog grounded context” bằng `aiCatalogContextService`.
-  - Lấy “policy context” (shipping/payment/membership/voucher/orders) bằng:
-    - Legacy: `buildWebsiteKnowledgeContext` (text blocks).
-    - Structured Tool Context: `aiPolicyStructuredContextService` (tool blocks + toolNames).
-  - Lựa chọn retrieval mode:
-    - Có flag `USE_RAG_RETRIEVAL=true` để dùng **RAG semantic search**.
-    - Nếu RAG fail sẽ fallback về legacy.
-- **RAG/pgvector**:
-  - Có service `aiEmbeddingService` và model `aiKnowledgeEmbeddingModel`.
-  - Migration `setup-pgvector-for-ai` cho index vector.
-
-### 3D
-
-- Dùng **react-three-fiber** + **drei** + **three**.
-- Component chính: `ShowroomCanvas` hiển thị room GLTF/GLB và các product GLTF/GLB.
-- Có parse “camera markers” nằm trong scene node name `CAM_*` để điều khiển camera.
+> Tài liệu này thay thế bản tổng hợp cũ (đã gỡ phần RAG/pgvector vì embeddings đã bị remove khỏi backend). Chi tiết AI roadmap xem thêm `README.md`, `AI_CHATBOT_UPGRADES.md`.
 
 ---
 
-## 2) Các feature website có & cách thức hoạt động
+## 1. Kiến trúc tổng thể
 
-### 2.1 E-commerce core
+```mermaid
+flowchart LR
+  Browser[Browser_NextJS]
+  Clerk[Clerk_Auth]
+  API[Express_API]
+  PG[(PostgreSQL)]
+  Redis[(Redis_optional)]
+  Cloud[Cloudinary]
+  Gemini[Google_Gemini]
+  SePay[SePay_VietQR]
 
-Nhìn theo routes/controllers (tên file):
+  Browser --> Clerk
+  Browser -->|Axios_Bearer| API
+  Clerk -->|Webhook_Svix| API
+  API --> PG
+  API --> Redis
+  API --> Cloud
+  API --> Gemini
+  SePay -->|Webhook| API
+  Browser -->|img.vietqr.io| SePay
+```
 
-- `/api/products` + `/api/categories` + `/api/reviews`
-- `/api/cart` (giỏ hàng)
-- `/api/orders` + `/api/payments` + `/api/payment/*` webhook
-- `/api/shipping` (shipping zones/rates/methods)
-- `/api/discount-campaigns`, `/api/vouchers`, `/api/bundles`
-- `/api/users`, `/api/addresses`, `/api/taxs`
-- `/api/stock-receipts` và inventory movements
-- Admin routes: controller có `optionalAuth/requireAdmin` cho phần admin.
+| Lớp | Công nghệ |
+|-----|-----------|
+| Frontend | Next.js **16**, React **19**, App Router, TypeScript, Tailwind **4**, shadcn/Radix, Zustand, Axios, Three.js + R3F + drei |
+| Backend | Node ESM, Express **5**, TypeScript, Sequelize **6**, PostgreSQL |
+| Auth | Clerk (frontend UI + `clerkMiddleware` qua `proxy.ts`; backend JWT + webhook) |
+| Media | Cloudinary (ảnh + GLB 3D) |
+| AI | Gemini (intent-routed, catalog/policy grounded) |
+| Payment | COD, chuyển khoản + VietQR, webhook SePay |
+| Cache | Redis nếu có `REDIS_URL`, fallback memory Map |
+| Deploy | Frontend Render (`dgtech-frontend.onrender.com` trong CORS); backend migrate-on-start |
 
-**Luồng chung frontend**:
+**Không phải** Turborepo/Nx — hai package độc lập (`frontend/`, `backend/`) + root script mỏng. **Không** Docker / `.env.example` trong repo. ORM là **Sequelize**, không Prisma.
 
-- Next.js gọi REST API bằng Axios.
-- Cart/order flow: chọn sản phẩm -> giỏ -> checkout -> payment -> webhook/payment completion.
+### Cấu trúc thư mục chính
 
-### 2.2 AI Chatbot (DGTech AI)
+| Path | Vai trò |
+|------|---------|
+| `frontend/src/app/` | App Router: storefront + admin |
+| `frontend/src/components/` | UI public / admin / shared / shadcn |
+| `frontend/src/stores/` | Zustand |
+| `frontend/src/apis/` | Axios API clients |
+| `backend/src/server.ts` | Express entry |
+| `backend/src/controllers/` | HTTP handlers |
+| `backend/src/services/` | Business logic |
+| `backend/src/models/` | Sequelize models |
+| `backend/src/middlewares/` | Auth, admin, Gold, upload |
+| `backend/src/libs/` | DB, cache, Cloudinary, sync |
+| `backend/migrations/` | Sequelize migrations |
+| `backend/src/data/vn/` | Tỉnh/phường, zone shipping |
 
-#### Backend API
+### API surface (`/api/*`)
 
-- Route: `backend/src/routes/aiChatRoute.ts`
-  - `POST /api/ai/chat` (optionalAuth) → `chatWithAi`
-  - Conversation APIs (requireAuth):
-    - `GET /api/ai/conversations`
-    - `POST /api/ai/conversations`
-    - `GET /api/ai/conversations/:conversationId`
-    - `DELETE /api/ai/conversations/:conversationId`
-    - `POST /api/ai/conversations/:conversationId/messages`
-    - `POST /api/ai/messages`
-
-- Controller: `backend/src/controllers/aiChatController.ts`
-  - Lấy `req.body.message`, `req.body.history`.
-  - Gọi `generateChatReply(message, history, { userId })`.
-  - Trả JSON `{ ...payload }` gồm `reply`, `intent`, `catalogEnabled`, `productLinks`.
-
-#### Frontend UI
-
-- Floating widget: `frontend/src/components/public/FloatingAIWidget.tsx`
-  - Ẩn trên mọi trang admin (`/admin*`).
-  - Có **guest session** dùng localStorage key `dgtech_ai_guest_session_id`.
-  - Có sidebar history khi signed-in.
-  - Khi gửi message:
-    - Nếu guest: gọi `aiChatApi.sendGuestMessage(trimmedInput, historyPayload)`.
-    - Nếu signed-in: gọi conversation message endpoint.
-  - Parse `metadata.productLinks` để link trực tiếp trong câu trả lời (dựa `productLinks[].name` match trong text).
-
-#### Conversation & storage
-
-- Model:
-  - `AiConversation` (ai_conversations): clerkId/guestSessionId/title/status.
-  - `AiConversationMessage` (ai_conversation_messages): role, content, intent/model/metadata JSONB.
-
-- Service: `backend/src/services/aiConversationService.ts`
-  - Actor (userId hoặc guestSessionId) để “ownerWhere”.
-  - Listing conversations: load conversations + batch fetch latest message.
-  - Send message:
-    1. Load recent history (role user/assistant, limit 12).
-    2. Insert user message row.
-    3. Generate reply via `generateChatReply`.
-    4. Insert assistant message row (intent/model/metadata).
-    5. Update conversation updatedAt.
-
-#### AI pipeline chi tiết (generateChatReply)
-
-- File: `backend/src/services/aiChatService.ts`
-
-**Các bước chính**
-
-1. Validate message (string, trim) → 400 nếu rỗng.
-2. Normalize history:
-   - chỉ giữ các item có `{sender: 'user'|'ai', text: string}`
-   - slice cuối tối đa **12**.
-3. Build website knowledge context:
-   - Nếu `USE_RAG_RETRIEVAL=true`:
-     - `retrieveRelevantKnowledge()` → RAG static knowledge (semanticSearch/pgvector) + dynamicContext (shipping/payment/membership/promotions) nếu doc metadata gợi ý.
-     - `detectAiIntent()` để lấy intent từ keyword rules.
-     - `formatRagContextForLLM()` để đóng gói text context.
-     - Nếu RAG fail → fallback `buildWebsiteKnowledgeContext` + `buildStructuredPolicyContext`.
-   - Nếu legacy (default):
-     - `buildWebsiteKnowledgeContext(message, { recentUserMessages, userId })`
-     - `buildStructuredPolicyContext(websiteKnowledgeContext, ...)`
-
-4. Build catalog context:
-   - `buildCatalogContext()` (aiCatalogContextService.ts)
-   - Có caching snapshot catalog summary (2 phút) + fallback featured products.
-   - Extract search terms + detect variant intent.
-   - Nếu không “looksLikeCatalogQuery” → catalogContext disabled.
-   - Nếu có match:
-     - match bằng **catalog index score** (normalizedName/description/category/variant attrs, stock ưu tiên) để chọn top IDs.
-     - sau đó fetch details từ DB.
-     - apply discount pricing for variants qua `discountCampaignResolveService`.
-
-5. Structured AI context:
-   - `buildStructuredAiContext()` (aiStructuredContextService.ts)
-   - Xác định:
-     - retrievalConfidence: high/medium/low/none.
-     - answerMode: clarify | catalog_direct | policy_direct | general.
-     - Nếu cần clarification → tạo question 1 câu.
-   - Tạo blocks:
-     - `AI tool result: store_policy_router ...`
-     - `AI tool result: search_catalog ...` (kèm answer_mode/retrieval_confidence/clarification_question + danh sách top sản phẩm & rule contract)
-
-6. Build Gemini request:
-   - systemInstruction gồm:
-     - rules về định dạng trả lời (không markdown bold \*\*, dùng bullet dashes),
-     - ưu tiên context cung cấp,
-     - không lộ internal field/db/schema,
-     - rule rõ về clarify/low confidence.
-   - contents gồm:
-     - optional context block (website context + tool blocks + rag context nếu có),
-     - lịch sử hội thoại (history items mapped role user/model),
-     - message user hiện tại.
-
-7. Parse response:
-   - Lấy `payload.candidates[0].content.parts[].text` join.
-   - Normalize formatting (strip **bold**, collapse whitespace, đảm bảo newline hợp lý).
-
-8. Trả về:
-   - `reply`
-   - `intent` (websiteKnowledgeContext.intent)
-   - `sourceTypes`
-   - `catalogEnabled`
-   - `productLinks` (tạo link `/shop/<productId>` từ matchedProducts max 5)
-
-#### AI intent routing & policy blocks (đặc biệt)
-
-- Intent detection: `backend/src/services/aiWebsiteKnowledgeService.ts`
-  - Quy tắc keyword rules → intent:
-    - membership_policy (bronze/silver/gold, rank, membership, showroom, 3d, phòng ảo, mô hình 3d)
-    - shipping_policy (giao hàng, ship, phi ship...)
-    - payment_policy (thanh toán, cod, bank transfer...)
-    - voucher_policy (voucher, mã giảm giá, khuyến mãi...)
-    - order_support (đơn hàng, tracking, hủy đơn...)
-    - product_catalog (san phẩm, danh mục, biến thể, tồn kho, giá, màu, kích thước...)
-    - store_capability (website/shop/có gì/tính năng...)
-  - Admin blocking:
-    - `looksLikeAdminQuestion()` dựa blocklist regex (admin panel, backend, setting, shipping setup, inventory management, showroom config...)
-    - Nếu match admin question: trả context “general_support” + rules từ chối trợ giúp admin.
-
-- Policy structured tools:
-  - `aiPolicyStructuredContextService.ts`
-    - build các tool blocks:
-      - get_shipping_policy
-      - get_payment_policy
-      - get_membership_policy (+ current user membership progress nếu có userId)
-      - get_active_promotions
-    - tool blocks được đóng gói theo format “AI tool result: <tool_name>”.
+`users`, `categories`, `products`, `reviews`, `cart`, `orders`, `payments`, `slideshows`, `addresses`, `shipping`, `discount-campaigns`, `bundles`, `vouchers`, `taxs`, `stock-receipts`, `ai`, `showroom`, `rooms`, `webhooks`
 
 ---
 
-### 2.3 Feature AI liên quan Showroom 3D (Gold-only)
+## 2. Feature — nói qua (core e-commerce chuẩn)
 
-#### Tích hợp AI showroom vào knowledge
+Những phần này “đủ dùng, đầy đủ”, nhưng không phải điểm khác biệt chính:
 
-- Tài liệu cập nhật: `SHOWROOM_AI_INTEGRATION_SUMMARY.md` cho thấy AI chatbot đã được:
-  - Update membership block: mô tả showroom 3D, access `/showroom-3d`, yêu cầu Gold, yêu cầu sản phẩm có mô hình 3D GLB/GLTF, có slots/positions, có save setup, không phải giỏ hàng.
-  - Update membership_policy intent rules: detect từ keyword `showroom`, `3d`, `phòng ảo`, `mô hình 3d`.
-  - Update admin question patterns: block các câu hỏi kiểu upload 3D, tạo scene, cấu hình showroom, thiết lập showroom, upload glb/gltf, tạo vị trí.
+- **Auth**: đăng ký/đăng nhập Clerk; sync user qua webhook `user.created`; role `admin` / user thường.
+- **Catalog**: danh mục, sản phẩm, biến thể, tìm kiếm/lọc/sort/pagination (shop 20/trang, URL sync query).
+- **Reviews**, slideshow trang chủ (Embla), dark/light theme, toast Sonner.
+- **Giỏ hàng** (Zustand persist + sync API), drawer mini-cart, chọn nhiều / xóa hàng loạt.
+- **Địa chỉ VN** (tỉnh/phường từ data tĩnh + API geo), **thuế**, **đơn hàng** (list/detail/hủy), theo dõi trạng thái.
+- **Admin CRUD** rộng: products, categories, orders, users, vouchers, campaigns, bundles, shipping, tax, stock-receipts, slideshows, rooms, showroom scenes.
+- **UI**: shadcn “new-york”, primary cam ấm (OKLCH), Geist + Fraunces trên home.
 
-#### Hệ quả trong runtime AI
+### Routes storefront chính
 
-- Khi user hỏi showroom:
-  - detectAiIntent → membership_policy.
-  - buildMembershipBlock() chèn text showroom 3D.
-  - structured policy context có tool block membership_policy.
-  - Gemini system rules yêu cầu trả lời theo context + không hướng dẫn admin.
-- Khi user hỏi kỹ thuật admin:
-  - looksLikeAdminQuestion() match regex → admin question blocker.
-  - AI bị ép từ chối và điều hướng liên hệ admin/support.
-
----
-
-### 2.4 3D Showroom (Gold members only)
-
-#### Frontend route & access control
-
-- Page: `frontend/src/app/showroom-3d/page.tsx`
-  - Dùng hook `useUserRank()` để lấy rank.
-  - Nếu không gold → `router.replace('/membership')`.
-  - Login yêu cầu: nếu isLoaded & !isSignedIn → redirect `/`.
-
-#### Load dữ liệu showroom
-
-- Dùng `showroomApi`:
-  - `getScenes()` để lấy danh sách scene.
-  - `getSceneByKey(activeSceneKey)` để lấy:
-    - roomModelUrl
-    - slots (các vị trí trong phòng)
-    - eligibleProducts (sản phẩm đủ điều kiện showroom)
-    - savedSetup nếu có.
-
-#### UX logic placement products
-
-- State chính:
-  - `selectedBySlot: { [slotId]: productId }` (setup bố trí hiện tại)
-  - `pendingPlacementByProduct: { [productId]: slotId|null }` (chờ xác nhận placement)
-  - `selectedProductIds[]` (checkbox/select nhiều sản phẩm)
-  - `focusedSlotId` (tập trung camera vào vị trí)
-  - `savedSetup` để so sánh thay đổi.
-
-- Eligibility & rules:
-  - Chỉ product có `model3dUrl` mới xuất hiện trong showroom.
-  - Slot có `allowedCategoryId` → slot chỉ nhận sản phẩm cùng category.
-  - Khi chọn product:
-    - nếu chỉ match 1 slot → auto assign.
-    - nếu match nhiều slot → yêu cầu user chọn chính xác vị trí.
-
-- Confirm placement:
-  - `handleConfirmPlacement()`:
-    - cập nhật `selectedBySlot` bằng cách map product→slot từ pending.
-    - xóa các map slot trùng để tránh 2 product vào 1 slot.
-
-- Save setup:
-  - `showroomApi.saveSceneSetup(activeSceneKey, { selectedBySlot })`.
-
-#### Rendering 3D (core)
-
-- Component: `frontend/src/components/public/showroom/ShowroomCanvas.tsx`
-
-**Các thành phần**
-
-- `RoomModel`:
-  - load GLB/GLTF room model via `useGLTF(roomModelUrl)`
-  - traverse mesh node name bắt đầu `CAM_` để build `cameraMarkers`:
-    - mỗi marker có position + target + keywords.
-    - markerOverview: keywords chỉ gồm `overview`.
-
-- `SlotMarker`:
-  - đặt HTML label lên position của slot (anchorPosition) để user click focus camera.
-
-- `AnimatedProductModel`:
-  - load product model glTF/GLB
-  - clone scene và thêm shadow flags
-  - animate đặt model vào `anchorPosition` + `anchorRotation` của slot.
-  - offset/sceneOffset: tính bounding box để canh model.
-
-- Camera rig:
-  - `CameraRig` dùng `OrbitControls`.
-  - Khi chọn slot:
-    - findBestCameraForSlot(slotTarget, cameraMarkers)
-      - có override mapping từ `ROOM_CAMERA_SLOT_OVERRIDES` theo marker name.
-      - nếu không có override: score dựa overlap keywords và khoảng cách.
-    - CameraRig interpolate camera position & target theo 2 pha (mid & end).
-
-- Reset view:
-  - button “Default view” gọi `onSelectSlot(null)` để tắt focused slot và tăng `resetVersion`.
+| Route | Mục đích |
+|-------|----------|
+| `/` | Landing / home sections |
+| `/shop`, `/shop/[id]` | Listing + PDP (variants, 3D, bundles, reviews) |
+| `/cart`, `/checkout` | Giỏ + thanh toán |
+| `/orders`, `/orders/[orderId]` | Đơn hàng |
+| `/payment/[orderId]` | VietQR / trạng thái thanh toán |
+| `/addresses` | Địa chỉ giao hàng |
+| `/membership` | Hạng thành viên |
+| `/showroom-3d` | Showroom 3D (Gold) |
 
 ---
 
-## 3) Tóm tắt chi tiết cách AI chatbot & 3D showroom “liên quan” nhau
+## 3. Feature lớn — đi sâu
 
-- **3D showroom là một lợi ích membership (Gold)**.
-- AI membership_policy intent rule đã được mở rộng để nhận diện câu hỏi về showroom bằng keyword `showroom/3d/phòng ảo/mô hình 3d`.
-- AI khi trả lời showroom:
-  - chỉ dựa context showroom đã được nhúng trong `buildMembershipBlock()`.
-  - không claim có thể upload/config showroom.
-- AI admin blocking:
-  - các câu kiểu “upload glb/gltf”, “create showroom scene”, “set up showroom”, “upload 3D model”, “quản lý showroom” bị chặn và trả lời từ chối.
+### 3.1 Showroom 3D (điểm nhấn sản phẩm)
+
+**Làm gì:** Gold member vào `/showroom-3d`, chọn scene phòng (GLB), gắn sản phẩm có `model3dUrl` vào **slot** theo category, tint màu biến thể, lưu setup — xem “phòng đã bài trí” trước khi mua.
+
+**Cách làm:**
+
+- Frontend: `frontend/src/components/public/showroom/ShowroomCanvas.tsx` (R3F) load room GLB + product GLB; marker `SLOT_*` / `CAM_*` điều khiển vị trí và camera; OrbitControls; HTML overlay nhãn slot; `frontend/src/lib/colorVariantTint.ts` duyệt mesh đổi màu.
+- Admin: upload room GLB (tới **100MB**), map slot → `allowedCategoryId`, preview live (`SceneEditorForm.tsx`).
+- Backend: `backend/src/services/showroomService.ts` (~1.5k dòng, SQL nặng); gate `requireGoldTier`; bảng `showroom_scenes`, `showroom_scene_slots`, `showroom_saved_setups`; sanitize: 1 SP/slot, đúng category, không trùng SP.
+- PDP/card: preview 3D lazy qua IntersectionObserver khi có model.
+- Media: room GLB → Cloudinary `showroom/rooms`; product model → `products/models` (giới hạn ~25MB).
+
+**Mô hình membership:** rank **tính từ lịch sử đơn** (DELIVERED/COMPLETED − penalty hủy); mặc định bronze → silver (~5M) → gold (~20M), admin chỉnh được (`RankSetting`). Showroom chỉ mở khi rank computed = gold.
+
+### 3.2 AI Concierge (Stage 5 — intent-routed business assistant)
+
+**Làm gì:** Widget chat nổi; trả lời dựa trên **catalog thật + policy thật**, không hallucinate domain sai.
+
+**Pipeline:**
+
+```mermaid
+flowchart TD
+  Msg[User_message]
+  Intent[Intent_regex_scored]
+  Cat[Catalog_retrieval_V2]
+  Pol[Structured_policy_tools]
+  Mode[Answer_mode_confidence]
+  Guard[Guardrails]
+  LLM[Gemini]
+  Out[Reply_plus_productLinks]
+
+  Msg --> Intent
+  Intent --> Cat
+  Intent --> Pol
+  Cat --> Mode
+  Pol --> Mode
+  Mode --> Guard
+  Guard --> LLM
+  LLM --> Out
+```
+
+**File chính:**
+
+- `backend/src/services/aiChatService.ts` — orchestration
+- `aiWebsiteKnowledgeService.ts` — intent + knowledge blocks
+- `aiCatalogContextService.ts` — catalog retrieval V2 + cache
+- `aiPolicyStructuredContextService.ts` — policy snapshots
+- `aiStructuredContextService.ts` — answer mode / confidence
+- `aiConversationService.ts` — persistence
+
+**Chi tiết:**
+
+- Intent: `product_catalog`, `shipping_policy`, `payment_policy`, `voucher_policy`, `membership_policy` (gồm keyword showroom/3D), `promotion_products`, `order_support`, `store_capability`, `general_support`.
+- Policy intents thuần → **không** nhét catalog (trừ khi force promo).
+- History: tối đa **12** turn; user auth lưu conversation DB (max **5** hội thoại/user).
+- Guardrails: chặn hỏi admin nội bộ; không bịa hoàn/hủy; clarify khi confidence thấp; map quota Gemini → message tiếng Việt.
+- **Không còn RAG/pgvector:** migration đã remove embeddings; retrieval hiện tại là catalog/policy structured + intent routing (không semantic vector search).
+
+Roadmap maturity Stage 0→5: xem `README.md`.
+
+### 3.3 Thanh toán Việt Nam (COD + VietQR + SePay)
+
+| Phương thức | Hành vi |
+|-------------|---------|
+| COD | Order → `PROCESSING`, trừ kho ngay |
+| BANK_TRANSFER | Order `PENDING`, Payment PENDING, hiện QR VietQR; **kho hold đến khi paid** |
+| SePay webhook | Parse mã `DH` + 8 ký tự orderId; khớp số tiền; idempotent complete → PAID + trừ kho + `PROCESSING` |
+
+Nội dung CK: `generateTransactionContent`; QR qua `img.vietqr.io`. Webhook: `POST /api/webhooks/sepay`.
+
+File: `paymentService.ts`, `paymentHelper.js`, `webhookService.ts`, `orderPaymentCompletionService.js`.
+
+### 3.4 Pricing phức tạp: Campaign + Bundle + Voucher
+
+- **Discount campaigns:** không sửa giá DB; overlay giá thắng (priority ASC); mode `price_list` hoặc `price_rule` (PERCENT/FIXED); scope product/category/all; có `targetTiers`. Cache campaign active.
+- **Bundles:** giảm giá combo độc lập campaign; cart `itemType` BUNDLE; `maxPerUser` qua `BundlePurchase`; stock hiệu dụng theo dòng bundle.
+- **Vouchers:** PERCENT / FIXED / FREE_SHIPPING; audience ALL / TIER_USERS (hạng lấy qua `getStorefrontUserTier` = **cùng rank computed** với showroom/membership; cột `users.tier` không còn dùng cho storefront).
+
+### 3.5 Checkout / inventory / shipping
+
+**Checkout:** địa chỉ → cart đã chọn → enrich campaign → validate stock & bundle caps → subtotal → shipping quote → tax snapshot → revalidate voucher → `total = taxTotal - voucherDiscount` → explode bundle lines → trừ kho (COD) hoặc hold (CK) → clear cart đã chọn + ghi redemption.
+
+**Trạng thái đơn:** `PENDING → PROCESSING → SHIPPED → DELIVERED → COMPLETED`; hủy từ PENDING/PROCESSING; unpaid bank transfer không đẩy fulfillment; hủy hoàn stock nếu đã allocate.
+
+**Inventory:** phiếu nhập DRAFT → POSTED (row-lock, tăng stock, `InventoryMovement` RECEIPT); bán giảm stock; invalidate cache storefront khi post.
+
+**Shipping VN:** `provinceCode` → zone (`warehouse`, `north_near`, `north_far`, `central`, `south`) → method standard/express → flat rate; free-ship threshold; display `separate` | `included`. Data: `backend/src/data/vn/`.
 
 ---
 
-## 4) File/directory tiêu biểu cần xem thêm (nếu muốn mở rộng bản tổng hợp)
+## 4. Tối ưu & xử lý “ẩn” trong hệ thống
 
-### AI
-
-- `backend/src/services/aiChatService.ts`
-- `backend/src/services/aiWebsiteKnowledgeService.ts`
-- `backend/src/services/aiCatalogContextService.ts`
-- `backend/src/services/aiStructuredContextService.ts`
-- `backend/src/services/aiPolicyStructuredContextService.ts`
-- `backend/src/services/aiRagRetrievalService.ts`
-- `backend/src/services/aiConversationService.ts`
-- `backend/src/routes/aiChatRoute.ts`
-
-### 3D Showroom
-
-- `frontend/src/app/showroom-3d/page.tsx`
-- `frontend/src/components/public/showroom/ShowroomCanvas.tsx`
-- (thường sẽ có trong `frontend/src/apis/showroomApi.ts` và component showroom khác như `ShowroomProductPreview`, nhưng ở phần này mình đã trích trực tiếp logic từ file page + canvas).
-
-### Auth & UX
-
-- `frontend/src/components/public/FloatingAIWidget.tsx` (AI UI)
+| Khu vực | Cơ chế |
+|---------|--------|
+| HTTP | `compression()`, CORS `maxAge` 24h, timeout upload dài (120s) cho GLB |
+| DB | Pool env `DB_POOL_*`, SSL auto Neon/prod, `withDbRetry`, 503 khi DB transient |
+| Cache | Fresh TTL + **stale-while-error**; version bump `storefront-products` khi product/campaign/stock đổi; cache AI catalog + policy snapshots |
+| Frontend media | AVIF/WebP; `optimizePackageImports` (lucide, clerk, date-fns); `next/dynamic` home sections + AI widget `ssr:false` |
+| 3D perf | Lazy mount GLB trên card (IntersectionObserver); `useGLTF.preload`; tách canvas nặng khỏi SSR |
+| Auth race | Clerk token gắn sớm trên axios để tránh mismatch giá/auth request đầu |
+| Client cache | Categories/rooms TTL ~5 phút trong Zustand; cart persist tránh flash rỗng |
+| Payments | Idempotent complete bank transfer; stock timing khác nhau COD vs CK (tránh oversell khi unpaid) |
 
 ---
 
-## 5) Ghi chú về phạm vi
+## 5. Domain dữ liệu (rút gọn)
 
-- Tài liệu này được tổng hợp từ các file đã đọc trực tiếp trong quá trình phân tích + các tài liệu Markdown có sẵn ở repo.
-- Vì giới hạn truy xuất toàn bộ source trong một lượt, một số file khác có thể chưa được đọc trực tiếp (ví dụ: showroomApi, ShowroomProductPreview, showroom models/controllers). Tuy nhiên phần AI & 3D core đã được nắm rõ qua các file trọng yếu ở trên.
+```
+Users (Clerk) → Addresses, Cart/Items, Orders/Items, Payments
+Products/Variants (+ model3dUrl) ← Categories
+Campaigns / Bundles / Vouchers chồng lên giá & checkout
+Shipping zones/rates + Tax + Rank settings
+StockReceipts → InventoryMovements
+ShowroomScenes → Slots → SavedSetups (Gold)
+AiConversations → Messages
+```
+
+### Models Sequelize (tóm tắt)
+
+User, UserAddress, Category, Product, ProductVariant, Review, Cart, CartItem, Order, OrderItem, Payment, Bundle, BundleItem, BundlePurchase, Voucher, UserVoucherRedemption, DiscountCampaign (+ liên kết product/category/variant price), ShippingZone/Method/Rate/ProvinceZone/Setting, TaxSetting, RankSetting, StockReceipt, StockReceiptLine, InventoryMovement, AiConversation, AiConversationMessage, Slideshow, ShowroomScene, ShowroomSceneSlot, Room. Bảng SQL `showroom_saved_setups` (saved layouts). `ProductShowroomOverride` tồn tại schema nhưng **không dùng** runtime.
+
+Associations: `backend/src/models/associationsModel.ts`.
+
+---
+
+## 6. Giá trị thực tế — có “đóng góp” gì không?
+
+### Thực trạng thị trường
+
+- **Nội thất VN:** ~1,5 tỷ USD (2024, IMARC) → hướng ~2,3 tỷ USD năm 2033 (CAGR ~4,7%); e-commerce là kênh tăng nhanh (Mordor ~13% CAGR online tới 2031).
+- **Online furniture VN:** doanh thu online ~**1,85 tỷ USD (2025)** (ECDB, trích Báo Đầu Tư), tăng ~10–15% YoY; Shopee đang mở vận chuyển/lắp đặt hàng cồng kềnh — tín hiệu hành vi mua sofa/giường online đang chín.
+- **Pain point cố hữu:** mua nội thất online không “sờ / ướm không gian” → tỷ lệ trả hàng ngành nội thất thường **15–30%+**; lý do chính: sai kích thước, sai màu, không hợp style (~75% lý do trả liên quan visualization).
+- **Bằng chứng quốc tế:** IKEA Place / Wayfair View-in-Room — AR/3D gắn với giảm return ~20–43%, tăng conversion / AOV (case study ngành; không phải số liệu nội bộ DGtech).
+- **VN đã có đối thủ chuyên sâu:** Haizz AI, Marvy (WebAR), VR Plus — thị trường **đã công nhận** nhu cầu visualization.
+
+### Vấn đề DGtech nhắm tới
+
+| Pain | Cách DGtech trả lời |
+|------|---------------------|
+| Không hình dung đồ trong phòng | Showroom 3D slot + tint màu + lưu layout |
+| Hỏi CSKH lặp / AI bịa catalog | Intent-routed Gemini grounded DB + policy |
+| Thanh toán VN thực tế | VietQR + SePay webhook, COD |
+| Vận hành shop thật | Admin đủ: kho nhập, campaign, bundle, voucher, shipping theo vùng VN |
+| Loyalty / upsell trải nghiệm premium | Rank → Gold unlock showroom |
+
+### Đánh giá thẳng (strength / gap)
+
+**Đóng góp thực — MVP / portfolio nâng cao, đúng hướng ngành:**
+
+- Không chỉ “CRUD shop”: ghép **commerce VN + 3D configurator + AI grounded + membership gate**.
+- Kiến trúc AI (intent → retrieval → guardrail → LLM) là pattern production.
+- Showroom giải pain “fit & color”; hướng **room template + slot** (thực dụng hơn full room scan cho capstone/CV).
+
+**Chưa sẵn sàng thay Haizz/IKEA:**
+
+- Chưa AR-in-your-room; phụ thuộc scene admin.
+- ~~`User.tier` (voucher) vs rank computed (showroom) lệch~~ — đã fix Option A (`getStorefrontUserTier` → `getMyRank`).
+- Guest AI persistence lệch giữa service và route; RAG đã bỏ.
+- Thiếu Docker/env template; chưa có A/B nội bộ (conversion, return).
+
+**Kết luận:** Đô thị hóa + e-commerce hàng cồng kềnh tăng → nhu cầu mua nội thất online tăng, niềm tin hình ảnh thấp. DGtech xây **cầu nối tin cậy** (3D trong ngữ cảnh phòng + AI biết hàng thật + thanh toán/vận hành VN). Vấn đề thật; mức hiện tại = **prototype thương mại có chiều sâu kỹ thuật**, đủ làm case study / nền tảng mở rộng, chưa validate doanh thu.
+
+Xem thêm: `DGTECH_CV_HIGHLIGHT.md`, `DGTECH_ROADMAP.md`.
+
+---
+
+## 7. Bản đồ file quan trọng
+
+| Chủ đề | Path |
+|--------|------|
+| Tổng quan | `README.md`, `TONG_HOP_CODE_DGTECH.md` |
+| AI | `backend/src/services/aiChatService.ts`, `aiWebsiteKnowledgeService.ts`, `aiCatalogContextService.ts`, `AI_CHATBOT_*.md` |
+| Showroom FE | `frontend/src/app/showroom-3d/page.tsx`, `ShowroomCanvas.tsx`, `GlbPreviewViewer.tsx` |
+| Showroom BE | `backend/src/services/showroomService.ts`, `requireGoldTier.ts` |
+| Payment/order | `paymentService.ts`, `orderService.ts`, `webhookService.ts` |
+| Cache/DB | `backend/src/libs/cache.ts`, `backend/src/libs/db.js` |
+| Highlight / roadmap | `DGTECH_CV_HIGHLIGHT.md`, `DGTECH_ROADMAP.md` |
+
+---
+
+## 8. Env quan trọng (không có `.env.example` trong repo)
+
+**Backend:** `DATABASE_URL`, `PORT`, `NODE_ENV`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`, `CLOUDINARY_*`, `SEPAY_*`, `GEMINI_API_KEY`, `GEMINI_MODEL`, optional `REDIS_URL`, `DB_POOL_*`.
+
+**Frontend:** `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_API_URL`.

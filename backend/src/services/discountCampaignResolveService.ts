@@ -10,10 +10,10 @@ import {
   DiscountCampaignVariantPrice,
   Product,
   ProductVariant,
-  User,
 } from "../models/associationsModel.js";
 import { cacheBumpVersion, cacheDelete, cacheGetJson, cacheSetJson } from "../libs/cache.js";
 import { isTransientDbError, withDbRetry } from "../helpers/dbResilience.js";
+import { getMyRank } from "./userService.js";
 
 function roundMoney(n: number) {
   return Math.round(Number(n) * 100) / 100;
@@ -132,7 +132,8 @@ function pricingModeOf(campaign: any): "price_list" | "price_rule" {
 
 const ACTIVE_CAMPAIGNS_CACHE_KEY = "discountCampaigns:active:v1";
 const ACTIVE_CAMPAIGNS_STALE_CACHE_KEY = "discountCampaigns:active:stale:v1";
-const USER_TIER_CACHE_PREFIX = "userTier:v1:";
+/** v2 = computed rank from orders (same as showroom/membership), not users.tier column */
+const USER_TIER_CACHE_PREFIX = "userTier:v2:";
 const ACTIVE_CAMPAIGNS_CACHE_TTL_MS = 120000;
 const ACTIVE_CAMPAIGNS_STALE_CACHE_TTL_MS = 15 * 60 * 1000;
 const USER_TIER_CACHE_TTL_MS = 600000;
@@ -224,10 +225,8 @@ export async function getStorefrontUserTier(clerkId: string | null | undefined):
   }
 
   try {
-    const u = await withDbRetry(() => User.findByPk(clerkId, { attributes: ["tier"] }), {
-      label: "getStorefrontUserTier",
-    });
-    const t = u?.tier;
+    const rank = await withDbRetry(() => getMyRank(clerkId), { label: "getStorefrontUserTier" });
+    const t = rank?.currentRank;
     const result = t === "silver" || t === "gold" || t === "bronze" ? t : "bronze";
     await cacheSetJson(cacheKey, result, USER_TIER_CACHE_TTL_MS);
     return result;

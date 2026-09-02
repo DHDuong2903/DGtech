@@ -1,6 +1,12 @@
 # DGtech
 
-DGtech là nền tảng thương mại điện tử hiện đại, phát triển với Next.js (frontend) và Node.js/Express (backend), sử dụng PostgreSQL, Clerk, Cloudinary. Dự án hướng tới trải nghiệm người dùng tối ưu, bảo mật, dễ mở rộng và quản trị.
+DGtech là nền tảng thương mại điện tử nội thất / trang trí nhà, phát triển với Next.js (frontend) và Node.js/Express (backend), sử dụng PostgreSQL, Clerk, Cloudinary. Dự án hướng tới trải nghiệm người dùng tối ưu, bảo mật, dễ mở rộng và quản trị — kèm showroom 3D, AI concierge grounded, thanh toán VietQR/SePay.
+
+**Tài liệu dự án:**
+
+- [Tổng hợp chi tiết](./TONG_HOP_CODE_DGTECH.md) — kiến trúc, feature, tối ưu, giá trị thị trường
+- [Highlight 1 trang (CV/bảo vệ)](./DGTECH_CV_HIGHLIGHT.md)
+- [Roadmap đóng gap](./DGTECH_ROADMAP.md)
 
 ## Kiến trúc dự án
 

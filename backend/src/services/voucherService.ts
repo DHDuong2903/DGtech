@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Op } from "sequelize";
-import { User, UserVoucherRedemption, Voucher } from "../models/associationsModel.js";
+import { UserVoucherRedemption, Voucher } from "../models/associationsModel.js";
+import { getStorefrontUserTier } from "./discountCampaignResolveService.js";
 import { buildShippingQuoteForProvince, normalizeShippingMethodCode } from "./shippingService.js";
 
 const USER_TIERS = new Set(["bronze", "silver", "gold"]);
@@ -76,8 +77,7 @@ export async function listEligibleVouchersForUser(params: {
   shippingMethodCode?: string;
 }) {
   const { clerkId, subtotal, provinceCode, shippingMethodCode } = params;
-  const user = await User.findByPk(clerkId, { attributes: ["clerkId", "tier"] });
-  const userTier = String(user?.tier || "bronze").toLowerCase();
+  const userTier = String(await getStorefrontUserTier(clerkId)).toLowerCase();
   const now = new Date();
   const baseShippingFee =
     params.shippingFee !== undefined

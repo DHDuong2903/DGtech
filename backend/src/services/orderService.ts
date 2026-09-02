@@ -32,7 +32,9 @@ import { completeBankTransferPayment } from "./orderPaymentCompletionService.js"
 import { generateQRCodeUrl, generateTransactionContent } from "../helpers/paymentHelper.js";
 import { listEligibleVouchersForUser } from "./voucherService.js";
 import { computeTaxBreakdown, getTaxSettings } from "./taxService.js";
+import { invalidateUserTierCache } from "./discountCampaignResolveService.js";
 
+const RANK_AFFECTING_STATUSES = new Set(["DELIVERED", "COMPLETED", "CANCELLED"]);
 const FULFILLMENT_STATUSES = ["PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"];
 const TERMINAL_STATUSES = ["COMPLETED", "CANCELLED"];
 const ORDER_STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -431,6 +433,8 @@ export async function cancelOrder(clerkId: string, orderId: string) {
     await order.update({ status: "CANCELLED" }, { transaction });
     await transaction.commit();
 
+    invalidateUserTierCache(clerkId);
+
     return Order.findByPk(order.orderId, {
       include: [{ model: OrderItem, as: "items", include: [{ model: Product, as: "product", attributes: ["productId", "name", "price", "imageUrl"] }] }],
     });
@@ -594,6 +598,9 @@ export async function updateOrderStatus(orderId: string, status: string) {
     }
     await order.update({ status }, { transaction });
     await transaction.commit();
+    if (RANK_AFFECTING_STATUSES.has(status)) {
+      invalidateUserTierCache(order.clerkId);
+    }
     return fetchOrderAdminDetail(orderId);
   } catch (error) {
     await transaction.rollback();

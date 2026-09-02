@@ -506,8 +506,10 @@ function shouldUseCompactPolicyOnly(result: WebsiteKnowledgeContextResult) {
   if (result.sourceTypes.includes("admin_question_blocker")) return false;
   // Keep verbose campaign product lists for sale-product discovery.
   if (result.intent === "promotion_products") return false;
-  // Auth membership/voucher details already live in tool or auth blocks; prefer compact policy text.
-  return ["shipping_policy", "payment_policy", "membership_policy", "voucher_policy"].includes(result.intent);
+  // Prefer tool blocks + lean prompts; drop duplicate verbose website dumps.
+  return ["shipping_policy", "payment_policy", "membership_policy", "voucher_policy", "product_catalog"].includes(
+    result.intent,
+  );
 }
 
 export async function buildStructuredPolicyContext(
